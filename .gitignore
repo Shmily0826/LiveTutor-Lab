@@ -1,0 +1,15 @@
+# candidates/ — third-party repos are cloned here with their own git history
+candidates/
+
+# runtime / capture output
+benchmarks/raw/
+*.log
+.env
+.env.*
+!*.env.example
+
+# OS / editor
+Thumbs.db
+.DS_Store
+.idea/
+.vscode/
