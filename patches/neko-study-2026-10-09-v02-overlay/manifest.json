@@ -1,0 +1,546 @@
+﻿{
+    "format":  "livetutor-source-overlay-v1",
+    "source_revision":  "ce79f63ba1941b5b17a8e29521ebf0f0906b89e2",
+    "scope":  "curated modified teaching, lifecycle, mute, schema, grading, UI, and entrypoint source only",
+    "files":  [
+                  {
+                      "root":  "live",
+                      "sha256":  "13bdcc291cb196e51021d3e873f9678f8ffc7429d8b4fa63cb2ffce12350d673",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/_event_bus.py",
+                      "bytes":  27889,
+                      "payload":  "payload/live/_event_bus.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "69061bb6678fb70cffda8d57e86cb868d34cac120dfc8d38e2e65081a1dbab9f",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/entry_status_entries.py",
+                      "bytes":  20152,
+                      "payload":  "payload/live/entry_status_entries.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "de9e3aa3efa6e51c9b4d1e77d08ccb998431bb862e1a0c556b9da6b95c4b856e",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/entry_neko_commands.py",
+                      "bytes":  26010,
+                      "payload":  "payload/live/entry_neko_commands.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "6af915f1e666938ab490486dbabe526d03c7b4a9eeedf6741294aa3e97ce5321",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/entry_ocr_entries.py",
+                      "bytes":  20760,
+                      "payload":  "payload/live/entry_ocr_entries.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "e35bd1bf795d5e6faa84227433199360594b8de14ecad97a1d4314d9991f6c2e",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/llm_prompts.py",
+                      "bytes":  20633,
+                      "payload":  "payload/live/llm_prompts.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "25ccc63f55bcbb0ea35964f6269048edae7e62bfaa2ef33c639189524459a7a5",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/static/main.js",
+                      "bytes":  94887,
+                      "payload":  "payload/live/static/main.js"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "a6b8353b9b4a99c3a66ef1a9ed2be531a57c605c4e1f4412e73fecdc1025681d",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/static/index.html",
+                      "bytes":  46065,
+                      "payload":  "payload/live/static/index.html"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "fdbb5140b4bbaa157361847c1c1fa0d91f539e6bcc2cbc8186f0a43328e8d49f",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/static/style.css",
+                      "bytes":  68193,
+                      "payload":  "payload/live/static/style.css"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "0d1bc3d0e708882f0b095817a9da8167df2d5d1c5dc8eb536ed5219d8c1de324",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/i18n/zh-CN.json",
+                      "bytes":  51008,
+                      "payload":  "payload/live/i18n/zh-CN.json"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "b8fd7f7a38e3c1e05d672c950cef48591ec4799fddc425bcd6ca127d07da9636",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/i18n/en.json",
+                      "bytes":  53441,
+                      "payload":  "payload/live/i18n/en.json"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "a872c2444e178586a85186ea5817d8ff47d18a3ee7fee738c37c70e926cde753",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/entry_tutor_context_support.py",
+                      "bytes":  45872,
+                      "payload":  "payload/live/entry_tutor_context_support.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "8b37398f73a82c435bf05eb2e6c567670f490a61dc912d6a61ef920b88513ef3",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/entry_tutor_explain_entries.py",
+                      "bytes":  29238,
+                      "payload":  "payload/live/entry_tutor_explain_entries.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "bb68108ef723a1dcbaf39b05e4d6fb7fbbdee2fa0d21ee1585a9893520c05594",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/entry_tutor_question_entries.py",
+                      "bytes":  34882,
+                      "payload":  "payload/live/entry_tutor_question_entries.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "3d749cf88dca94dd03404ad6c96b4f1a88ed8a5b37bc4b90a7814c1923c46d40",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/prompt_templates.py",
+                      "bytes":  17772,
+                      "payload":  "payload/live/prompt_templates.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "0123c331f49f114f61c292410bf8ebf59a4cfedde261a750fb1396afde29b83d",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/models.py",
+                      "bytes":  31729,
+                      "payload":  "payload/live/models.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "337d850e6884b92f98c0602245fa661792ab763d8723e936ad657e7f35e2c72f",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/store_schema.py",
+                      "bytes":  17979,
+                      "payload":  "payload/live/store_schema.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "9d212433a5958db67b1b1f3c9e8aec25186dc0d4b038ba5764c74ae710d2f8e9",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/store.py",
+                      "bytes":  62648,
+                      "payload":  "payload/live/store.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "666b1c4ce7b91b54ec1ea8a600b2a25c4f8943e455aed095d9e2d4c78c43a36f",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/store_qa.py",
+                      "bytes":  13432,
+                      "payload":  "payload/live/store_qa.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "2f3e183ed89bff4ad7d525ffa69730370e4df3378219eb1946f76186db520a25",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/entry_tutor_summary_entries.py",
+                      "bytes":  5156,
+                      "payload":  "payload/live/entry_tutor_summary_entries.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "8a5fe9f1141209804a2c552c7685d708fc00e423b478ffc7f0359b561f786eaf",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/entry_tutor_answer_entries.py",
+                      "bytes":  16377,
+                      "payload":  "payload/live/entry_tutor_answer_entries.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "b207345024a18ac53d4e705aedadc46374155a650d76e3e4a79743b6aebde309",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/entry_document_analysis_jobs.py",
+                      "bytes":  24267,
+                      "payload":  "payload/live/entry_document_analysis_jobs.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "b41b6c827a1477e011070a69cd092ed5118ee85ab3e2bd7323fad5d3dddffd3b",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/tutor_llm_agent_answer_evaluate.py",
+                      "bytes":  4328,
+                      "payload":  "payload/live/tutor_llm_agent_answer_evaluate.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "e920c30b6e3bc631965638afe487770e6a53c76aa010b00c7645385965799727",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/__init__.py",
+                      "bytes":  61835,
+                      "payload":  "payload/live/__init__.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "2adce3d0951ac0996029e8072292d9988bdf670df2f23266f681878abe5d68c5",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/plugin.toml",
+                      "bytes":  2889,
+                      "payload":  "payload/live/plugin.toml"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "319bea1dc6929b8ae5bb0e94ac3b901da0b70a2e2e90f2d0371724d3f1ed9769",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/lab_bootstrap.py",
+                      "bytes":  111,
+                      "payload":  "payload/live/lab_bootstrap.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "99b7e0357c189551a9d54bcd2efcfc9bddb8c6432447f3f188bbff24e7fa51ee",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/lab_bootstrap_plane.py",
+                      "bytes":  190,
+                      "payload":  "payload/live/lab_bootstrap_plane.py"
+                  },
+                  {
+                      "root":  "live",
+                      "sha256":  "b1ffc714af47eaf9164cb2ade5f4b8691ae08a8a0a6086572df48536549153cd",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/lab_entry.py",
+                      "bytes":  60490,
+                      "payload":  "payload/live/lab_entry.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "13bdcc291cb196e51021d3e873f9678f8ffc7429d8b4fa63cb2ffce12350d673",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/_event_bus.py",
+                      "bytes":  27889,
+                      "payload":  "payload/bridge/_event_bus.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "69061bb6678fb70cffda8d57e86cb868d34cac120dfc8d38e2e65081a1dbab9f",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/entry_status_entries.py",
+                      "bytes":  20152,
+                      "payload":  "payload/bridge/entry_status_entries.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "de9e3aa3efa6e51c9b4d1e77d08ccb998431bb862e1a0c556b9da6b95c4b856e",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/entry_neko_commands.py",
+                      "bytes":  26010,
+                      "payload":  "payload/bridge/entry_neko_commands.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "6af915f1e666938ab490486dbabe526d03c7b4a9eeedf6741294aa3e97ce5321",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/entry_ocr_entries.py",
+                      "bytes":  20760,
+                      "payload":  "payload/bridge/entry_ocr_entries.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "e35bd1bf795d5e6faa84227433199360594b8de14ecad97a1d4314d9991f6c2e",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/llm_prompts.py",
+                      "bytes":  20633,
+                      "payload":  "payload/bridge/llm_prompts.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "5526ed3efc3d665b84c6dcb328ce6f40d9797dd38011b251703e4deeb2d20b01",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/static/main.js",
+                      "bytes":  94354,
+                      "payload":  "payload/bridge/static/main.js"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "b81eb768645b1441e0e61e2d82f4645838ba062a09f1f5fb865a72b192c4acda",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/static/index.html",
+                      "bytes":  45672,
+                      "payload":  "payload/bridge/static/index.html"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "066d4f72bb42786142c0877e383f0e19982a1b46fb1061e0fbdc435cad9e92bb",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/static/style.css",
+                      "bytes":  68187,
+                      "payload":  "payload/bridge/static/style.css"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "e36ab45c24cefbe4b3455d91818a9f4b2dcb0b1c9cff4e199e3f2476f6877dc1",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/i18n/zh-CN.json",
+                      "bytes":  50653,
+                      "payload":  "payload/bridge/i18n/zh-CN.json"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "01b13e09b761acd5f3e466358f827333caa49c2d6786c9767b6b9b22195102e4",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/i18n/en.json",
+                      "bytes":  53062,
+                      "payload":  "payload/bridge/i18n/en.json"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "a872c2444e178586a85186ea5817d8ff47d18a3ee7fee738c37c70e926cde753",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/entry_tutor_context_support.py",
+                      "bytes":  45872,
+                      "payload":  "payload/bridge/entry_tutor_context_support.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "8b37398f73a82c435bf05eb2e6c567670f490a61dc912d6a61ef920b88513ef3",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/entry_tutor_explain_entries.py",
+                      "bytes":  29238,
+                      "payload":  "payload/bridge/entry_tutor_explain_entries.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "bb68108ef723a1dcbaf39b05e4d6fb7fbbdee2fa0d21ee1585a9893520c05594",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/entry_tutor_question_entries.py",
+                      "bytes":  34882,
+                      "payload":  "payload/bridge/entry_tutor_question_entries.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "3d749cf88dca94dd03404ad6c96b4f1a88ed8a5b37bc4b90a7814c1923c46d40",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/prompt_templates.py",
+                      "bytes":  17772,
+                      "payload":  "payload/bridge/prompt_templates.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "0123c331f49f114f61c292410bf8ebf59a4cfedde261a750fb1396afde29b83d",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/models.py",
+                      "bytes":  31729,
+                      "payload":  "payload/bridge/models.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "337d850e6884b92f98c0602245fa661792ab763d8723e936ad657e7f35e2c72f",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/store_schema.py",
+                      "bytes":  17979,
+                      "payload":  "payload/bridge/store_schema.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "9d212433a5958db67b1b1f3c9e8aec25186dc0d4b038ba5764c74ae710d2f8e9",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/store.py",
+                      "bytes":  62648,
+                      "payload":  "payload/bridge/store.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "666b1c4ce7b91b54ec1ea8a600b2a25c4f8943e455aed095d9e2d4c78c43a36f",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/store_qa.py",
+                      "bytes":  13432,
+                      "payload":  "payload/bridge/store_qa.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "2f3e183ed89bff4ad7d525ffa69730370e4df3378219eb1946f76186db520a25",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/entry_tutor_summary_entries.py",
+                      "bytes":  5156,
+                      "payload":  "payload/bridge/entry_tutor_summary_entries.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "8a5fe9f1141209804a2c552c7685d708fc00e423b478ffc7f0359b561f786eaf",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/entry_tutor_answer_entries.py",
+                      "bytes":  16377,
+                      "payload":  "payload/bridge/entry_tutor_answer_entries.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "b207345024a18ac53d4e705aedadc46374155a650d76e3e4a79743b6aebde309",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/entry_document_analysis_jobs.py",
+                      "bytes":  24267,
+                      "payload":  "payload/bridge/entry_document_analysis_jobs.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "b41b6c827a1477e011070a69cd092ed5118ee85ab3e2bd7323fad5d3dddffd3b",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/tutor_llm_agent_answer_evaluate.py",
+                      "bytes":  4328,
+                      "payload":  "payload/bridge/tutor_llm_agent_answer_evaluate.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "4825aaf2195f8b33a581f6e7de08efd7bce04e0b47cd4c776b15ab340c84cbeb",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/__init__.py",
+                      "bytes":  61469,
+                      "payload":  "payload/bridge/__init__.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "2adce3d0951ac0996029e8072292d9988bdf670df2f23266f681878abe5d68c5",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/plugin.toml",
+                      "bytes":  2889,
+                      "payload":  "payload/bridge/plugin.toml"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "319bea1dc6929b8ae5bb0e94ac3b901da0b70a2e2e90f2d0371724d3f1ed9769",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/lab_bootstrap.py",
+                      "bytes":  111,
+                      "payload":  "payload/bridge/lab_bootstrap.py"
+                  },
+                  {
+                      "root":  "bridge",
+                      "sha256":  "99b7e0357c189551a9d54bcd2efcfc9bddb8c6432447f3f188bbff24e7fa51ee",
+                      "source":  "benchmarks/raw/neko-app/resources/bin/plugins/study_companion/lab_bootstrap_plane.py",
+                      "bytes":  190,
+                      "payload":  "payload/bridge/lab_bootstrap_plane.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "13bdcc291cb196e51021d3e873f9678f8ffc7429d8b4fa63cb2ffce12350d673",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/_event_bus.py",
+                      "bytes":  27889,
+                      "payload":  "payload/isolated/_event_bus.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "69061bb6678fb70cffda8d57e86cb868d34cac120dfc8d38e2e65081a1dbab9f",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/entry_status_entries.py",
+                      "bytes":  20152,
+                      "payload":  "payload/isolated/entry_status_entries.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "de9e3aa3efa6e51c9b4d1e77d08ccb998431bb862e1a0c556b9da6b95c4b856e",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/entry_neko_commands.py",
+                      "bytes":  26010,
+                      "payload":  "payload/isolated/entry_neko_commands.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "6af915f1e666938ab490486dbabe526d03c7b4a9eeedf6741294aa3e97ce5321",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/entry_ocr_entries.py",
+                      "bytes":  20760,
+                      "payload":  "payload/isolated/entry_ocr_entries.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "e35bd1bf795d5e6faa84227433199360594b8de14ecad97a1d4314d9991f6c2e",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/llm_prompts.py",
+                      "bytes":  20633,
+                      "payload":  "payload/isolated/llm_prompts.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "25ccc63f55bcbb0ea35964f6269048edae7e62bfaa2ef33c639189524459a7a5",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/static/main.js",
+                      "bytes":  94887,
+                      "payload":  "payload/isolated/static/main.js"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "a6b8353b9b4a99c3a66ef1a9ed2be531a57c605c4e1f4412e73fecdc1025681d",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/static/index.html",
+                      "bytes":  46065,
+                      "payload":  "payload/isolated/static/index.html"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "fdbb5140b4bbaa157361847c1c1fa0d91f539e6bcc2cbc8186f0a43328e8d49f",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/static/style.css",
+                      "bytes":  68193,
+                      "payload":  "payload/isolated/static/style.css"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "0d1bc3d0e708882f0b095817a9da8167df2d5d1c5dc8eb536ed5219d8c1de324",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/i18n/zh-CN.json",
+                      "bytes":  51008,
+                      "payload":  "payload/isolated/i18n/zh-CN.json"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "b8fd7f7a38e3c1e05d672c950cef48591ec4799fddc425bcd6ca127d07da9636",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/i18n/en.json",
+                      "bytes":  53441,
+                      "payload":  "payload/isolated/i18n/en.json"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "a872c2444e178586a85186ea5817d8ff47d18a3ee7fee738c37c70e926cde753",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/entry_tutor_context_support.py",
+                      "bytes":  45872,
+                      "payload":  "payload/isolated/entry_tutor_context_support.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "8b37398f73a82c435bf05eb2e6c567670f490a61dc912d6a61ef920b88513ef3",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/entry_tutor_explain_entries.py",
+                      "bytes":  29238,
+                      "payload":  "payload/isolated/entry_tutor_explain_entries.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "bb68108ef723a1dcbaf39b05e4d6fb7fbbdee2fa0d21ee1585a9893520c05594",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/entry_tutor_question_entries.py",
+                      "bytes":  34882,
+                      "payload":  "payload/isolated/entry_tutor_question_entries.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "3d749cf88dca94dd03404ad6c96b4f1a88ed8a5b37bc4b90a7814c1923c46d40",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/prompt_templates.py",
+                      "bytes":  17772,
+                      "payload":  "payload/isolated/prompt_templates.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "0123c331f49f114f61c292410bf8ebf59a4cfedde261a750fb1396afde29b83d",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/models.py",
+                      "bytes":  31729,
+                      "payload":  "payload/isolated/models.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "337d850e6884b92f98c0602245fa661792ab763d8723e936ad657e7f35e2c72f",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/store_schema.py",
+                      "bytes":  17979,
+                      "payload":  "payload/isolated/store_schema.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "9d212433a5958db67b1b1f3c9e8aec25186dc0d4b038ba5764c74ae710d2f8e9",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/store.py",
+                      "bytes":  62648,
+                      "payload":  "payload/isolated/store.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "666b1c4ce7b91b54ec1ea8a600b2a25c4f8943e455aed095d9e2d4c78c43a36f",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/store_qa.py",
+                      "bytes":  13432,
+                      "payload":  "payload/isolated/store_qa.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "2f3e183ed89bff4ad7d525ffa69730370e4df3378219eb1946f76186db520a25",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/entry_tutor_summary_entries.py",
+                      "bytes":  5156,
+                      "payload":  "payload/isolated/entry_tutor_summary_entries.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "8a5fe9f1141209804a2c552c7685d708fc00e423b478ffc7f0359b561f786eaf",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/entry_tutor_answer_entries.py",
+                      "bytes":  16377,
+                      "payload":  "payload/isolated/entry_tutor_answer_entries.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "b207345024a18ac53d4e705aedadc46374155a650d76e3e4a79743b6aebde309",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/entry_document_analysis_jobs.py",
+                      "bytes":  24267,
+                      "payload":  "payload/isolated/entry_document_analysis_jobs.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "b41b6c827a1477e011070a69cd092ed5118ee85ab3e2bd7323fad5d3dddffd3b",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/tutor_llm_agent_answer_evaluate.py",
+                      "bytes":  4328,
+                      "payload":  "payload/isolated/tutor_llm_agent_answer_evaluate.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "4825aaf2195f8b33a581f6e7de08efd7bce04e0b47cd4c776b15ab340c84cbeb",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/__init__.py",
+                      "bytes":  61469,
+                      "payload":  "payload/isolated/__init__.py"
+                  },
+                  {
+                      "root":  "isolated",
+                      "sha256":  "2adce3d0951ac0996029e8072292d9988bdf670df2f23266f681878abe5d68c5",
+                      "source":  "benchmarks/raw/goal-isolated/study_companion/plugin.toml",
+                      "bytes":  2889,
+                      "payload":  "payload/isolated/plugin.toml"
+                  }
+              ]
+}

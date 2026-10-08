@@ -9,4 +9,6 @@
 
 补丁不包含原始安装包、凭据、用户数据库或截图；本机完整原始备份都在 ignored `benchmarks/raw/evidence/goal-backups/`。新机器应用前核对版本与上下文并执行 `git apply --check` 或等价检查，不把这些 diff 视为跨版本通用安装器。
 
-本轮 Python 14 项与两个前端逻辑脚本通过，实际 Study UI 和冷启动有指定样本通过；区域截图、最终 awareness 角色 UI 投递和真实语音仍未验收。切换回原冻结入口需后台重启，不可用初始整个数据库覆盖当前学习记录。
+**2026-10-09 更新**：本 patch 已重新生成（971 行），包含 10-09 第二轮对 `llm_prompts.py`（会话记忆注入、summarize 上下文投影）与 `entry_ocr_entries.py`（`active_window` 捕获模式）的改动。第二轮还改动了 `prompt_templates.py`、`entry_tutor_context_support.py`、`entry_tutor_explain_entries.py`、`entry_tutor_question_entries.py`——这四个文件不在本 patch 的文件清单里（10-08 那一轮未改动它们，本地无原始备份可比对），其增量 diff 见 `../neko-study-2026-10-09-round2/`。**两份 patch 合起来才是完整的当前工作树状态。**
+
+本轮 Python 21 项（含新增 6 项）与两个前端逻辑脚本通过，实际 Study UI 和冷启动有指定样本通过；区域截图、真实 awareness 角色投递、真实语音仍未验收。切换回原冻结入口需后台重启，不可用初始整个数据库覆盖当前学习记录。

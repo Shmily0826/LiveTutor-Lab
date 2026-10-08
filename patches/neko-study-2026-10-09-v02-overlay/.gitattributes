@@ -1,0 +1,2 @@
+# Keep archived snapshot payload byte-exact; preserve original line endings.
+payload/** -text whitespace=-blank-at-eol

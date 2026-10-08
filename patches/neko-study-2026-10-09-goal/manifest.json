@@ -1,0 +1,26 @@
+{
+  "kind": "PARTIAL_FINGERPRINTED_SOURCE_PATCH",
+  "base": "preserved round2 _pre source snapshot; not pristine vendor archive",
+  "files": {
+    "entry_tutor_context_support.py": {
+      "preimage_sha256": "8a9e465349e9bacb12fceef8fca72eb0238f02a94218b41f5c461e22303c3115",
+      "runtime_postimage_sha256": "a872c2444e178586a85186ea5817d8ff47d18a3ee7fee738c37c70e926cde753"
+    },
+    "entry_tutor_explain_entries.py": {
+      "preimage_sha256": "4bc39750854436efbd7840e2ba145c15ca9db659aea68a616ce46fff3caa8ed6",
+      "runtime_postimage_sha256": "8b37398f73a82c435bf05eb2e6c567670f490a61dc912d6a61ef920b88513ef3"
+    },
+    "entry_tutor_question_entries.py": {
+      "preimage_sha256": "5886963c0a42874e2a174bf22b8e71edd3bf9609ce15e521f4029c04bb798ab5",
+      "runtime_postimage_sha256": "bb68108ef723a1dcbaf39b05e4d6fb7fbbdee2fa0d21ee1585a9893520c05594"
+    },
+    "llm_prompts.py": {
+      "preimage_sha256": "65c058c688284c790b53bef14f165cd2ae48f8b6e36367f74e42869021842cf9",
+      "runtime_postimage_sha256": "e35bd1bf795d5e6faa84227433199360594b8de14ecad97a1d4314d9991f6c2e"
+    },
+    "prompt_templates.py": {
+      "preimage_sha256": "a30383d69855e10c78a15528925ad6230ff0d0b0ab6d23189f5697a7fc51c2c0",
+      "runtime_postimage_sha256": "3d749cf88dca94dd03404ad6c96b4f1a88ed8a5b37bc4b90a7814c1923c46d40"
+    }
+  }
+}

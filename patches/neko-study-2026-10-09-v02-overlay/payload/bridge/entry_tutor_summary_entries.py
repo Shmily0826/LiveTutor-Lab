@@ -1,0 +1,132 @@
+from __future__ import annotations
+
+from .entry_common import (
+    asyncio,
+    Err,
+    Ok,
+    SdkError,
+    plugin_entry,
+    tr,
+    ui,
+    LLM_OPERATION_SUMMARIZE_SESSION,
+)
+
+
+class _TutorSummaryEntriesMixin:
+    @ui.action()
+    @plugin_entry(
+        id="study_start_session",
+        name=tr("entries.start_session.name", default="Start Study Session"),
+        description=tr("entries.start_session.description", default="Start a new persistent study session."),
+        input_schema={"type": "object", "properties": {}},
+        llm_result_fields=["session_id", "started_at"],
+    )
+    async def study_start_session(self, **_):
+        session_id = await self._restart_study_session()
+        sessions = await asyncio.to_thread(self._store.list_sessions, 1)
+        session = next(
+            (row for row in sessions if row.get("id") == session_id), {}
+        )
+        return Ok({"session_id": session_id, "started_at": session.get("started_at", "")})
+
+    @ui.action()
+    @plugin_entry(
+        id="study_end_session",
+        name=tr("entries.end_session.name", default="End Study Session"),
+        description=tr("entries.end_session.description", default="End the active study session."),
+        input_schema={"type": "object", "properties": {}},
+        llm_result_fields=["session_id", "ended_at"],
+    )
+    async def study_end_session(self, **_):
+        session_id = await self._end_study_session()
+        sessions = await asyncio.to_thread(self._store.list_sessions, 100)
+        session = next((row for row in sessions if row.get("id") == session_id), {})
+        return Ok({"session_id": session_id, "ended_at": session.get("ended_at", "")})
+
+    @ui.action()
+    @plugin_entry(
+        id="study_get_session",
+        name=tr("entries.get_session.name", default="Get Study Session"),
+        description=tr("entries.get_session.description", default="Retrieve a saved study session and its interactions."),
+        input_schema={"type": "object", "required": ["session_id"], "properties": {"session_id": {"type": "string"}}},
+        llm_result_fields=["session", "interactions"],
+    )
+    async def study_get_session(self, session_id: str = "", **_):
+        session = next(
+            (row for row in await asyncio.to_thread(self._store.list_sessions, 500)
+             if row.get("id") == str(session_id or "").strip()),
+            None,
+        )
+        if session is None:
+            return Err(SdkError("study session not found", code="SESSION_NOT_FOUND"))
+        interactions = await asyncio.to_thread(
+            self._store.list_interactions, 500, session_id=session["id"]
+        )
+        return Ok({"session": session, "interactions": interactions})
+
+    @ui.action()
+    @plugin_entry(
+        id="study_summarize_session",
+        name=tr("entries.summarize_session.name", default="Summarize Study Session"),
+        description=tr(
+            "entries.summarize_session.description",
+            default="Summarize recent study interactions into compact study notes.",
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {"focus": {"type": "string", "default": ""}},
+        },
+        timeout=85.0,
+        llm_result_fields=[
+            "summary",
+            "markdown",
+            "highlights",
+            "weak_points",
+            "next_actions",
+        ],
+    )
+    async def study_summarize_session(self, focus: str = "", **_):
+        if self._agent is None:
+            return Err(SdkError("study tutor agent is not initialized"))
+        async with self._lock:
+            active_mode = self._state.active_mode
+        session_id = await self._ensure_active_study_session()
+        history = await asyncio.to_thread(
+            self._store.list_interactions,
+            max(5, min(30, self._cfg.history_limit)),
+            session_id=session_id,
+        )
+        tutor_context = await self._build_learning_context(
+            LLM_OPERATION_SUMMARIZE_SESSION,
+            input_text="session",
+            extra={
+                "focus": str(focus or "").strip(),
+                "mode": active_mode,
+            },
+            session_id=session_id,
+        )
+        reply = await self._agent.summarize_session(
+            history, mode=active_mode, context=tutor_context
+        )
+        payload = await self._finalize_tutor_call(
+            LLM_OPERATION_SUMMARIZE_SESSION,
+            reply,
+            history_kind=LLM_OPERATION_SUMMARIZE_SESSION,
+            metadata={
+                "degraded": reply.degraded,
+                "diagnostic": reply.diagnostic,
+                "payload": reply.payload,
+                "screen_classification": tutor_context.get("screen_classification")
+                or {},
+            },
+        )
+        payload["screen_classification"] = (
+            tutor_context.get("screen_classification") or {}
+        )
+        if reply.degraded:
+            return Ok(payload)
+        try:
+            await self._emit_session_summarized_event(payload)
+        except Exception as exc:
+            self.logger.warning("study session summarized event degraded: {}", exc)
+        return Ok(payload)
