@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>NEKO-LAB-20261009 定积分换元法复习</title>
+<style>
+  body { font-family: "Microsoft YaHei", sans-serif; margin: 18px 42px; font-size: 17px; color: #111; background: #fff; line-height: 1.45; }
+  h1 { font-size: 25px; border-bottom: 2px solid #333; padding-bottom: 4px; margin: 0 0 6px; }
+  h2 { font-size: 19px; margin: 12px 0 4px; }
+  .formula { font-family: "Cambria Math", Georgia, serif; font-size: 18px; background: #f4f4f4; padding: 5px 14px; border-radius: 6px; margin: 6px 0; }
+  .example { border: 2px solid #888; border-radius: 8px; padding: 6px 14px; margin: 8px 0; }
+  .example p { margin: 3px 0; }
+  .warn { border: 3px dashed #c0392b; border-radius: 8px; padding: 6px 14px; margin: 8px 0; color: #c0392b; font-weight: bold; }
+  .warn p { margin: 3px 0; }
+  .tag { color: #888; font-size: 14px; margin: 2px 0 8px; }
+  p { margin: 4px 0; }
+</style>
+</head>
+<body>
+<h1>定积分与不定积分：换元法（第一换元法 / 凑微分）</h1>
+<p class="tag">课程复习材料 NEKO-LAB-20261009 · 微积分 II · 第 5 章复习页</p>
+
+<h2>一、方法</h2>
+<p>当被积函数可以写成 f(g(x))·g′(x) 的形式时，设 u = g(x)，则 du = g′(x) dx。</p>
+<div class="formula">∫ f(g(x))·g′(x) dx = ∫ f(u) du</div>
+<p>求出关于 u 的原函数后，必须把 u = g(x) 代回，换成 x 的函数，最后不要忘记 + C。</p>
+
+<h2>二、例题 1</h2>
+<div class="example">
+<p>计算 ∫ 2x·cos(x²) dx。</p>
+<p>令 u = x²，则 du = 2x dx，被积函数恰好凑成 cos(u) du。</p>
+<p>所以原式 = ∫ cos(u) du = sin(u) + C = sin(x²) + C。</p>
+</div>
+
+<h2>三、例题 2</h2>
+<div class="example">
+<p>计算 ∫ x·e<sup>x²</sup> dx。</p>
+<p>令 u = x²，则 du = 2x dx，于是 x dx = (1/2) du。</p>
+<p>所以原式 = (1/2) ∫ e<sup>u</sup> du = (1/2) e<sup>u</sup> + C = (1/2) e<sup>x²</sup> + C。</p>
+<p>注意这里出现了系数 1/2：因为 du 里有因子 2，凑微分时要除回去。</p>
+</div>
+
+<h2>四、易错警示</h2>
+<div class="warn">
+<p>∫ x·cos(x) dx 不能用换元法！</p>
+<p>虽然看起来和例题 1 很像，但这里 x 与 cos(x) 不是"外层套内层"的复合关系，
+x 自己就是自变量。强行令 u = x 只会得到 du = dx，等于什么都没换。</p>
+<p>正确做法是分部积分：∫ x·cos(x) dx = x·sin(x) − ∫ sin(x) dx = x·sin(x) + cos(x) + C。</p>
+</div>
+
+<h2>五、检查清单</h2>
+<p>① 是否找准了内层函数 u = g(x)？② du 是否真的凑出来了（差常数要除回去）？
+③ 积分完成后是否回代成 x 的函数？④ 是否写了 + C？</p>
+</body>
+</html>

@@ -301,9 +301,11 @@
                  except Exception as exc:
                      self.logger.warning(
                          "shutdown: failed to stop {} messages bus watcher: {}",
+diff --git a/plugin/plugins/study_companion/entry_ocr_entries.py b/plugin/plugins/study_companion/entry_ocr_entries.py
+index fb33240..f5ce70d 100644
 --- a/plugin/plugins/study_companion/entry_ocr_entries.py
 +++ b/plugin/plugins/study_companion/entry_ocr_entries.py
-@@ -59,7 +59,8 @@
+@@ -59,7 +59,8 @@ class _OcrEntriesMixin:
                      "type": "string",
                      "enum": ["fullscreen", "interactive"],
                      "default": "fullscreen",
@@ -313,7 +315,7 @@
              },
          },
          timeout=90.0,
-@@ -72,7 +73,7 @@
+@@ -72,7 +73,7 @@ class _OcrEntriesMixin:
              "interactive_fallback_reason",
          ],
      )
@@ -322,7 +324,7 @@
          if self._ocr_pipeline is None:
              return Err(SdkError("study OCR pipeline is not initialized"))
          if capture_mode not in {"fullscreen", "interactive"}:
-@@ -85,6 +86,8 @@
+@@ -85,6 +86,8 @@ class _OcrEntriesMixin:
                      lanlan_name=_ocr_request_lanlan(kwargs)
                  )
              except InteractiveCaptureError as exc:
@@ -331,7 +333,15 @@
                  exc_text = str(exc)
                  interactive_fallback_reason = next(
                      (
-@@ -121,6 +124,8 @@
+@@ -93,6 +96,7 @@ class _OcrEntriesMixin:
+                             "no_renderer",
+                             "main_server_unavailable",
+                             "interactive_unavailable",
++                            "capture_busy",
+                         )
+                         if code in exc_text
+                     ),
+@@ -121,6 +125,8 @@ class _OcrEntriesMixin:
          else:
              snapshot = await asyncio.to_thread(self._ocr_pipeline.capture_snapshot)
          payload = build_ocr_payload(snapshot)
