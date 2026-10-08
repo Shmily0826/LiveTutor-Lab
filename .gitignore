@@ -13,3 +13,7 @@ Thumbs.db
 .DS_Store
 .idea/
 .vscode/
+
+# Local browser evidence and Python bytecode
+.playwright-cli/
+__pycache__/

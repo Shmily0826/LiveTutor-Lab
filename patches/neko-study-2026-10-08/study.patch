@@ -1,0 +1,544 @@
+--- a/plugin/plugins/study_companion/__init__.py
++++ b/plugin/plugins/study_companion/__init__.py
+@@ -151,6 +151,7 @@
+ 
+ 
+ _REVIEW_DUE_INTERVAL_SECONDS = 1800.0
++_AWARENESS_OS_TIMEOUT_SECONDS = 2.0
+ 
+ 
+ from .entry_tutor_context_support import _TutorContextSupportMixin
+@@ -755,7 +756,15 @@
+ 
+     async def _run_awareness_loop(self) -> None:
+         while self._buffer is not None:
+-            await self.awareness_tick()
++            try:
++                await self.awareness_tick()
++            except Exception as exc:
++                self._awareness_last_error_type = type(exc).__name__
++                self.logger.warning("study awareness tick failed: {}", type(exc).__name__)
++            else:
++                self._awareness_tick_count = getattr(self, "_awareness_tick_count", 0) + 1
++                self._awareness_last_tick_at = time.time()
++                self._awareness_last_error_type = ""
+             await asyncio.sleep(self._awareness_sleep_seconds())
+ 
+     def _awareness_sleep_seconds(self) -> float:
+@@ -771,7 +780,10 @@
+     ) -> OsActivitySnapshot | None:
+         if not self._cfg.awareness.os_signals_enabled:
+             return None
+-        return await get_os_activity_snapshot(self.plugin_id, now=now)
++        return await asyncio.wait_for(
++            get_os_activity_snapshot(self.plugin_id, now=now),
++            timeout=_AWARENESS_OS_TIMEOUT_SECONDS,
++        )
+ 
+     async def _read_awareness_os_activity(self, *, now: float):
+         activity_snap = None
+@@ -875,6 +887,13 @@
+             self._awareness_idle_ticks += 1
+             return
+         await buffer.add(activity)
++        self._awareness_capture_count = getattr(self, "_awareness_capture_count", 0) + 1
++        self._awareness_last_observation = {
++            "app_type": activity.app_type,
++            "activity_type": activity.activity_type,
++            "classify_method": activity.classify_method,
++            "window_title_available": bool(activity.window_title.strip()),
++        }
+         if activity.app_type in ("other", "unknown") and activity.activity_type in (
+             "idle",
+             "",
+@@ -929,7 +948,19 @@
+     async def _push_awareness_context(self, summary: ActivitySummary) -> None:
+         mode = self._cfg.awareness.push_to_llm_mode
+         try:
+-            self.push_message(
++            # A local submission before the plane starts can be silently lost.
++            # Bound readiness and retry on a later tick instead of advancing
++            # the success clock while the message components are unavailable.
++            await asyncio.wait_for(
++                self.ctx.bus.messages.get(plugin_id=self.plugin_id, max_count=1),
++                timeout=_AWARENESS_OS_TIMEOUT_SECONDS,
++            )
++        except Exception as exc:
++            self._awareness_push_status = "message_plane_unavailable"
++            self.logger.warning("study awareness delivery unavailable: {}", type(exc).__name__)
++            return
++        try:
++            result = self.push_message(
+                 visibility=[],
+                 ai_behavior="read" if mode == "read" else "respond",
+                 parts=[
+@@ -945,12 +976,18 @@
+                     }
+                 ],
+                 source="awareness",
++                coalesce_key="study-awareness",
+                 priority=0,
+             )
++            if isinstance(result, dict) and (result.get("submitted") is False or result.get("ok") is False):
++                self.logger.warning("study awareness context was not submitted")
++                self._awareness_push_status = "rejected"
++                return
+         except Exception:
+             self.logger.warning("study awareness context push failed", exc_info=True)
+             return
+         self._last_awareness_push_at = time.monotonic()
++        self._awareness_push_status = "submitted" if isinstance(result, dict) and result.get("submitted") is True else "submission_unknown"
+ 
+     @staticmethod
+     def _summary_for_llm(
+@@ -1063,13 +1100,23 @@
+             "weak_topics": self._knowledge_tracker.get_weak_topics(limit=8),
+             "mastery_overview": self._store.list_mastery_overview(limit=8),
+         }
+-        return build_status_payload(
++        payload = build_status_payload(
+             config=self._cfg,
+             state=self._state,
+             history=history,
+             knowledge={**knowledge, "habit": habit_payload},
+             is_first_run=is_first_run,
+         )
++        payload["awareness_runtime"] = {
++            "active": self.is_awareness_active(),
++            "completed_ticks": getattr(self, "_awareness_tick_count", 0),
++            "captured_observations": getattr(self, "_awareness_capture_count", 0),
++            "last_tick_at": getattr(self, "_awareness_last_tick_at", 0.0),
++            "last_error_type": getattr(self, "_awareness_last_error_type", ""),
++            "last_observation": getattr(self, "_awareness_last_observation", None),
++            "push_status": getattr(self, "_awareness_push_status", "not_attempted"),
++        }
++        return payload
+ 
+     def _habit_status_payload(self, today: str) -> dict[str, Any]:
+         if (
+--- a/plugin/plugins/study_companion/entry_status_entries.py
++++ b/plugin/plugins/study_companion/entry_status_entries.py
+@@ -30,6 +30,7 @@
+             "llm_vision_max_image_px": config.llm_vision_max_image_px,
+         },
+         "communication": config.communication.to_dict(),
++        "awareness": config.awareness.to_dict(),
+         "doc_export": config.doc_export.to_dict(),
+     }
+ 
+@@ -49,6 +50,9 @@
+             watcher is not None or (transport is not None and handler is not None)
+         ),
+         "command_worker_active": bool(worker is not None and not worker.done()),
++        "subscription_retry_active": bool(
++            (retry := getattr(owner, "_neko_command_retry_task", None)) is not None and not retry.done()
++        ),
+         "events_emitted": int(bus.emit_count if bus is not None else 0),
+         "events_blocked": int(bus.block_count if bus is not None else 0),
+     }
+@@ -87,6 +91,18 @@
+ def _apply_settings_config(current: StudyConfig, raw: dict) -> StudyConfig:
+     next_values = current.to_dict()
+     study = raw.get("study") if isinstance(raw.get("study"), dict) else {}
++    awareness = raw.get("awareness", study.get("awareness", {}))
++    if isinstance(awareness, dict):
++        next_awareness = dict(next_values.get("awareness") or {})
++        for key in next_awareness:
++            if key not in awareness:
++                continue
++            previous = next_awareness[key]
++            value = awareness[key]
++            next_awareness[key] = (_coerce_bool(value, previous) if isinstance(previous, bool)
++                                   else _coerce_int(value, previous) if isinstance(previous, int)
++                                   else value)
++        next_values["awareness"] = next_awareness
+     ocr = raw.get("ocr_reader") if isinstance(raw.get("ocr_reader"), dict) else {}
+     llm = raw.get("llm") if isinstance(raw.get("llm"), dict) else {}
+     communication = (
+@@ -220,6 +236,12 @@
+         if callable(sync_doc_export_entry):
+             sync_doc_export_entry()
+ 
++    async def _set_awareness_runtime(self, config: StudyConfig) -> None:
++        self.stop_awareness_loop()
++        await self._await_awareness_stop()
++        if config.awareness.enabled:
++            self.start_awareness_loop()
++
+     def _restore_runtime_settings_config(self, config: StudyConfig) -> None:
+         self._cfg = config
+         restore_steps: list[tuple[str, object]] = []
+@@ -277,6 +299,7 @@
+         persist_previous_config: bool,
+     ) -> None:
+         self._restore_runtime_settings_config(previous_config)
++        await self._set_awareness_runtime(previous_config)
+         if runtime_reconciled:
+             try:
+                 await self._set_communication_runtime(previous_runtime_enabled)
+@@ -390,6 +413,8 @@
+                         )
+                     config_application_attempted = True
+                     self._apply_runtime_settings_config(next_config)
++                    if next_config.awareness != previous_config.awareness:
++                        await self._set_awareness_runtime(next_config)
+                     await self._refresh_dependency_status()
+                     await self._persist_state()
+                 except BaseException:
+--- a/plugin/plugins/study_companion/entry_neko_commands.py
++++ b/plugin/plugins/study_companion/entry_neko_commands.py
+@@ -2,6 +2,7 @@
+ 
+ import asyncio
+ import inspect
++import threading
+ from typing import Any
+ 
+ from plugin.sdk.plugin import Err, Ok, SdkError
+@@ -11,6 +12,8 @@
+ 
+ 
+ _NEKO_COMMAND_TOPIC = "neko.study_command"
++_SUBSCRIPTION_TIMEOUT_SECONDS = 2.0
++_SUBSCRIPTION_RETRY_SECONDS = 5.0
+ 
+ _NEKO_COMMAND_HANDLERS: dict[str, str] = {
+     "explain_current": "_handle_neko_explain_current",
+@@ -92,14 +95,30 @@
+ class _NekoCommandsMixin:
+     async def _subscribe_neko_commands(self) -> None:
+         await self._unsubscribe_neko_commands()
+-        if await self._subscribe_neko_command_transport():
+-            return
+-        if await self._subscribe_neko_command_bus():
++        if await self._try_subscribe_neko_commands():
+             return
+         self.logger.warning(
+             "startup: message-plane transport unavailable for {}",
+             _NEKO_COMMAND_TOPIC,
+         )
++        self._neko_command_retry_task = asyncio.create_task(self._retry_neko_commands())
++
++    async def _try_subscribe_neko_commands(self) -> bool:
++        for subscribe in (self._subscribe_neko_command_transport,
++                          self._subscribe_neko_command_bus):
++            try:
++                if await asyncio.wait_for(subscribe(), _SUBSCRIPTION_TIMEOUT_SECONDS):
++                    return True
++            except Exception as exc:
++                self.logger.warning("study command subscription unavailable: {}", type(exc).__name__)
++        return False
++
++    async def _retry_neko_commands(self) -> None:
++        while self._event_bus is not None:
++            await asyncio.sleep(_SUBSCRIPTION_RETRY_SECONDS)
++            if await self._try_subscribe_neko_commands():
++                self.logger.info("study command subscription recovered")
++                return
+ 
+     async def _subscribe_neko_command_transport(self) -> bool:
+         transport = None
+@@ -148,7 +167,41 @@
+                 self._dispatch_neko_command_messages(delta, loop)
+ 
+             watcher.subscribe(on="add")(_on_messages_added)
+-            watcher.start()
++            canceled = threading.Event()
++            cleanup_lock = threading.Lock()
++            cleanup_done = False
++
++            def stop_watcher() -> None:
++                nonlocal cleanup_done
++                with cleanup_lock:
++                    if cleanup_done:
++                        return
++                    cleanup_done = True
++                watcher.stop()
++
++            def start_watcher() -> None:
++                try:
++                    watcher.start()
++                finally:
++                    if canceled.is_set():
++                        stop_watcher()
++
++            start_task = asyncio.create_task(asyncio.to_thread(start_watcher))
++            def started(task) -> None:
++                if not task.cancelled():
++                    task.exception()
++                    if canceled.is_set():
++                        cleanup = asyncio.create_task(asyncio.to_thread(stop_watcher))
++                        cleanup.add_done_callback(lambda task: task.exception() if not task.cancelled() else None)
++
++            start_task.add_done_callback(started)
++            try:
++                await asyncio.shield(start_task)
++            except BaseException:
++                canceled.set()
++                if start_task.done() and not start_task.cancelled():
++                    await asyncio.to_thread(stop_watcher)
++                raise
+         except Exception as exc:
+             self.logger.warning(
+                 "startup: failed to subscribe {} via messages bus: {}",
+@@ -211,13 +264,18 @@
+         return None
+ 
+     async def _unsubscribe_neko_commands(self) -> None:
++        retry = getattr(self, "_neko_command_retry_task", None)
++        self._neko_command_retry_task = None
++        if retry is not None:
++            retry.cancel()
++            await asyncio.gather(retry, return_exceptions=True)
+         watcher = getattr(self, "_neko_command_watcher", None)
+         self._neko_command_watcher = None
+         if watcher is not None:
+             stop = getattr(watcher, "stop", None)
+             if callable(stop):
+                 try:
+-                    stop()
++                    await asyncio.to_thread(stop)
+                 except Exception as exc:
+                     self.logger.warning(
+                         "shutdown: failed to stop {} messages bus watcher: {}",
+--- a/plugin/plugins/study_companion/entry_ocr_entries.py
++++ b/plugin/plugins/study_companion/entry_ocr_entries.py
+@@ -59,7 +59,8 @@
+                     "type": "string",
+                     "enum": ["fullscreen", "interactive"],
+                     "default": "fullscreen",
+-                }
++                },
++                "allow_fullscreen_fallback": {"type": "boolean", "default": True},
+             },
+         },
+         timeout=90.0,
+@@ -72,7 +73,7 @@
+             "interactive_fallback_reason",
+         ],
+     )
+-    async def study_ocr_snapshot(self, capture_mode: str = "fullscreen", **kwargs):
++    async def study_ocr_snapshot(self, capture_mode: str = "fullscreen", allow_fullscreen_fallback: bool = True, **kwargs):
+         if self._ocr_pipeline is None:
+             return Err(SdkError("study OCR pipeline is not initialized"))
+         if capture_mode not in {"fullscreen", "interactive"}:
+@@ -85,6 +86,8 @@
+                     lanlan_name=_ocr_request_lanlan(kwargs)
+                 )
+             except InteractiveCaptureError as exc:
++                if not allow_fullscreen_fallback:
++                    return _entry_exception_error(self, exc, operation="study_ocr_snapshot")
+                 exc_text = str(exc)
+                 interactive_fallback_reason = next(
+                     (
+@@ -121,6 +124,8 @@
+         else:
+             snapshot = await asyncio.to_thread(self._ocr_pipeline.capture_snapshot)
+         payload = build_ocr_payload(snapshot)
++        payload["capture_mode_requested"] = capture_mode
++        payload["capture_mode_used"] = capture_mode_used
+         if capture_mode == "interactive":
+             payload["capture_mode_requested"] = "interactive"
+             payload["capture_mode_used"] = capture_mode_used
+--- a/plugin/plugins/study_companion/llm_prompts.py
++++ b/plugin/plugins/study_companion/llm_prompts.py
+@@ -182,6 +182,14 @@
+ def _context_json_for_prompt(operation: str, context: dict[str, Any]) -> str:
+     limit = STUDY_PROMPT_CONTEXT_MAX_TOKENS.get(operation, 4000)
+     safe_context = _prompt_context(context)
++    # A grade must never be computed from a reference after dropping the answer.
++    required = {}
++    if operation == LLM_OPERATION_ANSWER_EVALUATE:
++        required = {key: safe_context[key] for key in
++                    ("question", "answer", "expected_answer") if key in safe_context}
++        if count_tokens(_json_dump(required)) > limit:
++            raise ValueError("evaluation question and answer exceed prompt budget")
++    auxiliary = {key: value for key, value in safe_context.items() if key not in required}
+     raw = _json_dump(safe_context)
+     if count_tokens(raw) <= limit:
+         return raw
+@@ -191,19 +199,20 @@
+         (4, 240, 16),
+     ):
+         compact = _compact_prompt_value(
+-            safe_context,
++            auxiliary,
+             list_limit=list_limit,
+             string_limit=string_limit,
+             dict_key_limit=dict_key_limit,
+         )
+         if isinstance(compact, dict):
+-            compact = {"_prompt_truncated": True, **compact}
++            compact = {"_prompt_truncated": True, **required, **compact}
+         rendered = _json_dump(compact)
+         if count_tokens(rendered) <= limit:
+             return rendered
+-    excerpt = truncate_to_tokens(raw, max(0, limit - 100))
++    excerpt = truncate_to_tokens(_json_dump(auxiliary), max(0, limit - count_tokens(_json_dump(required)) - 100))
+     fallback = {
+         "_prompt_truncated": True,
++        **required,
+         "context_excerpt": f"{excerpt}\n...[truncated {len(raw) - len(excerpt)} chars]",
+     }
+     while count_tokens(_json_dump(fallback)) > limit and excerpt:
+--- a/plugin/plugins/study_companion/static/main.js
++++ b/plugin/plugins/study_companion/static/main.js
+@@ -58,6 +58,7 @@
+ const ocrBtn = $id('ocrBtn');
+ const generateQuestionBtn = $id('generateQuestionBtn');
+ const explainBtn = $id('explainBtn');
++const usePreviousExplanation = $id('usePreviousExplanation');
+ const evaluateAnswerBtn = $id('evaluateAnswerBtn');
+ const summarizeBtn = $id('summarizeBtn');
+ const answerInput = $id('answerInput');
+@@ -168,6 +169,7 @@
+ let refreshPending = false;
+ let learningProfileModal = null;
+ let lastReplyValue = '';
++let previousExplanation = null;
+ let ocrN = '';
+ let ocrT = '';
+ let studyInputImageValue = '';
+@@ -1953,13 +1955,16 @@
+ }
+ 
+ async function runOcr(options = {}) {
+-  setStatus(t(
++  const captureMode = $id('ocrCaptureMode')?.value === 'fullscreen' ? 'fullscreen' : 'interactive';
++  setStatus(captureMode === 'fullscreen' ? t('ui.status.preparing_ocr_fullscreen',
++    'Switch to the learning material. Reading the entire screen starts in 2 seconds...') : t(
+     'ui.status.preparing_ocr_selection',
+     'Screen selection opens in 2 seconds...',
+   ));
+   let data;
+   try {
+-    data = await callPlugin('study_ocr_snapshot', { capture_mode: 'interactive' });
++    if (captureMode === 'fullscreen') await new Promise(resolve => setTimeout(resolve, 2000));
++    data = await callPlugin('study_ocr_snapshot', { capture_mode: captureMode, allow_fullscreen_fallback: false });
+   } catch (error) {
+     const localizedMessage = interactiveOcrErrorMessage(error);
+     if (!localizedMessage) {
+@@ -1972,7 +1977,9 @@
+     return data;
+   }
+   const s = data.status || 'unknown';
+-  const n = data.capture_mode_used === 'fullscreen' && ['ok', 'empty'].includes(s) ? interactiveOcrFallbackMessage(data.interactive_fallback_reason) : '';
++  const n = data.capture_mode_used === 'fullscreen' && ['ok', 'empty'].includes(s)
++    ? (captureMode === 'fullscreen' ? t('ui.status.ocr_explicit_fullscreen', 'Read the entire screen, including other visible windows.')
++      : interactiveOcrFallbackMessage(data.interactive_fallback_reason)) : '';
+   const text = String(data.text || '').trim();
+   if (text) {
+     studyInput.value = data.text;
+@@ -1988,17 +1995,29 @@
+   return data;
+ }
+ 
++function buildFollowupText(text, previous) {
++  if (!previous) return text;
++  return JSON.stringify({previous_input: previous.input,
++    previous_explanation: previous.reply, current_followup: text});
++}
++
+ async function explainText(options = {}) {
+   const text = studyInput.value.trim();
+   if (!text && !studyInputImageValue) {
+     throw new Error(t('ui.error.missing_study_input', 'Please enter text or paste an image first.'));
++  }
++  const requestText = buildFollowupText(text,
++    usePreviousExplanation?.checked ? previousExplanation : null);
++  if (requestText.length > 12000 && usePreviousExplanation?.checked) {
++    throw new Error(t('ui.error.followup_context_too_long',
++      'The previous explanation is too long. Uncheck Use previous explanation and quote the relevant passage.'));
+   }
+   const n = (options.notice || (text === ocrT ? ocrN : '')).trim();
+   const pending = studyInputImageValue ? t('ui.status.solving_problem', 'Solving problem...') : t('ui.status.explaining', 'Explaining...');
+   setStatus(pending);
+   setReply(n ? `${n}\n\n${pending}` : pending);
+   scrollReplyIntoView();
+-  const args = { text };
++  const args = { text: requestText };
+   if (studyInputImageValue) {
+     args.vision_image_base64 = studyInputImageValue;
+   }
+@@ -2012,6 +2031,10 @@
+   setStatus(data.degraded
+     ? t('ui.status.reply_ready_fallback', 'Reply ready (fallback)')
+     : t('ui.status.reply_ready', 'Reply ready'));
++  if (!data.degraded && data.reply) {
++    previousExplanation = {input: text, reply: data.reply};
++    if (usePreviousExplanation) usePreviousExplanation.disabled = false;
++  }
+   setReply([
+     n,
+     data.degraded
+--- a/plugin/plugins/study_companion/static/index.html
++++ b/plugin/plugins/study_companion/static/index.html
+@@ -69,6 +69,10 @@
+ 
+             <div class="toolbar-actions">
+               <button id="refreshBtn" class="button button-secondary" type="button" data-i18n="ui.button.refresh">Refresh</button>
++              <select id="ocrCaptureMode" class="button button-secondary" aria-label="OCR capture area" data-i18n-aria-label="ui.label.ocr_capture_area">
++                <option value="interactive" data-i18n="ui.label.ocr_select_area">Select area</option>
++                <option value="fullscreen" data-i18n="ui.label.ocr_entire_screen">Entire screen</option>
++              </select>
+               <button id="ocrBtn" class="button button-primary" type="button" data-i18n="ui.button.ocr">OCR</button>
+             </div>
+           </div>
+@@ -315,6 +319,10 @@
+               <div id="studyInputPasteError" class="study-panel__paste-error" role="alert" hidden></div>
+               <div class="action-row">
+                 <button id="explainBtn" class="button button-primary" type="button" data-i18n="ui.button.explain">Explain</button>
++                <label class="setting-field setting-field-inline">
++                  <input id="usePreviousExplanation" type="checkbox" disabled />
++                  <span data-i18n="ui.label.use_previous_explanation">Use previous explanation</span>
++                </label>
+               </div>
+               <section id="replyPanel" class="reply-panel" aria-live="polite" data-i18n-aria-label="ui.label.reply_panel" aria-label="Reply panel" hidden>
+                 <div class="section-heading">
+@@ -608,6 +616,6 @@
+     <script src="./outcome-formatters.js?v=study-hotfix-20260812"></script>
+     <script src="./model-runtime.js?v=study-provider-gateway-20260813"></script>
+     <script src="./request-utils.js?v=study-request-abort-20260819"></script>
+-    <script src="./main.js?v=study-ocr-fallback-notice-20260820"></script>
++    <script src="./main.js?v=lab-followup-capture-20261008"></script>
+   </body>
+ </html>
+--- a/plugin/plugins/study_companion/static/style.css
++++ b/plugin/plugins/study_companion/static/style.css
+@@ -140,7 +140,7 @@
+ .hero {
+   position: relative;
+   display: grid;
+-  grid-template-columns: minmax(300px, 0.9fr) minmax(560px, 1.3fr);
++  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+   gap: 24px;
+   align-items: center;
+   min-height: 166px;
+--- a/plugin/plugins/study_companion/i18n/zh-CN.json
++++ b/plugin/plugins/study_companion/i18n/zh-CN.json
+@@ -1,4 +1,11 @@
+ {
++    "ui.label.ocr_capture_area": "OCR 截图范围",
++    "ui.label.ocr_select_area": "选择区域",
++    "ui.label.ocr_entire_screen": "整个屏幕",
++    "ui.status.preparing_ocr_fullscreen": "请切换到学习材料，2 秒后读取整个屏幕。",
++    "ui.status.ocr_explicit_fullscreen": "本次读取了整个屏幕，包含其他可见窗口。",
++    "ui.label.use_previous_explanation": "沿用上一轮解释",
++    "ui.error.followup_context_too_long": "上一轮解释过长。请取消勾选“沿用上一轮解释”，并引用需要追问的段落。",
+     "ui.status.preparing_ocr_selection": "请切换到学习材料页面，2 秒后开始屏幕选区...",
+     "ui.status.ocr_canceled": "已取消屏幕选区",
+     "ui.status.ocr_fallback_fullscreen": "屏幕选区不可用，已改用全屏 OCR。",
+--- a/plugin/plugins/study_companion/i18n/en.json
++++ b/plugin/plugins/study_companion/i18n/en.json
+@@ -1,4 +1,11 @@
+ {
++    "ui.label.ocr_capture_area": "OCR capture area",
++    "ui.label.ocr_select_area": "Select area",
++    "ui.label.ocr_entire_screen": "Entire screen",
++    "ui.status.preparing_ocr_fullscreen": "Switch to the learning material. Reading the entire screen starts in 2 seconds...",
++    "ui.status.ocr_explicit_fullscreen": "Read the entire screen, including other visible windows.",
++    "ui.label.use_previous_explanation": "Use previous explanation",
++    "ui.error.followup_context_too_long": "The previous explanation is too long. Uncheck Use previous explanation and quote the relevant passage.",
+     "ui.status.preparing_ocr_selection": "Switch to the learning material. Screen selection opens in 2 seconds...",
+     "ui.status.ocr_canceled": "Screen selection canceled",
+     "ui.status.ocr_fallback_fullscreen": "Screen selection unavailable; used full-screen OCR.",

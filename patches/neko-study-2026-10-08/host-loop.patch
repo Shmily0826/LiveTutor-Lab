@@ -1,0 +1,116 @@
+--- a/plugin/core/host.py
++++ b/plugin/core/host.py
+@@ -895,7 +895,14 @@
+                 logger.warning("[Plugin Process] Model client cleanup failed: {}", type(exc).__name__)
+ 
+ 
+-def _plugin_process_runner(
++def _plugin_process_runner(*args: Any, **kwargs: Any) -> None:
++    # Startup, background tasks, entries and shutdown own one process loop.
++    # Runner closes it only after the complete process lifecycle ends.
++    with asyncio.Runner() as runner:
++        _plugin_process_runner_on_loop(*args, _loop_runner=runner, **kwargs)
++
++
++def _plugin_process_runner_on_loop(
+     plugin_id: str,
+     entry_point: str,
+     config_path: Path,
+@@ -908,6 +915,7 @@
+     image_uplink_endpoint: str | None = None,
+     *,
+     model_gateway_options: dict[str, str] | None = None,
++    _loop_runner: asyncio.Runner,
+ ) -> None:
+     """独立进程中的运行函数。通过 ZMQ 与宿主进程通信。"""
+     uplink_token = str(uplink_token or "").strip()
+@@ -1094,7 +1102,7 @@
+             # Retain the SDK read fallback when child-side resolution fails.
+             # Only a successful read can establish the loaded identity.
+             try:
+-                fallback_cfg = asyncio.run(instance.config.dump(timeout=3.0))
++                fallback_cfg = _loop_runner.run(instance.config.dump(timeout=3.0))
+                 if not isinstance(fallback_cfg, dict):
+                     raise TypeError("Startup effective config must be a mapping")
+                 effective_cfg = fallback_cfg
+@@ -1152,14 +1160,14 @@
+                             raise RuntimeError(f"state persistence {op_name} failed: {error_obj}")
+                         return result_obj
+ 
+-                    has_saved_state_result = asyncio.run(state_persistence.has_saved_state())
++                    has_saved_state_result = _loop_runner.run(state_persistence.has_saved_state())
+                     has_saved_state = _unwrap_state_result("has_saved_state", has_saved_state_result)
+                     if bool(has_saved_state):
+                         logger.debug("[Plugin Process] Restoring saved state...")
+-                        load_result_obj = asyncio.run(state_persistence.load(instance))
++                        load_result_obj = _loop_runner.run(state_persistence.load(instance))
+                         load_result = _unwrap_state_result("load", load_result_obj)
+                         if bool(load_result):
+-                            clear_result_obj = asyncio.run(state_persistence.clear())  # 恢复后清除
++                            clear_result_obj = _loop_runner.run(state_persistence.clear())  # 恢复后清除
+                             clear_result = _unwrap_state_result("clear", clear_result_obj)
+                             if not bool(clear_result):
+                                 raise RuntimeError("state persistence clear returned falsy result")
+@@ -1421,7 +1429,7 @@
+         if startup_fn:
+             try:
+                 with ctx._handler_scope("lifecycle.startup"):
+-                    asyncio.run(_run_with_model_client_cleanup(ctx, _run_startup_with_downlink(startup_fn)))
++                    _loop_runner.run(_run_with_model_client_cleanup(ctx, _run_startup_with_downlink(startup_fn)))
+             except (KeyboardInterrupt, SystemExit):
+                 # 系统级中断，直接抛出
+                 raise
+@@ -1445,7 +1453,7 @@
+             try:
+                 logger.info("[Plugin Process] Executing unfreeze lifecycle (restored from frozen state)...")
+                 with ctx._handler_scope("lifecycle.unfreeze"):
+-                    asyncio.run(_run_with_model_client_cleanup(ctx, unfreeze_fn()))
++                    _loop_runner.run(_run_with_model_client_cleanup(ctx, unfreeze_fn()))
+             except (KeyboardInterrupt, SystemExit):
+                 raise
+             except Exception as e:
+@@ -1470,7 +1478,7 @@
+             while not stop_event.is_set():
+                 try:
+                     with ctx._handler_scope(f"timer.{fn_name}"):
+-                        asyncio.run(_run_with_model_client_cleanup(ctx, fn()))
++                        asyncio.run_coroutine_threadsafe(fn(), _loop_runner.get_loop()).result()
+                 except (KeyboardInterrupt, SystemExit):
+                     # 系统级中断，停止定时任务
+                     logger.info("Timer '{}' interrupted, stopping", fn_name)
+@@ -1505,7 +1513,7 @@
+             """执行自动启动的自定义事件"""
+             try:
+                 with ctx._handler_scope(f"{event_type}.{fn_name}"):
+-                    asyncio.run(_run_with_model_client_cleanup(ctx, fn()))
++                    asyncio.run_coroutine_threadsafe(fn(), _loop_runner.get_loop()).result()
+             except (KeyboardInterrupt, SystemExit):
+                 logger.info("Custom event '{}' (type: {}) interrupted", fn_name, event_type)
+             except Exception:
+@@ -2053,7 +2061,7 @@
+                     await asyncio.gather(*tasks, return_exceptions=True)
+                     _run_tasks.clear()
+ 
+-        asyncio.run(_run_with_model_client_cleanup(ctx, _command_loop_with_cleanup()))
++        _loop_runner.run(_run_with_model_client_cleanup(ctx, _command_loop_with_cleanup()))
+ 
+         # 触发生命周期：shutdown（尽力而为），并停止所有定时任务
+         try:
+@@ -2071,7 +2079,7 @@
+                 with ctx._handler_scope("lifecycle.shutdown"):
+                     result = shutdown_fn()
+                     if asyncio.iscoroutine(result):
+-                        asyncio.run(_run_with_model_client_cleanup(ctx, result))
++                        _loop_runner.run(_run_with_model_client_cleanup(ctx, result))
+             except (KeyboardInterrupt, SystemExit):
+                 raise
+             except Exception as e:
+@@ -2100,7 +2108,7 @@
+                 with ctx._handler_scope("lifecycle.shutdown"):
+                     result = shutdown_fn()
+                     if asyncio.iscoroutine(result):
+-                        asyncio.run(_run_with_model_client_cleanup(ctx, result))
++                        _loop_runner.run(_run_with_model_client_cleanup(ctx, result))
+         except BaseException:
+             pass
+         try:

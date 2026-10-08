@@ -1,152 +1,144 @@
 # LiveTutor-Lab
 
-An evaluation rig for one question:
+An evaluation lab for deciding whether LiveTutor should keep its current base or
+adopt Project N.E.K.O. This repository holds reports and diagnostic scripts;
+LiveTutor product development happens elsewhere.
 
-> **Should LiveTutor keep its current base architecture, or switch to Project
-> N.E.K.O?**
+## Current status (2026-10-08)
 
-**Answer, as of 2026-10-08: keep the current base (option A).** Reasoning and
-evidence in [`docs/base-evaluation.md`](docs/base-evaluation.md).
+The recorded strategy keeps the LiveTutor base (option A) as the main line while
+evaluating native N.E.K.O + Study Companion as a candidate. N.E.K.O is **not yet
+accepted for daily realtime tutoring**. This round completed a sampled real Study
+UI flow and repaired awareness startup in the local test environment. Region
+capture, final proactive-message display and voice/interruption acceptance remain
+unfinished. The frozen backend currently uses experimental compatibility hooks.
 
-This repo exists to hold evidence, not features. It contains no product code, and
-it is not the place LiveTutor gets built.
+Start with the [latest handoff](docs/neko-handoff-2026-10-08-goal-wip.md), the
+[current progress and evidence](docs/neko-goal-progress-2026-10-08.md), and the
+[four-round acceptance report](docs/neko-acceptance-2026-10-08.md), especially its
+R2 corrections and R4 final verdict. Earlier sections preserve the investigation
+history; later corrections supersede their conclusions.
 
----
+| Area | Recorded result | Remaining limit |
+| --- | --- | --- |
+| Native teaching plugin | Real UI: OCR → explanation → follow-up → question → wrong/correct feedback → persisted records | Fixed chain-rule material; broader teaching and grading reliability unverified |
+| Semantic routing / knowledge guidance | Routing applied to the sampled follow-up; UI explanation took 3.700 s | Initial noisy OCR explanation did not apply graph guidance |
+| Screen grounding | Explicit full-screen OCR recognized the fixture in 6.238 s | Region capture still returned `capture_busy`; foreground and overlay content matter |
+| Normal character chat continuity | Awake UI test recalled 47 and computed 150 correctly | Short continuity check; sustained learning dialogue unverified |
+| Background awareness | Settings, persistent ticks, subscriptions and first cold startup verified; bridge forwarding observed | Final character UI delivery unverified; awareness restored disabled |
+| Voice / interruption | Microphone, ASR and TTS prerequisites identified | Configuration and real audio acceptance unfinished |
 
-## Why this repo exists
+The latest handoff separates this round's live results from earlier reported
+results. Changes are local and uncommitted; raw evidence remains ignored.
 
-The previous LiveTutor was frozen on 2026-10-07 with an explicit note that the
-*base architecture* was still an open question:
+## Read before testing or developing
 
-> "before any further feature work, the base architecture must be re-evaluated
-> against N.E.K.O as a possible substrate."
+Read the product documentation and shipped tutorial before interpreting an
+unexpected UI response as a missing capability. Check source revisions: the
+candidate checkout, packaged application and marketplace plugin can differ.
 
-Building more on an undecided base is the specific waste the freeze existed to
-prevent. This lab is that re-evaluation. It ends in a decision, and the decision
-is written down with numbers attached.
+### Important interaction rules
 
----
+- **Recent conversation:** the blue handle above the compact chat input opens
+  recent conversation history. A collapsed panel does not mean no reply arrived.
+  The shipped Day 1 tutorial explicitly teaches this interaction.
+- **Message delivery:** after expanding the panel, confirm pasted text is visible
+  in the input and the send control appears before pressing Enter.
+- **Cat form and sleep:** the product documents CAT1 (awake cat), CAT2 (dozing)
+  and CAT3 (sleeping). Clicking the cat runs the existing return action and
+  restores the normal character. Ordinary typing or mouse activity does not
+  automatically restore the character. Packaged cat-form chat has a separate
+  local meow-response implementation, so an awake CAT1 is not sufficient proof
+  that normal LLM chat is active. Confirm the return has completed before tutoring.
+- **History versus memory:** recent UI messages, durable character memory and
+  Study Companion learning records are different surfaces. `/memory_browser`
+  is a memory inspection entry, not the compact recent-chat panel. Persisted
+  history is not automatically included in full in every model request.
+- **Study input:** onboarding describes pasting text or explicitly clicking OCR,
+  then choosing explain, generate question or evaluate answer. Opening Study does
+  not by itself establish that continuous screen tutoring is running.
+- **Screen sharing:** the Day 1 tutorial describes enabling screen sharing during
+  a voice call. This is separate from Study OCR and background awareness.
+- **Voice readiness:** a registered ASR provider does not establish that its
+  resources are installed or the actual microphone/session works. Verify
+  preparation, capture, recognition, playback and interruption separately.
 
-## Layout
+### Reading map
 
+Tracked lab reports:
+
+1. [Latest handoff](docs/neko-handoff-2026-10-08-goal-wip.md): deployment, evidence, rollback and remaining work.
+2. [Current progress](docs/neko-goal-progress-2026-10-08.md): sampled UI results and root-cause evidence.
+3. [Earlier end-of-day handoff](docs/neko-handoff-2026-10-08-eod.md): baseline before this round.
+4. [Four-round acceptance](docs/neko-acceptance-2026-10-08.md): measurements and corrected verdicts.
+5. [Study Companion audit](docs/neko-study-companion-audit.md): source/release inventory and teaching contracts.
+6. [Windows native reality check](docs/neko-windows-native-reality-check.md): earlier runtime baseline, superseded where later acceptance corrects it.
+7. [Base maintenance audit](docs/neko-base-maintenance-audit.md): upstream integration and maintenance risks.
+8. [External tutor integration](docs/neko-external-tutor-integration.md): extension seams; read with later native acceptance before proposing a separate Tutor Brain.
+
+Local upstream/product references (gitignored; not delivered by cloning this lab):
+
+- `candidates/N.E.K.O/docs/design/seven-day-tutorial-content-inventory.md`
+- `candidates/N.E.K.O/docs/design/cat-idle-states-feature.md`
+- `candidates/N.E.K.O/docs/zh-CN/architecture/memory-system.md`
+- `candidates/N.E.K.O/docs/development/voice-readiness.md`
+- `candidates/N.E.K.O/docs/zh-CN/modules/tts-client.md`
+- `candidates/N.E.K.O/docs/zh-CN/plugins/migration-v0.9.md`
+- Packaged tutorial: `benchmarks/raw/neko-app/resources/bin/static/tutorial/yui-guide/days/`
+- Packaged Study onboarding: `benchmarks/raw/neko-app/resources/bin/plugin/plugins/study_companion/onboarding.md`
+- Packaged cat chat: `benchmarks/raw/neko-app/resources/bin/static/app/app-react-chat-window/cat-local-chat.js`
+
+## Next acceptance work
+
+1. On an interactive desktop, correlate a fresh awareness `respond` message with
+   the awake character UI, then restore the previous awareness configuration.
+2. Diagnose region capture's `capture_busy`; retest the latest explicit capture
+   mode metadata and full-screen fallback policy through the physical UI.
+3. Broaden grading and teaching samples, including identical-question wrong and
+   correct answers, context pressure, realistic materials and longer follow-ups.
+4. Review source integration of the host/message-plane repairs. The local frozen
+   binary compatibility deployment is not a release solution.
+5. With the user present, complete microphone / ASR / TTS and spoken interruption
+   acceptance. This round can remain muted and does not require live microphone use.
+
+Awareness periodically reads activity/context and may trigger proactive messages.
+Its default `title_first` path is lightweight; optional `ocr_text`/`both` modes
+can use OCR. Manual full-screen OCR latency does not establish the cause of its
+old startup failure. The proposed normal-character history repair was withdrawn
+after the awake chat test passed. No new Tutor Brain or teaching extension is
+currently justified solely by the completed tests.
+
+## Evidence and repository layout
+
+```text
+docs/                    tracked reports and handoffs
+scripts/                 tracked diagnosis and acceptance scripts
+patches/                 source patches and deployment notes
+benchmarks/materials/    synthetic, shareable acceptance fixtures
+candidates/              ignored third-party checkouts with their own history
+benchmarks/raw/           ignored packages, extracted source, runtime data
+  evidence/              ignored logs, measurements and desktop screenshots
+  asar-src/              extracted Electron files
+  neko-app/              packaged application
 ```
-README.md
-docs/
-  base-evaluation.md      <- the decision. Read this one.
-  architecture-notes.md   <- mechanics: how N.E.K.O is built, what was measured
-benchmarks/
-  raw/                    <- gitignored working data
-    evidence/             <- committed: the evidence behind every claim
-    asar-src/             <- 138 Electron files extracted from shipped app.asar
-    neko-app/             <- the shipped bundle
-scripts/                  <- the diagnosis and measurement chain
-candidates/               <- gitignored: third-party clones, own git history
-```
 
-`candidates/` is gitignored on purpose. N.E.K.O is cloned there at depth 50 with
-its own git history intact and is never committed into this repo. No submodules.
+GitHub contains the reports and scripts, **not the raw evidence or application
+bundle**. A fresh clone alone cannot reproduce this machine's environment or
+independently inspect the original screenshots. Arrange sanitized evidence and
+version-pinned dependencies separately when handing work to another machine.
 
----
+## Earlier conclusions and working discipline
 
-## What was actually done
+[base-evaluation.md](docs/base-evaluation.md) and
+[architecture-notes.md](docs/architecture-notes.md) preserve the initial evaluation.
+The initial claims that N.E.K.O has no teaching layer, that the desktop shell could
+not run, and that `no_renderer` proves a core capture defect were overturned by
+later artifact and runtime checks. Do not reuse them as the current rationale for
+option A.
 
-1. **Verified N.E.K.O independently.** Commit
-   `1d814cf32fba8c02b5727d2890710e4e7b8ece24`, 2026-10-06, Apache-2.0, 3026★.
-   No prior summary was trusted.
-2. **Ran the backend standalone.** Cleared the storage gate through the product's
-   own `/restart` contract, got 340 live routes, measured startup, latency, CPU
-   and RAM.
-3. **Read the closed half as far as it can be read.** The desktop shell is not in
-   the open repo (`N.E.K.O.-PC` → 404), so the shipped `app.asar` was parsed and
-   138 Electron source files extracted.
-4. **Tested the decisive question directly.** An external HTTP brain registered
-   custom tools into the running backend, appeared in the agent role's tool list,
-   was loopback-enforced, and unregistered cleanly — with no N.E.K.O source
-   changes.
-5. **Searched the teaching surface honestly.** Read the keyword matches rather
-   than counting them: 146 hits for `exercise` are all the English verb.
-6. **Compared against the frozen baseline** without touching it.
-7. **Reviewed five alternatives** with the same rigour.
-
----
-
-## The decision in one paragraph
-
-N.E.K.O is a good project and a genuinely extensible one — external services
-attach to it over public API, and its plugin isolation, memory service and
-proactive pipeline are real work that would be expensive to rebuild. But its
-teaching layer is **0 % implemented** (not experimental, not abandoned:
-absent), its desktop shell cannot be built or audited from source, screen
-capture is bound to the Electron renderer (`no_renderer`, so no headless
-operation and no GUI-free testing), and barge-in has no acoustic echo
-cancellation. Adopting it does not reduce the teaching work, which must be built
-either way — it relocates that work onto a worse substrate.
-
-**OLV is retained and frozen to: Live2D/VRM rendering, audio I/O, and
-expression/lip-sync mapping.** No new perception, proactive, or brain logic goes
-into OLV.
-
----
-
-## Honest limits of this evaluation
-
-Stated plainly, because a decision document that hides its gaps is worse than
-no decision document:
-
-- **The Electron desktop shell never ran here.** The only distributable is an
-  NSIS installer; the documented channel is Steam; silent install fails with
-  rc=1. A control experiment proved the GUI subsystem itself works, so this is a
-  packaging limit, not an environment limit.
-- Therefore **avatar, voice path, barge-in, and proactive speech are BLOCKED in
-  actual use** — implemented in code, unverified in practice.
-- **Dialogue quality (5–8 turns) was not measured.** It needs a configured LLM
-  provider and the shell.
-- **This machine's loopback is silent**, so audio claims are unverifiable here for
-  LiveTutor too, not just for N.E.K.O.
-- **Attachability is proven; invocation inside a real LLM turn is not.** N.E.K.O
-  calls registered tools only from its own agent turn, which needs a provider.
-- An earlier CPU reading of `13435848058.8s` was a FILETIME field error. It is
-  discarded and corrected in `benchmarks/raw/evidence/cpu-ram.txt`.
-
-`BLOCKED` in these documents means "this evaluation could not verify it", which is
-not the same as "N.E.K.O lacks it". The distinction is kept explicit throughout.
-
----
-
-## What would change the recommendation
-
-Recorded in advance so the decision can be revisited on evidence rather than
-sentiment:
-
-- N.E.K.O opens the shell source **and** moves capture out of the renderer into a
-  service.
-- N.E.K.O ships any teaching-layer work at all — re-run §5 of the evaluation first;
-  that single fact flips the comparison.
-- A third party ships a Windows tutor substrate with `WDA_EXCLUDEFROMCAPTURE`
-  done properly.
-
----
-
-## Reproducing
-
-`scripts/` is ordered as the diagnosis actually happened, so the reasoning is
-followable:
-
-| Script | Purpose |
-|---|---|
-| `diag_neko_packer.py` | Proves the exe is an NSIS installer |
-| `control_gui_probe.py` | Proves the GUI subsystem works (control experiment) |
-| `neko_restart_proper.py` | Clears the storage gate via the product's `/restart` |
-| `measure_neko.py` | Startup, latency, route inventory, capture probes |
-| `brain_integration_probe.py` | The decisive external-Brain attachment test |
-| `cpu_probe.py` | Corrected CPU/RAM measurement |
-
-Everything under `benchmarks/raw/evidence/` was produced by these and committed,
-so the claims can be checked without re-running anything.
-
----
-
-## Scope
-
-This lab stopped at the recommendation. No migration was started and no
-`LiveTutor-Next` was created, by design.
+Keep raw captures and credentials out of Git. Do not print API keys. Before an
+authorized push, check sensitive paths and tracked changes. Confirm the character
+state before UI tests, announce desktop control, and return input control afterward.
+Agree the scope before configuration changes or core modifications; use isolated
+copies and reversible validation where possible. Configuration, source presence
+and synthetic tests do not replace real-device acceptance.
