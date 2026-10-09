@@ -13,6 +13,15 @@ UI flow and repaired awareness startup in the local test environment. Region
 capture, final proactive-message display and voice/interruption acceptance remain
 unfinished. The frozen backend currently uses experimental compatibility hooks.
 
+## Quick start (2026-10-09)
+
+A text-only desktop tutor now runs end to end on the frozen N.E.K.O host: one command
+starts a disposable host (TTS, microphone and proactive output disabled; only
+`api.deepseek.com` is allowed out), opens the shipped Study UI, and stops everything again
+when you press Enter. See [the quick start](docs/neko-tutor-quick-start.md) for usage and
+[the round report](docs/neko-safe-screen-desktop-tutor-2026-10-09.md) for what is verified.
+Voice input, speech output and interruption remain unverified.
+
 Start with the [latest handoff](docs/neko-handoff-2026-10-08-goal-wip.md), the
 [current progress and evidence](docs/neko-goal-progress-2026-10-08.md), and the
 [four-round acceptance report](docs/neko-acceptance-2026-10-08.md), especially its

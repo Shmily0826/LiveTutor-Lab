@@ -1,6 +1,6 @@
-# 2026-10-09 第三轮：真实模型 UI 闭环 —— 教学模式横幅 + 总结语言修复补丁
+# 2026-10-09 第三轮：真实模型 UI 闭环 —— 教学模式横幅 + 总结语言 + 总结范围修复补丁
 
-本目录是「浏览器真实教学闭环」这一轮的插件源码改动（3 个文件，+8/−1 行）。尚未 commit、尚未 push。
+本目录是「浏览器真实教学闭环」及后续学习状态修复的插件源码改动（4 个文件）。尚未 commit、尚未 push。
 验收与测量见 `../../docs/neko-real-tutor-ui-2026-10-09.md`。
 
 ## 改动一：重复的模式横幅
@@ -34,14 +34,32 @@
 实测：`explanations_have_cjk` / `summaries_have_cjk` / `evaluation_feedback_has_cjk` 全为 true，
 刷新后的第二次总结也是中文（`## 本次学习总结 …`）。
 
+## 改动三：Session Summary 丢掉本会话最早的互动（含已评分答案）
+
+`entry_tutor_context_support.py` 的 summarize 分支不用 store 已经按 `session_id` 过滤好的结果，
+另外用内存事件环 `recent_learning_events`（上限 64 条）里最早的 `at` 当会话边界。互动行是**先落库
+再记事件**，所以第一行的 `created_at` 必然早于它自己那条事件的 `at`，于是最早那条互动**每次都被切掉**；
+环转起来之后还会切掉更多。真实浏览器那轮两次总结都说"未记录具体作答"，就是这个方向的问题
+（答案本身是否入 prompt 需要宿主侧 prompt 正文才能定性，见验收文档的遗留项）。
+
+改法：会话内直接按行自带的 `session_id` 取；只有在拿不到 session id（历史确实跨会话）时，
+才退回原来的事件环边界。不改 schema、不动记忆系统、不加新状态。
+
+回归：`scripts/test_neko_study_summary_scope.py`（离线，零模型调用）跑 explain→追问→出题→作答→
+构造 summarize 上下文，断言 `session_history` 条数 == 本会话互动条数、参考答案与首条讲解都在
+summarize prompt 里，并且显式断言"最早那条行的 created_at 早于事件环边界"，这样旧逻辑一旦被重新
+引入这条用例会失败。实测：修复后 1/1 通过，原有 5 条 focused 用例仍全过。
+
 ## 文件
 
 | 文件 | 内容 |
 |---|---|
-| `ui-real-tutor.patch` | 3 个文件的精确 diff |
-| `_pre/prompt_templates.py` | 原始快照镜像（与 v02 overlay 的 `payload/bridge` 逐字节一致） |
-| `_pre/llm_prompts.py` | 原始快照镜像（与 v02 overlay 的 `payload/bridge` 逐字节一致） |
+| `ui-real-tutor.patch` | 4 个文件的精确 diff |
+| `_pre/entry_tutor_context_support.py` | 原始快照镜像（与 v02 overlay `payload/bridge` 逐字节一致） |
+| `_pre/prompt_templates.py` | 原始快照镜像（与 v02 overlay `payload/bridge` 逐字节一致） |
+| `_pre/llm_prompts.py` | 原始快照镜像（与 v02 overlay `payload/bridge` 逐字节一致） |
 | `_pre/tutor_llm_agent_concept_explain.py` | 改动**之前**的镜像，由反演本轮编辑重建（310 行） |
+
 
 ## 落地位置（两份都要一致）
 
@@ -52,10 +70,16 @@
 
 ## 诚实边界
 
-- `prompt_templates.py`、`llm_prompts.py` 在 `../neko-study-2026-10-09-v02-overlay/manifest.json`
-  里有快照，本轮改动前的字节与快照一致（校验过），所以这两个文件的 diff 是对**原始打包版**的 diff。
-- `tutor_llm_agent_concept_explain.py` 不在该快照清单里，仓库也没有它的原始备份，因此 `_pre/` 是
+- `prompt_templates.py`、`llm_prompts.py`、`entry_tutor_context_support.py` 在
+  `../neko-study-2026-10-09-v02-overlay/manifest.json` 里有快照，本轮改动前的字节与快照一致
+  （校验过），所以这三个文件的 diff 是对**原始打包版**的 diff。
+- `tutor_llm_agent_concept_explain.py` 不在该快照清单里，仓库也没有它的原始备份，因此它的 `_pre/` 是
   「反演本轮编辑」得到的改动前镜像（与 `../neko-study-2026-10-09-round2/README.md` 同类限制）。
+- 本 README 顶部所述"4 个文件"包含上面三段改动。
+- **最终复核更正**：原先写的「`round2-teaching-context.patch` 里 `entry_tutor_context_support.py`
+  那份 diff 无法重建当前快照（差 64 行）」并不成立 —— 按 v02 快照 → `goal-context.patch` →
+  本目录 `ui-real-tutor.patch` 的顺序可以逐字节重建运行源码。复核命令：
+  `python -I -S -B scripts/neko_plugin_source_coverage_check.py` → `PASS_SOURCE_COVERAGE`。
 
 ## 如何重建运行源码（已实测）
 
@@ -64,7 +88,7 @@
 
 ```bash
 mkdir -p rebuild/plugin/plugins/study_companion
-for f in llm_prompts.py prompt_templates.py tutor_llm_agent_concept_explain.py; do
+for f in llm_prompts.py prompt_templates.py tutor_llm_agent_concept_explain.py entry_tutor_context_support.py; do
   git show "HEAD:patches/neko-study-2026-10-09-ui/_pre/$f" > "rebuild/plugin/plugins/study_companion/$f"
 done
 git show HEAD:patches/neko-study-2026-10-09-ui/ui-real-tutor.patch > ../ui.patch
@@ -76,10 +100,25 @@ git -c core.autocrlf=false apply ../ui.patch     # 必须关掉 autocrlf，否�
 不带 `-c core.autocrlf=false` 时内容一致、仅行尾变成 CRLF。应用前请先按 v02 overlay 的方式
 逐个核对目标指纹，不要直接覆盖别人的在制改动。
 
+## 附带收：宿主平面模块（此前完全不在版本控制里）
+
+`benchmarks/raw/neko-app/resources/bin/plugins/lab_study_plane.py` 与 `lab_study_runtime.py` 被 LIVE 入口
+`lab_bootstrap_plane` import，属于运行路径的一部分，但既不在 v02 overlay 清单里、也没有任何补丁副本
+——即"测试通过但关键代码没进 Git"。本轮按快照方式收进 `host_plane/`（未修改内容，逐字节一致）：
+
+| 文件 | SHA-256（前 16） |
+|---|---|
+| `host_plane/lab_study_plane.py` | `876e00824894fbaa` |
+| `host_plane/lab_study_runtime.py` | `d4768dbd2cf7818b` |
+
+两者的定位与限制见 `../../docs/neko-desktop-tutor-2026-10-09.md`：它们是对冻结宿主的兼容性 hook
+（补 message plane 与 asyncio runner），后续应改由源码构建侧的 `host-loop.patch` 承担。
+
 ## 验证
 
 - `node scripts/neko_study_ocr_ui_e2e.mjs --real-model` → `PASS_UNIFIED_OCR_STUDY_UI_REAL_MODEL_LOOP`
   + `PASS_REOPENED_TEMP_SQLITE`
 - `node scripts/neko_study_ocr_ui_e2e.mjs` → `PASS_UNIFIED_OCR_STUDY_UI_LOOP`（Mock 回归，改后仍过）
 - `scripts/neko_study_plugin_methods_fixture.py` → `PASS_PLUGIN_METHOD_LOOP`；
-  `scripts/test_neko_study_context_fixture.py` → 5/5 OK
+  `scripts/test_neko_study_context_fixture.py` → 5/5 OK；
+  `scripts/test_neko_study_summary_scope.py` → 1/1 OK（离线，无模型调用）

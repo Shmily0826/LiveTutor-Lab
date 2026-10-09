@@ -47,3 +47,73 @@
      if mode:
          prompt = STUDY_STRUCTURED_MODE_PREFIX_TEMPLATE.format(mode=normalize_mode(mode), prompt=prompt)
      return [
+--- a/plugin/plugins/study_companion/entry_tutor_context_support.py
++++ b/plugin/plugins/study_companion/entry_tutor_context_support.py
+@@ -687,33 +687,47 @@
+             context["knowledge_session_summary"] = await asyncio.to_thread(
+                 self._knowledge_tracker.get_session_summary
+             )
+-            # `history` is a rolling 50-row window that spans previous sessions.
+-            # A summary must describe what was actually studied in *this* one, so
+-            # the session boundary is derived from the in-memory event log.
+-            events = list(context.get("recent_learning_events") or [])
+-            async with _plugin_lock(self._lock):
+-                full_events = list(getattr(self._state, "recent_learning_events", []) or [])
+-            if len(full_events) > len(events):
+-                events = full_events
+-            session_start = min(
+-                (
+-                    float(event.get("at"))
+-                    for event in events
+-                    if isinstance(event, dict)
+-                    and isinstance(event.get("at"), (int, float))
+-                    and not isinstance(event.get("at"), bool)
+-                ),
+-                default=None,
+-            )
+-            if session_start is not None:
++            # The store query above is already scoped by ``session_id`` when one is
++            # known, and every row carries its own session id. Deriving a boundary
++            # from the bounded in-memory event ring instead dropped the earliest
++            # interactions of the session — a row is stamped before the event that
++            # records it, so the very first row always fell below ``min(at)`` — which
++            # is how a graded answer could disappear from its own summary.
++            own_session = str(context.get("session_id") or "").strip()
++            if own_session:
+                 session_history = [
+                     item
+                     for item in history
+                     if isinstance(item, dict)
+-                    and float(item.get("created_at") or 0.0) >= session_start
++                    and str(item.get("session_id") or "") == own_session
+                 ]
+                 if session_history:
+                     context["session_history"] = session_history
++            else:
++                events = list(context.get("recent_learning_events") or [])
++                async with _plugin_lock(self._lock):
++                    full_events = list(getattr(self._state, "recent_learning_events", []) or [])
++                if len(full_events) > len(events):
++                    events = full_events
++                session_start = min(
++                    (
++                        float(event.get("at"))
++                        for event in events
++                        if isinstance(event, dict)
++                        and isinstance(event.get("at"), (int, float))
++                        and not isinstance(event.get("at"), bool)
++                    ),
++                    default=None,
++                )
++                if session_start is not None:
++                    session_history = [
++                        item
++                        for item in history
++                        if isinstance(item, dict)
++                        and float(item.get("created_at") or 0.0) >= session_start
++                    ]
++                    if session_history:
++                        context["session_history"] = session_history
+         else:
+             context["knowledge_summary"] = await asyncio.to_thread(
+                 self._knowledge_tracker.get_status_summary,

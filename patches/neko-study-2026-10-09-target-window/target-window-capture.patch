@@ -1,0 +1,335 @@
+--- a/plugin/plugins/study_companion/entry_ocr_entries.py
++++ b/plugin/plugins/study_companion/entry_ocr_entries.py
+@@ -37,6 +37,107 @@ _ACTIVE_WINDOW_MIN_SIDE = 64
+ def _foreground_window_target() -> dict[str, object] | None:
+     """Resolve the foreground window into a rect target for the OCR pipeline.
+ 
++    Legacy resolver for `active_window`: it crops whatever happens to be in
++    front, so on a live desktop an unrelated personal window can be captured and
++    sent to the model. `target_window` requires an explicit title instead and is
++    what the desktop tutor uses.
++    """
++    return _window_target_for_hwnd(_foreground_hwnd())
++
++
++def _foreground_hwnd() -> int:
++    import sys
++
++    if sys.platform != "win32":
++        return 0
++    try:
++        import ctypes
++
++        return int(ctypes.windll.user32.GetForegroundWindow() or 0)
++    except Exception:
++        return 0
++
++
++def _window_title(hwnd: int) -> str:
++    import sys
++
++    if sys.platform != "win32" or not hwnd:
++        return ""
++    try:
++        import ctypes
++
++        user32 = ctypes.windll.user32
++        length = int(user32.GetWindowTextLengthW(hwnd) or 0)
++        buffer = ctypes.create_unicode_buffer(length + 2)
++        user32.GetWindowTextW(hwnd, buffer, length + 2)
++        return str(buffer.value or "").strip()
++    except Exception:
++        return ""
++
++
++def _hwnd_for_title(title: str) -> int:
++    """Handle of a visible, non-minimised window with exactly this title, else 0."""
++    import sys
++
++    wanted = str(title or "").strip()
++    if sys.platform != "win32" or not wanted:
++        return 0
++    try:
++        import ctypes
++
++        user32 = ctypes.windll.user32
++        hwnd = int(user32.FindWindowW(None, wanted) or 0)
++        if not hwnd or not user32.IsWindowVisible(hwnd) or user32.IsIconic(hwnd):
++            return 0
++        return hwnd
++    except Exception:
++        return 0
++
++
++def _named_window_target(title: str) -> tuple[dict[str, object] | None, str, int]:
++    """Resolve an explicit capture target as (target, refusal_reason, hwnd).
++
++    There is no fallback path here on purpose. Cropping the screen rectangle of a
++    window that is not frontmost would capture whatever is painted on top of it,
++    so a target that is not the current foreground window is refused rather than
++    captured, and an obscured window is never substituted by the whole desktop.
++    """
++    wanted = str(title or "").strip()
++    if not wanted:
++        return None, "target_window_title_required", 0
++    hwnd = _hwnd_for_title(wanted)
++    if not hwnd:
++        return None, "target_window_not_found", 0
++    if _window_title(hwnd) != wanted:
++        return None, "target_window_title_mismatch", hwnd
++    if _foreground_hwnd() != hwnd:
++        return None, "target_window_not_foreground", hwnd
++    target = _window_target_for_hwnd(hwnd)
++    if target is None:
++        return None, "target_window_geometry_unusable", hwnd
++    return target, "", hwnd
++
++
++def _marker_list(value: object) -> list[str]:
++    if value is None:
++        return []
++    items = value if isinstance(value, (list, tuple)) else [value]
++    return [str(item).strip() for item in items if str(item or "").strip()][:12]
++
++
++def _markers_matched(text: str, markers: list[str]) -> int:
++    """Count markers present in OCR text, ignoring whitespace and casing.
++
++    OCR inserts its own spaces and line breaks, so the two sides are compared as
++    compacted strings rather than as literal substrings.
++    """
++    compact = "".join(str(text or "").lower().split())
++    return sum(1 for marker in markers if "".join(marker.lower().split()) in compact)
++
++
++def _window_target_for_hwnd(hwnd: int) -> dict[str, object] | None:
++    """Measure one window into a rect target for the OCR pipeline.
++
+     The pipeline already knows how to crop to a target (`capture_snapshot` with a
+     target + the capture backends' profile insets); this only supplies the target.
+ 
+@@ -46,8 +147,8 @@ def _foreground_window_target() -> dict[str, object] | None:
+     backend answers a region outside the screen with an empty frame. Clamping is
+     therefore what makes a maximized study window capturable at all.
+ 
+-    Returns None when there is no usable study surface in front, so the caller
+-    falls back to fullscreen instead of OCR-ing the plugin's own UI.
++    Returns None when there is no usable study surface to capture, so the caller
++    refuses or falls back instead of OCR-ing the plugin's own UI.
+     """
+     import sys
+ 
+@@ -65,7 +166,6 @@ def _foreground_window_target() -> dict[str, object] | None:
+             ]
+ 
+         user32 = ctypes.windll.user32
+-        hwnd = int(user32.GetForegroundWindow() or 0)
+         if not hwnd or not user32.IsWindowVisible(hwnd):
+             return None
+         if user32.IsIconic(hwnd):
+@@ -139,9 +239,24 @@ class _OcrEntriesMixin:
+             "properties": {
+                 "capture_mode": {
+                     "type": "string",
+-                    "enum": ["fullscreen", "interactive", "active_window"],
++                    "enum": ["fullscreen", "interactive", "active_window", "target_window"],
+                     "default": "fullscreen",
+                 },
++                "window_title": {
++                    "type": "string",
++                    "default": "",
++                    "description": "target_window only: exact title of the window to capture.",
++                },
++                "expected_markers": {
++                    "type": "array",
++                    "items": {"type": "string"},
++                    "default": [],
++                    "description": (
++                        "target_window only: text that must be readable in the captured "
++                        "region, proving the target really was the captured source."
++                    ),
++                },
++                "min_marker_matches": {"type": "integer", "default": 1},
+                 "allow_fullscreen_fallback": {"type": "boolean", "default": True},
+             },
+         },
+@@ -157,12 +272,13 @@ class _OcrEntriesMixin:
+             "active_window_capture_detail",
+             "active_window_capture_route",
+             "capture_target_title",
++            "target_window_markers_matched",
+         ],
+     )
+     async def study_ocr_snapshot(self, capture_mode: str = "fullscreen", allow_fullscreen_fallback: bool = True, **kwargs):
+         if self._ocr_pipeline is None:
+             return Err(SdkError("study OCR pipeline is not initialized"))
+-        if capture_mode not in {"fullscreen", "interactive", "active_window"}:
++        if capture_mode not in {"fullscreen", "interactive", "active_window", "target_window"}:
+             return Err(SdkError("invalid capture_mode"))
+         capture_mode_used = capture_mode
+         interactive_fallback_reason = ""
+@@ -170,11 +286,38 @@ class _OcrEntriesMixin:
+         active_window_capture_detail = ""
+         active_window_capture_route = ""
+         capture_target_title = ""
+-        if capture_mode == "active_window":
+-            target = await asyncio.to_thread(_foreground_window_target)
++        target_hwnd = 0
++        target_markers: list[str] = []
++        if capture_mode == "target_window":
++            # Fail closed: a window target without expected text cannot be proven to be
++            # the study material, so it is refused instead of being sent to the model.
++            target_markers = _marker_list(kwargs.get("expected_markers"))
++            if not target_markers:
++                return Err(
++                    SdkError(
++                        "TARGET_WINDOW_REFUSED: target_window_capture: "
++                        "expected_markers are required",
++                        code="TARGET_WINDOW_REFUSED",
++                    )
++                )
++            allow_fullscreen_fallback = False
++        if capture_mode in {"active_window", "target_window"}:
++            refusal = ""
++            if capture_mode == "target_window":
++                target, refusal, target_hwnd = await asyncio.to_thread(
++                    _named_window_target, str(kwargs.get("window_title") or "")
++                )
++            else:
++                target = await asyncio.to_thread(_foreground_window_target)
+             snapshot = None
+-            if target is None:
+-                active_window_capture_detail = "no_usable_foreground_window"
++            if refusal:
++                active_window_capture_detail = refusal
++            elif target is None:
++                active_window_capture_detail = (
++                    "no_usable_foreground_window"
++                    if capture_mode == "active_window"
++                    else "target_window_not_found"
++                )
+             else:
+                 snapshot = await asyncio.to_thread(
+                     self._ocr_pipeline.capture_snapshot, target
+@@ -189,14 +332,20 @@ class _OcrEntriesMixin:
+                     active_window_capture_route = "pipeline_target"
+                 if snapshot is None:
+                     # The region-aware capture backends (dxcam/mss/pyautogui) are not
+-                    # guaranteed to be present in the packaged runtime, while the
+-                    # fullscreen path works through PIL. Take one PIL grab and crop it
+-                    # to the target rect instead of failing the whole capture.
++                    # guaranteed to be present in the packaged runtime, while PIL is. Ask
++                    # PIL for the target rect only, so no other window is ever read into
++                    # memory on the way to the crop.
+                     try:
+                         from PIL import ImageGrab
+ 
+-                        frame = await asyncio.to_thread(lambda: ImageGrab.grab())
+-                        width, height = frame.size
++                        # Scaling matters: the rect above is measured in this process's
++                        # DPI space, PIL grabs physical pixels.
++                        screen = getattr(ImageGrab, "ScreenSize", None)
++                        if isinstance(screen, dict) and screen.get("width") and screen.get("height"):
++                            width, height = int(screen["width"]), int(screen["height"])
++                        else:
++                            frame = await asyncio.to_thread(lambda: ImageGrab.grab())
++                            width, height = frame.size
+                         screen_w = int(target.get("screen_width") or 0)
+                         screen_h = int(target.get("screen_height") or 0)
+                         scale_x = (width / screen_w) if screen_w and width else 1.0
+@@ -212,6 +361,7 @@ class _OcrEntriesMixin:
+                             or box[3] - box[1] < _ACTIVE_WINDOW_MIN_SIDE
+                         ):
+                             raise RuntimeError(f"cropped region too small: {box}")
++                        frame = await asyncio.to_thread(lambda: ImageGrab.grab(bbox=box))
+                         # Honour the same configured insets the pipeline's own
+                         # target path applies, so the two routes are equivalent.
+                         from .study_capture_backends import _crop_image_to_profile
+@@ -224,7 +374,7 @@ class _OcrEntriesMixin:
+                             top_ratio=config.ocr_top_ratio,
+                             bottom_inset_ratio=config.ocr_bottom_inset_ratio,
+                         )
+-                        target_frame = _crop_image_to_profile(frame.crop(box), profile)
++                        target_frame = _crop_image_to_profile(frame, profile)
+                         cropped = await asyncio.to_thread(
+                             self._ocr_pipeline.snapshot_from_image, target_frame
+                         )
+@@ -243,12 +393,22 @@ class _OcrEntriesMixin:
+                             active_window_capture_detail + " | pil_bbox_crop: " + str(exc)
+                         )[:240]
+             if snapshot is None:
+-                if not allow_fullscreen_fallback:
++                if capture_mode == "target_window" or not allow_fullscreen_fallback:
++                    # The host's error envelope keeps only the message, so the refusal
++                    # code is repeated inside it and survives transport.
++                    prefix = (
++                        "TARGET_WINDOW_REFUSED: target_window_capture: "
++                        if capture_mode == "target_window"
++                        else "active_window_capture: "
++                    )
+                     return Err(
+                         SdkError(
+-                            "active_window_capture: "
+-                            + (active_window_capture_detail or "capture failed"),
+-                            code="ACTIVE_WINDOW_CAPTURE_FAILED",
++                            prefix + (active_window_capture_detail or "capture failed"),
++                            code=(
++                                "TARGET_WINDOW_REFUSED"
++                                if capture_mode == "target_window"
++                                else "ACTIVE_WINDOW_CAPTURE_FAILED"
++                            ),
+                         )
+                     )
+                 capture_mode_used = "fullscreen"
+@@ -302,6 +462,30 @@ class _OcrEntriesMixin:
+                 )
+         else:
+             snapshot = await asyncio.to_thread(self._ocr_pipeline.capture_snapshot)
++        target_markers_matched = 0
++        if capture_mode == "target_window":
++            # A window can be covered between the identity check and the grab, so the
++            # foreground owner is read again and the captured text itself has to prove
++            # which window was really OCR-ed before anything leaves this process.
++            if await asyncio.to_thread(_foreground_hwnd) != target_hwnd:
++                return Err(
++                    SdkError(
++                        "TARGET_WINDOW_REFUSED: target_window_capture: target_lost_foreground",
++                        code="TARGET_WINDOW_REFUSED",
++                    )
++                )
++            minimum = max(1, int(kwargs.get("min_marker_matches") or 1))
++            target_markers_matched = _markers_matched(snapshot.text, target_markers)
++            if target_markers_matched < minimum:
++                # Refusing here is what keeps an unexpected window's content out of both
++                # the payload and the persisted last-OCR state.
++                return Err(
++                    SdkError(
++                        "TARGET_WINDOW_CONTENT_MISMATCH: target_window_capture: content_mismatch "
++                        f"({target_markers_matched} of {minimum} required markers)",
++                        code="TARGET_WINDOW_CONTENT_MISMATCH",
++                    )
++                )
+         payload = build_ocr_payload(snapshot)
+         payload["capture_mode_requested"] = capture_mode
+         payload["capture_mode_used"] = capture_mode_used
+@@ -310,8 +494,8 @@ class _OcrEntriesMixin:
+             payload["capture_mode_used"] = capture_mode_used
+             if interactive_fallback_reason:
+                 payload["interactive_fallback_reason"] = interactive_fallback_reason
+-        elif capture_mode == "active_window":
+-            payload["capture_mode_requested"] = "active_window"
++        elif capture_mode in {"active_window", "target_window"}:
++            payload["capture_mode_requested"] = capture_mode
+             payload["capture_mode_used"] = capture_mode_used
+             if active_window_fallback_reason:
+                 payload["active_window_fallback_reason"] = (
+@@ -327,6 +511,9 @@ class _OcrEntriesMixin:
+                     payload["active_window_capture_route"] = (
+                         active_window_capture_route
+                     )
++            if capture_mode == "target_window":
++                payload["target_window_markers_matched"] = target_markers_matched
++                payload["target_window_title"] = str(kwargs.get("window_title") or "").strip()
+         if self._supervision is not None:
+             sensor_available = snapshot.status in {"ok", "empty"}
+             payload["supervision"] = self._supervision.observe_activity(

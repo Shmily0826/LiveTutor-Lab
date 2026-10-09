@@ -334,6 +334,141 @@ class AwarenessTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(degraded['active_window_fallback_reason'],'active_window_capture_failed')
         self.assertIn('spans',degraded['active_window_capture_detail'])
 
+    async def test_target_window_refuses_unverified_capture_and_never_grabs_desktop(self):
+        class SdkError(RuntimeError):
+            def __init__(self, message, **kwargs):
+                super().__init__(message)
+                self.code = kwargs.get('code')
+        def refuse(error):
+            return {'error':str(error),'code':getattr(error,'code','')}
+        seen = []
+        state = {'resolved':(None,'target_window_not_found',0),'foreground':0,'text':'anything'}
+        def capture_snapshot(target=None):
+            seen.append('fullscreen' if target is None else 'target')
+            return SimpleNamespace(status='ok',text=state['text'],captured_at='fixture')
+        async def persist():
+            pass
+        async def classify(text, update_empty=False):
+            return {'screen_type':'study'}
+        owner = SimpleNamespace(_ocr_pipeline=SimpleNamespace(capture_snapshot=capture_snapshot),
+            _supervision=None,_persist_state=persist,_lock=asyncio.Lock(),
+            _state=SimpleNamespace(last_ocr_text='',last_ocr_at=''),
+            _update_screen_classification=classify)
+        namespace = source_functions('entry_ocr_entries.py',{'study_ocr_snapshot','_marker_list','_markers_matched'},
+            {'asyncio':asyncio,'Ok':lambda data:data,'Err':refuse,'SdkError':SdkError,
+             'build_ocr_payload':lambda snapshot:{'status':snapshot.status,'text':snapshot.text},
+             '_ocr_request_lanlan':lambda args:None,
+             '_foreground_window_target':lambda:None,
+             '_named_window_target':lambda title:state['resolved'],
+             '_foreground_hwnd':lambda:state['foreground'],
+             '_ACTIVE_WINDOW_MIN_SIDE':64,'_ACTIVE_WINDOW_TITLE_LIMIT':240,
+             '_ACTIVE_WINDOW_SELF_MARKERS':('N.E.K.O','NekoClaw')})
+        title = 'Synthetic Lesson Fixture (LiveTutor test)'
+        target = {'title':title,'left':0,'top':0,'right':800,'bottom':600,
+                  'screen_width':1920,'screen_height':1080}
+        lesson = ['let u equals 2 x','transfer practice']
+
+        # A window target is only trusted when the caller states what the window must
+        # already show, so an unmarked request is refused before any pixels are read.
+        state['resolved'] = (target,'',7)
+        state['foreground'] = 7
+        no_markers = await namespace['study_ocr_snapshot'](owner,capture_mode='target_window',
+                                                           window_title=title)
+        self.assertEqual(no_markers['code'],'TARGET_WINDOW_REFUSED')
+        self.assertIn('expected_markers',no_markers['error'])
+        self.assertEqual(seen,[])
+
+        for reason in ('target_window_title_required','target_window_not_found',
+                       'target_window_title_mismatch','target_window_not_foreground',
+                       'target_window_geometry_unusable'):
+            state['resolved'] = (None,reason,0 if 'not_found' in reason else 7)
+            missed = await namespace['study_ocr_snapshot'](owner,capture_mode='target_window',
+                window_title=title,expected_markers=lesson)
+            self.assertEqual(missed['code'],'TARGET_WINDOW_REFUSED',reason)
+            self.assertIn(reason,str(missed))
+        self.assertEqual(seen,[])
+
+        # The packaged runtime usually reaches the PIL crop route, so pin its privacy
+        # property: PIL is asked for the target rect, never for the whole desktop.
+        import sys as _sys, types as _types
+        grabs = []
+        def grab(bbox=None):
+            grabs.append(bbox)
+            return SimpleNamespace(size=(1920,1080))
+        pil = _types.ModuleType('PIL'); image_grab = _types.ModuleType('PIL.ImageGrab')
+        image_grab.grab = grab; image_grab.ScreenSize = {'width':1920,'height':1080}
+        pil.ImageGrab = image_grab
+        package = _types.ModuleType('livetutor_crop_fixture'); package.__path__ = []
+        backends = _types.ModuleType('livetutor_crop_fixture.study_capture_backends')
+        backends._crop_image_to_profile = lambda image,_profile: image
+        pipeline = _types.ModuleType('livetutor_crop_fixture.study_ocr_pipeline')
+        pipeline.StudyCaptureProfile = lambda **_: object()
+        originals = {_sys.modules.get(name) for name in ('PIL','PIL.ImageGrab',
+                                                          'livetutor_crop_fixture',
+                                                          'livetutor_crop_fixture.study_capture_backends',
+                                                          'livetutor_crop_fixture.study_ocr_pipeline')}
+        _sys.modules.update({'PIL':pil,'PIL.ImageGrab':image_grab,'livetutor_crop_fixture':package,
+            'livetutor_crop_fixture.study_capture_backends':backends,
+            'livetutor_crop_fixture.study_ocr_pipeline':pipeline})
+        namespace['__package__'] = 'livetutor_crop_fixture'
+        try:
+            owner._cfg = SimpleNamespace(ocr_left_inset_ratio=0.0, ocr_right_inset_ratio=0.0,
+                                        ocr_top_ratio=1.0, ocr_bottom_inset_ratio=0.0)
+            owner._ocr_pipeline = SimpleNamespace(
+                capture_snapshot=lambda _target=None: SimpleNamespace(status='capture_failed',
+                    text='', diagnostic='dxcam_unavailable', captured_at='fixture'),
+                snapshot_from_image=lambda _image: SimpleNamespace(status='ok',
+                    text='Example 3: substitution let u equals 2 x then do the transfer practice step',
+                    captured_at='fixture'))
+            seen.clear(); state['foreground'] = 7; state['resolved'] = (target,'',7)
+            cropped = await namespace['study_ocr_snapshot'](owner,capture_mode='target_window',
+                window_title=title,expected_markers=lesson,min_marker_matches=2)
+            self.assertEqual(cropped['capture_mode_used'],'target_window')
+            self.assertEqual(cropped['active_window_capture_route'],'pil_bbox_crop')
+            self.assertTrue(grabs and all(box is not None for box in grabs),
+                            'the crop route must never grab the whole desktop')
+        finally:
+            namespace['__package__'] = None
+            for name in ('PIL','PIL.ImageGrab','livetutor_crop_fixture',
+                         'livetutor_crop_fixture.study_capture_backends',
+                         'livetutor_crop_fixture.study_ocr_pipeline'):
+                _sys.modules.pop(name, None)
+        owner._ocr_pipeline = SimpleNamespace(capture_snapshot=capture_snapshot)
+
+        # Correct target: identity holds, capture is window-scoped, expected text is there.
+        state['resolved'] = (target,'',7)
+        state['text'] = 'Lesson: let u equals 2 x, then do the transfer practice step.'
+        hit = await namespace['study_ocr_snapshot'](owner,capture_mode='target_window',
+            window_title=title,expected_markers=lesson,min_marker_matches=2)
+        self.assertEqual(hit['capture_mode_used'],'target_window')
+        self.assertEqual(hit['capture_target_title'],title)
+        self.assertEqual(hit['active_window_capture_route'],'pipeline_target')
+        self.assertEqual(hit['target_window_markers_matched'],2)
+        self.assertEqual(seen,['target'])
+        self.assertEqual(owner._state.last_ocr_text,state['text'])
+
+        # Another window coming forward between the check and the grab invalidates it.
+        seen.clear(); owner._state.last_ocr_text = ''
+        state['foreground'] = 99
+        lost = await namespace['study_ocr_snapshot'](owner,capture_mode='target_window',
+            window_title=title,expected_markers=lesson)
+        self.assertEqual(lost['code'],'TARGET_WINDOW_REFUSED')
+        self.assertIn('target_lost_foreground',lost['error'])
+        self.assertNotIn('text',lost)
+        self.assertEqual(owner._state.last_ocr_text,'')
+        state['foreground'] = 7
+
+        # A matching foreground window whose text is not the lesson is refused too: the
+        # visible title alone does not prove what the cropped region actually contains.
+        seen.clear()
+        state['text'] = 'Save As  X:\\Users\\someone\\Documents\\private-final.docx'
+        mismatch = await namespace['study_ocr_snapshot'](owner,capture_mode='target_window',
+            window_title=title,expected_markers=lesson,min_marker_matches=2)
+        self.assertEqual(mismatch['code'],'TARGET_WINDOW_CONTENT_MISMATCH')
+        self.assertNotIn('text',mismatch)
+        self.assertEqual(owner._state.last_ocr_text,'')
+        self.assertEqual(seen,['target'])
+
     async def test_plane_bootstrap_is_idempotent_and_timeout_is_bounded(self):
         tree = ast.parse((ROOT/'scripts/neko_lab_runtime_plane.py').read_text(encoding='utf-8'))
         function = next(node for node in tree.body if isinstance(node,ast.AsyncFunctionDef)

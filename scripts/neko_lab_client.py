@@ -37,13 +37,26 @@ class LabClient:
             state = self.request(f"/runs/{run_id}")
             if state.get("status") in {"succeeded", "failed", "canceled", "timeout"}:
                 if state["status"] != "succeeded":
-                    raise RuntimeError(f"run {run_id}: {state['status']}")
+                    # A rejected entry is a result, not a transport failure: the run
+                    # still exports the refusal reason the plugin returned.
+                    reason = ""
+                    try:
+                        for item in self.request(f"/runs/{run_id}/export").get("items", []):
+                            if item.get("type") == "json":
+                                reason = json.dumps(item["json"].get("error"), ensure_ascii=False)[:300]
+                    except Exception:
+                        reason = ""
+                    raise RuntimeError(f"run {run_id}: {state['status']}"
+                                       + (f" {reason}" if reason and reason != "null" else ""))
                 export = self.request(f"/runs/{run_id}/export")
                 for item in export.get("items", []):
                     if item.get("type") == "json":
                         result = item["json"]
                         if result.get("success") is False:
-                            raise RuntimeError(f"plugin entry {entry} failed")
+                            # The entry's own refusal reason is the evidence that a
+                            # capture was rejected, so it must not be flattened away.
+                            detail = json.dumps(result.get("error"), ensure_ascii=False)[:400]
+                            raise RuntimeError(f"plugin entry {entry} failed: {detail}")
                         data = result.get("data", result)
                         return {"run_id": run_id, "elapsed_ms": round(
                             (time.monotonic() - started) * 1000), "data": data}
