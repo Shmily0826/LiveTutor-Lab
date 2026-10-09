@@ -1,0 +1,452 @@
+--- a/plugin/plugins/study_companion/entry_tutor_context_support.py
++++ b/plugin/plugins/study_companion/entry_tutor_context_support.py
+@@ -34,6 +34,35 @@
+ _SEMANTIC_ROUTE_MIN_CONFIDENCE = 0.6
+ _SEMANTIC_ROUTE_TIMEOUT_SECONDS = 12.0
+ _CANCEL_DRAIN_TIMEOUT_SECONDS = 5.0
++
++# A supplied study material shorter than this is treated as an instruction
++# ("generate a question from the image"), not as material to be grounded on.
++_MATERIAL_GROUNDING_MIN_CHARS = 40
++# Fields that pull a generated question toward a tracked topic. When an explicit
++# study material decides the subject they are dropped, so an unrelated weak topic
++# cannot hijack the question.
++_CROSS_SUBJECT_QUESTION_PARAM_FIELDS = (
++    "target_topic_id",
++    "target_topic",
++    "weak_topics",
++    "due_reviews",
++    "retry_wrong_question",
++    "candidate_evidence",
++)
++
++
++def _drop_cross_subject_question_params(
++    params: dict[str, Any] | None,
++) -> dict[str, Any]:
++    trimmed = dict(params or {})
++    for field in _CROSS_SUBJECT_QUESTION_PARAM_FIELDS:
++        if field in ("weak_topics", "due_reviews", "candidate_evidence"):
++            trimmed[field] = []
++        elif field == "retry_wrong_question":
++            trimmed[field] = {}
++        else:
++            trimmed[field] = ""
++    return trimmed
+ 
+ 
+ @dataclass(slots=True)
+@@ -258,9 +287,8 @@
+             return {}, _knowledge_guidance_outcome(status="not_applicable")
+         seed = dict(context or {})
+         query = str(
+-            seed.get("source_text")
+-            or seed.get("question")
+-            or seed.get("topic_hint")
++            seed.get("topic_hint")
++            or seed.get("source_text")
+             or seed.get("question")
+             or seed.get("topic")
+             or input_text
+@@ -614,14 +642,58 @@
+             if isinstance(supplied_params, dict):
+                 context["knowledge_question_params"] = dict(supplied_params)
+             else:
+-                context["knowledge_question_params"] = await asyncio.to_thread(
++                params = await asyncio.to_thread(
+                     self._knowledge_tracker.get_next_question_params,
+                     hint,
+                 )
++                supplied_extra = extra if isinstance(extra, dict) else {}
++                material_text = str(supplied_extra.get("source_text") or "").strip()
++                source_kind = str(supplied_extra.get("source") or "").strip()
++                material_grounded = bool(
++                    material_text
++                    and len(material_text) >= _MATERIAL_GROUNDING_MIN_CHARS
++                    and source_kind != "targeted_question"
++                )
++                if material_grounded:
++                    # The learner's own material decides the question subject.
++                    context["material_grounded_question"] = True
++                    resolved_target = str(
++                        (params or {}).get("target_topic_id") or ""
++                    ).strip()
++                    if not (hint and resolved_target):
++                        params = _drop_cross_subject_question_params(params)
++                context["knowledge_question_params"] = params
+         elif operation == LLM_OPERATION_SUMMARIZE_SESSION:
+             context["knowledge_session_summary"] = await asyncio.to_thread(
+                 self._knowledge_tracker.get_session_summary
+             )
++            # `history` is a rolling 50-row window that spans previous sessions.
++            # A summary must describe what was actually studied in *this* one, so
++            # the session boundary is derived from the in-memory event log.
++            events = list(context.get("recent_learning_events") or [])
++            async with _plugin_lock(self._lock):
++                full_events = list(getattr(self._state, "recent_learning_events", []) or [])
++            if len(full_events) > len(events):
++                events = full_events
++            session_start = min(
++                (
++                    float(event.get("at"))
++                    for event in events
++                    if isinstance(event, dict)
++                    and isinstance(event.get("at"), (int, float))
++                    and not isinstance(event.get("at"), bool)
++                ),
++                default=None,
++            )
++            if session_start is not None:
++                session_history = [
++                    item
++                    for item in history
++                    if isinstance(item, dict)
++                    and float(item.get("created_at") or 0.0) >= session_start
++                ]
++                if session_history:
++                    context["session_history"] = session_history
+         else:
+             context["knowledge_summary"] = await asyncio.to_thread(
+                 self._knowledge_tracker.get_status_summary,
+@@ -706,7 +778,7 @@
+             self._state.session_summary_seed = seed
+             self._state.recent_learning_events = (
+                 self._state.recent_learning_events + [event]
+-            )[-16:]
++            )[-64:]
+             if operation != LLM_OPERATION_KNOWLEDGE_TRACK:
+                 if operation == LLM_OPERATION_QUESTION_GENERATE:
+                     if str(payload.get("question") or "").strip():
+@@ -812,6 +884,7 @@
+             "knowledge_guidance_focus_topic",
+             "knowledge_guidance_related_topics",
+             "knowledge_guidance_source",
++            "material_grounded_question",
+             "study_semantic_status",
+             "study_semantic_reason",
+             "study_response_mode",
+--- a/plugin/plugins/study_companion/entry_tutor_explain_entries.py
++++ b/plugin/plugins/study_companion/entry_tutor_explain_entries.py
+@@ -12,6 +12,7 @@
+ )
+ from .tutor_llm_agent_concept_explain import repair_solution_structure
+ from .entry_tutor_context_support import _TutorFinalizeProgress
++from .llm_prompts import build_concept_recent_context
+ from .entry_common import (
+     Any,
+     Err,
+@@ -565,6 +566,11 @@
+             payload["general_narration_reason"] = general_narration_reason
+             payload["general_narration_response_mode"] = general_response_mode
+             payload["study_response_mode"] = response_mode
++            payload["mode"] = active_mode
++            payload["active_mode"] = active_mode
++            payload["recent_context_chars"] = len(
++                build_concept_recent_context(tutor_context)
++            )
+             if mode_switch:
+                 payload["mode_switch"] = mode_switch
+             if intent.get("matched"):
+--- a/plugin/plugins/study_companion/entry_tutor_question_entries.py
++++ b/plugin/plugins/study_companion/entry_tutor_question_entries.py
+@@ -534,6 +534,10 @@
+                 )
+         public_payload = None
+         if targeted_context:
++            # The stored topic is forced to the adaptive selection so mastery lands on
++            # the intended topic; keep the model's own label visible so a mismatch
++            # between the selected topic and the generated question is observable.
++            model_topic_label = str((reply.payload or {}).get("topic") or "").strip()
+             private_payload = _question_private_payload(
+                 dict(reply.payload or {}),
+                 {
+@@ -568,6 +572,8 @@
+                 created_at=reply.created_at,
+             )
+             public_payload = _targeted_public_payload(private_payload)
++            if model_topic_label:
++                public_payload["question_topic_label"] = model_topic_label
+         metadata_payload = (
+             public_payload if public_payload is not None else dict(reply.payload or {})
+         )
+--- a/plugin/plugins/study_companion/llm_prompts.py
++++ b/plugin/plugins/study_companion/llm_prompts.py
+@@ -62,10 +62,12 @@
+         "last_ocr_text",
+         "last_ocr_at",
+         "history",
++        "session_history",
+         "knowledge_summary",
+         "knowledge_session_summary",
+         "knowledge_guidance",
+         "knowledge_question_params",
++        "material_grounded_question",
+         "topic_hint",
+         "topic",
+         "selected_topic_id",
+@@ -228,6 +230,108 @@
+     return STUDY_MODE_SYSTEM_GUIDANCE.get(selected_mode, STUDY_MODE_SYSTEM_GUIDANCE[MODE_COMPANION])
+ 
+ 
++# Bounds for the session-memory block injected into concept_explain. They are kept
++# deliberately small: the block travels with every explanation, so it must never
++# crowd out the study text itself.
++_RECENT_CONTEXT_OCR_CHARS = 1200
++_RECENT_CONTEXT_HISTORY_ITEMS = 4
++_RECENT_CONTEXT_HISTORY_INPUT_CHARS = 240
++_RECENT_CONTEXT_HISTORY_OUTPUT_CHARS = 560
++_RECENT_CONTEXT_EVENT_ITEMS = 6
++_RECENT_CONTEXT_TEXT_CHARS = 300
++
++
++def _bounded_text(value: Any, limit: int) -> str:
++    text = str(value or "").strip()
++    if len(text) <= limit:
++        return text
++    return f"{text[:limit].rstrip()}..."
++
++
++def _recent_history_items(history: Any) -> list[dict[str, str]]:
++    if not isinstance(history, list):
++        return []
++    rows = [item for item in history if isinstance(item, dict)]
++    return [
++        {
++            "kind": str(item.get("kind") or ""),
++            "input": _bounded_text(
++                item.get("input_text"), _RECENT_CONTEXT_HISTORY_INPUT_CHARS
++            ),
++            "output": _bounded_text(
++                item.get("output_text"), _RECENT_CONTEXT_HISTORY_OUTPUT_CHARS
++            ),
++        }
++        for item in rows[-_RECENT_CONTEXT_HISTORY_ITEMS:]
++        if str(item.get("input_text") or "").strip()
++        or str(item.get("output_text") or "").strip()
++    ]
++
++
++def _recent_learning_events(events: Any) -> list[dict[str, str]]:
++    if not isinstance(events, list):
++        return []
++    rows = [item for item in events if isinstance(item, dict)]
++    compact: list[dict[str, str]] = []
++    for item in rows[-_RECENT_CONTEXT_EVENT_ITEMS:]:
++        entry = {
++            "operation": str(item.get("operation") or item.get("kind") or ""),
++            "topic": _bounded_text(item.get("topic"), 80),
++            "screen_type": str(item.get("screen_type") or ""),
++        }
++        compact.append({key: value for key, value in entry.items() if value})
++    return compact
++
++
++def build_concept_recent_context(context: dict[str, Any] | None) -> str:
++    """Render the session-memory block for concept_explain prompts.
++
++    Only fields needed to resolve ``that example`` / ``the previous step`` style
++    references are included, and every string is bounded. Private fields never
++    reach this function's output because only named public fields are read.
++    """
++    context = context if isinstance(context, dict) else {}
++    memory: dict[str, Any] = {}
++    history = _recent_history_items(context.get("history"))
++    if history:
++        memory["recent_interactions"] = history
++    ocr_text = _bounded_text(context.get("last_ocr_text"), _RECENT_CONTEXT_OCR_CHARS)
++    if ocr_text:
++        memory["last_captured_material"] = ocr_text
++        ocr_at = str(context.get("last_ocr_at") or "").strip()
++        if ocr_at:
++            memory["last_captured_at"] = ocr_at
++    question = context.get("current_question")
++    if isinstance(question, dict) and str(question.get("question") or "").strip():
++        memory["current_practice_question"] = {
++            "question": _bounded_text(
++                question.get("question"), _RECENT_CONTEXT_TEXT_CHARS
++            ),
++            "topic": str(question.get("topic") or question.get("selected_topic_id") or ""),
++        }
++    evaluation = context.get("last_answer_evaluation")
++    if isinstance(evaluation, dict) and evaluation:
++        memory["last_answer_evaluation"] = {
++            key: evaluation.get(key)
++            for key in ("verdict", "score", "error_type")
++            if evaluation.get(key) not in (None, "")
++        }
++        feedback = _bounded_text(
++            evaluation.get("feedback"), _RECENT_CONTEXT_TEXT_CHARS
++        )
++        if feedback:
++            memory["last_answer_evaluation"]["feedback"] = feedback
++    events = _recent_learning_events(context.get("recent_learning_events"))
++    if events:
++        memory["recent_learning_events"] = events
++    if not memory:
++        return ""
++    return (
++        "\n\nRecent study context (this session's memory; use it to resolve "
++        "references to earlier material):\n" + _json_dump(memory)
++    )
++
++
+ def _build_structured_messages(
+     *,
+     operation: str,
+@@ -294,6 +398,7 @@
+                 intent=str(context.get("study_semantic_intent") or "unknown"),
+                 response_guidance=STUDY_CONCEPT_RESPONSE_MODE_GUIDANCE[response_mode],
+                 text=f"{text.strip()}{guidance_block}",
++                recent_context=build_concept_recent_context(context),
+             ),
+         },
+     ]
+@@ -364,13 +469,60 @@
+     )
+ 
+ 
++_SUMMARY_HISTORY_LIMIT = 12
++_SUMMARY_HISTORY_INPUT_CHARS = 200
++_SUMMARY_HISTORY_OUTPUT_CHARS = 320
++
++
++def _summary_interaction_rows(rows: Any) -> list[dict[str, str]]:
++    if not isinstance(rows, list):
++        return []
++    compact: list[dict[str, str]] = []
++    for item in [row for row in rows if isinstance(row, dict)][-_SUMMARY_HISTORY_LIMIT:]:
++        input_text = _bounded_text(
++            item.get("input_text"), _SUMMARY_HISTORY_INPUT_CHARS
++        )
++        output_text = _bounded_text(
++            item.get("output_text"), _SUMMARY_HISTORY_OUTPUT_CHARS
++        )
++        if not input_text and not output_text:
++            continue
++        compact.append(
++            {
++                "kind": str(item.get("kind") or ""),
++                "input": input_text,
++                "output": output_text,
++            }
++        )
++    return compact
++
++
++def _summarize_context(context: dict[str, Any]) -> dict[str, Any]:
++    """Project the summary context onto this session's interactions.
++
++    The raw ``history`` window spans earlier sessions, so it is replaced by the
++    (much smaller) ``session_history`` derived by the caller. Without that
++    projection the 2000-token budget used to be spent on unrelated rows and the
++    model reported the session as "limited".
++    """
++    compact = dict(context)
++    session_rows = _summary_interaction_rows(compact.pop("session_history", None))
++    history_rows = _summary_interaction_rows(compact.pop("history", None))
++    if session_rows:
++        compact["session_history"] = session_rows
++    elif history_rows:
++        # No session boundary available (fresh state): fall back to the window.
++        compact["history"] = history_rows
++    return compact
++
++
+ def build_summarize_session_messages(
+     *,
+     language: str,
+     mode: str = MODE_COMPANION,
+     context: dict[str, Any] | None = None,
+ ) -> list[dict[str, str]]:
+-    context = dict(context or {})
++    context = _summarize_context(dict(context or {}))
+     context.setdefault("language", language)
+     context.setdefault("mode", normalize_mode(mode))
+     return _build_structured_messages(
+@@ -426,6 +578,7 @@
+ __all__ = [
+     "build_answer_evaluate_messages",
+     "build_concept_explain_messages",
++    "build_concept_recent_context",
+     "build_knowledge_track_messages",
+     "build_operation_messages",
+     "build_question_generate_messages",
+--- a/plugin/plugins/study_companion/prompt_templates.py
++++ b/plugin/plugins/study_companion/prompt_templates.py
+@@ -5,7 +5,9 @@
+     "question_generate": 4500,
+     "answer_evaluate": 3000,
+     "knowledge_track": 2500,
+-    "summarize_session": 2000,
++    # A session summary is only as good as the interactions it can see; the
++    # session rows are compacted before rendering (see llm_prompts).
++    "summarize_session": 6000,
+ }
+ 
+ STUDY_CONCEPT_RESPONSE_MODE_SYSTEM_PROMPT = (
+@@ -13,6 +15,16 @@
+     "identify relevant prerequisite ideas, and follow the backend-provided "
+     "response contract exactly. Do not infer a different response mode from "
+     "keywords or from knowledge-graph labels. "
++    "When the learner's message refers to earlier work in the session - for "
++    "example \"that example\", \"example 2\", \"the step before\", \"why is "
++    "there a 1/2\" - resolve the reference from the Recent study context block "
++    "and answer that specific item directly. Do not ask the learner to paste "
++    "material that is already present in the Recent study context, and do not "
++    "fall back to a generic textbook derivation when the referenced item is "
++    "visible there. "
++    "If the Recent study context shows that the current material is a "
++    "different subject from an earlier one, answer only about the subject the "
++    "learner is now asking about. "
+     "Do not invent source material beyond the supplied text."
+ )
+ 
+@@ -114,8 +126,17 @@
+     "10. difficulty: integer from 1 to 5.\n"
+     "11. topic: a short label for the target concept.\n"
+     "12. math_equivalence_engine.enabled must be false.\n"
+-    "13. Keep the output grounded in context.screen_classification when present.\n"
+-    "14. Output must match this JSON structure:\n"
++    "13. Subject grounding, in this priority order: (a) when context.selected_topic_name "
++    "or context.selected_topic_id is present, that adaptive practice topic is the "
++    "target; (b) otherwise, when context.material_grounded_question is true, the "
++    "subject taught by the supplied study material (context.source_text / context.text, "
++    "refined by context.topic_hint) is the target.\n"
++    "14. context.knowledge_question_params, context.knowledge_guidance, context.history "
++    "and context.last_ocr_text may inform difficulty, phrasing and distractor choice, "
++    "but they must never move the question off the subject chosen in rule 13. When "
++    "rule 13 names a topic, do not take the subject from the recent conversation or "
++    "from the last captured material.\n"
++    "15. Output must match this JSON structure:\n"
+ )
+ 
+ STUDY_ANSWER_EVALUATE_SYSTEM_PROMPT = (
+@@ -171,8 +192,17 @@
+     "4. next_actions: short bullet-like strings that suggest what to do next.\n"
+     "5. markdown: a compact Markdown summary suitable for display.\n"
+     "6. Use only the supplied context and keep the summary conservative.\n"
+-    "6. Use only the supplied context and keep the summary conservative.\n"
+-    "7. Output must match this JSON structure:\n"
++    "7. Ground the summary in what was actually studied. When context.session_history "
++    "is present it lists exactly the interactions of the current session: summarise "
++    "those, and use context.history only to understand continuity. Do not report "
++    "material that appears only in context.history and not in context.session_history. "
++    "Use context.last_ocr_text for the material that was on screen and "
++    "context.session_summary_seed for counts. Treat context.screen_classification as "
++    "weak metadata and never let it define the study subject.\n"
++    "8. Name the subject and the specific material or mistakes only when they appear "
++    "in the session interactions or material. If the session covered two different "
++    "subjects, mention both instead of picking one.\n"
++    "9. Output must match this JSON structure:\n"
+ )
+ 
+ STUDY_STRUCTURED_USER_TEMPLATE = "{requirements}{example_json}\n\ncontext:\n{context_json}"
+@@ -228,7 +258,7 @@
+     "Content type: {content_type}\n"
+     "Intent: {intent}\n"
+     "Response contract: {response_guidance}\n\n"
+-    "Study text:\n{text}"
++    "Study text:\n{text}{recent_context}"
+ )
+ 
+ # Backward-compatible public template for callers that still render this constant

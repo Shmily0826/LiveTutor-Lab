@@ -1,0 +1,49 @@
+--- a/plugin/plugins/study_companion/tutor_llm_agent_concept_explain.py
++++ b/plugin/plugins/study_companion/tutor_llm_agent_concept_explain.py
+@@ -228,11 +228,13 @@
+             created_at=utc_now_iso(),
+         )
+     selected_mode = normalize_mode(mode)
++    # Announce the mode only on the turn that switched into it, not on every explanation.
++    mode_switched_this_turn = bool((context or {}).get("mode_switch"))
+     teaching_prefix = (
+         build_transition_phrase(
+             MODE_TEACHING, language=self._config.language, outcome="changed"
+         )
+-        if selected_mode == MODE_TEACHING
++        if selected_mode == MODE_TEACHING and mode_switched_this_turn
+         else ""
+     )
+     messages = build_concept_explain_messages(
+--- a/plugin/plugins/study_companion/prompt_templates.py
++++ b/plugin/plugins/study_companion/prompt_templates.py
+@@ -209,6 +209,9 @@
+ 
+ STUDY_STRUCTURED_USER_TEMPLATE = "{requirements}{example_json}\n\ncontext:\n{context_json}"
+ STUDY_STRUCTURED_MODE_PREFIX_TEMPLATE = "Mode: {mode}\n\n{prompt}"
++# The structured operations only carried the language inside context_json, so the
++# model wrote session summaries in English while the learner's language was zh-CN.
++STUDY_STRUCTURED_LANGUAGE_TEMPLATE = "Write every natural-language field in {language}.\n\n{prompt}"
+ 
+ STUDY_CONCEPT_EXPLAIN_SYSTEM_WITH_MODE_TEMPLATE = "{system_prompt}\nMode guidance: {mode_guidance}"
+ STUDY_CONCEPT_RESPONSE_MODE_GUIDANCE = {
+--- a/plugin/plugins/study_companion/llm_prompts.py
++++ b/plugin/plugins/study_companion/llm_prompts.py
+@@ -20,6 +20,7 @@
+     STUDY_QUESTION_GENERATE_REQUIREMENTS,
+     STUDY_QUESTION_GENERATE_SYSTEM_PROMPT,
+     STUDY_STRUCTURED_MODE_PREFIX_TEMPLATE,
++    STUDY_STRUCTURED_LANGUAGE_TEMPLATE,
+     STUDY_STRUCTURED_USER_TEMPLATE,
+     STUDY_SUMMARIZE_SESSION_EXAMPLE,
+     STUDY_SUMMARIZE_SESSION_REQUIREMENTS,
+@@ -346,6 +347,9 @@
+         example_json=_json_dump(example),
+         context_json=_context_json_for_prompt(operation, context),
+     )
++    language = str(context.get("language") or "").strip()
++    if language:
++        prompt = STUDY_STRUCTURED_LANGUAGE_TEMPLATE.format(language=language, prompt=prompt)
+     if mode:
+         prompt = STUDY_STRUCTURED_MODE_PREFIX_TEMPLATE.format(mode=normalize_mode(mode), prompt=prompt)
+     return [

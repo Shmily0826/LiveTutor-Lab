@@ -301,13 +301,103 @@
                  except Exception as exc:
                      self.logger.warning(
                          "shutdown: failed to stop {} messages bus watcher: {}",
-diff --git a/plugin/plugins/study_companion/entry_ocr_entries.py b/plugin/plugins/study_companion/entry_ocr_entries.py
-index fb33240..f5ce70d 100644
 --- a/plugin/plugins/study_companion/entry_ocr_entries.py
 +++ b/plugin/plugins/study_companion/entry_ocr_entries.py
-@@ -59,7 +59,8 @@ class _OcrEntriesMixin:
+@@ -27,6 +27,88 @@
+     return None
+ 
+ 
++# N.E.K.O's own surfaces are never the study material, so they are not valid
++# "active window" capture targets.
++_ACTIVE_WINDOW_SELF_MARKERS = ("N.E.K.O", "NekoClaw")
++_ACTIVE_WINDOW_TITLE_LIMIT = 240
++_ACTIVE_WINDOW_MIN_SIDE = 64
++
++
++def _foreground_window_target() -> dict[str, object] | None:
++    """Resolve the foreground window into a rect target for the OCR pipeline.
++
++    The pipeline already knows how to crop to a target (`capture_snapshot` with a
++    target + the capture backends' profile insets); this only supplies the target.
++
++    The rect is clamped to the primary monitor and returned as explicit
++    left/top/right/bottom instead of an hwnd: a maximized window reports an
++    origin of about (-7, -7) for its invisible resize border, and the dxcam
++    backend answers a region outside the screen with an empty frame. Clamping is
++    therefore what makes a maximized study window capturable at all.
++
++    Returns None when there is no usable study surface in front, so the caller
++    falls back to fullscreen instead of OCR-ing the plugin's own UI.
++    """
++    import sys
++
++    if sys.platform != "win32":
++        return None
++    try:
++        import ctypes
++
++        class _Rect(ctypes.Structure):
++            _fields_ = [
++                ("left", ctypes.c_long),
++                ("top", ctypes.c_long),
++                ("right", ctypes.c_long),
++                ("bottom", ctypes.c_long),
++            ]
++
++        user32 = ctypes.windll.user32
++        hwnd = int(user32.GetForegroundWindow() or 0)
++        if not hwnd or not user32.IsWindowVisible(hwnd):
++            return None
++        if user32.IsIconic(hwnd):
++            return None
++        length = int(user32.GetWindowTextLengthW(hwnd) or 0)
++        buffer = ctypes.create_unicode_buffer(length + 2)
++        user32.GetWindowTextW(hwnd, buffer, length + 2)
++        title = str(buffer.value or "").strip()
++        if not title:
++            return None
++        if any(marker in title for marker in _ACTIVE_WINDOW_SELF_MARKERS):
++            return None
++        rect = _Rect()
++        if not user32.GetWindowRect(hwnd, ctypes.byref(rect)):
++            return None
++        primary_w = int(user32.GetSystemMetrics(0) or 0)
++        primary_h = int(user32.GetSystemMetrics(1) or 0)
++        if primary_w <= 0 or primary_h <= 0:
++            return None
++        if int(rect.right) <= 0 or int(rect.bottom) <= 0:
++            return None
++        if int(rect.left) >= primary_w or int(rect.top) >= primary_h:
++            return None
++        left = max(0, min(int(rect.left), primary_w - _ACTIVE_WINDOW_MIN_SIDE))
++        top = max(0, min(int(rect.top), primary_h - _ACTIVE_WINDOW_MIN_SIDE))
++        right = min(primary_w, max(int(rect.right), left + _ACTIVE_WINDOW_MIN_SIDE))
++        bottom = min(primary_h, max(int(rect.bottom), top + _ACTIVE_WINDOW_MIN_SIDE))
++        return {
++            "title": title[:_ACTIVE_WINDOW_TITLE_LIMIT],
++            "left": left,
++            "top": top,
++            "right": right,
++            "bottom": bottom,
++            # The measurement space above follows this process's DPI awareness,
++            # which is not necessarily the space PIL's screen grab uses; the
++            # caller rescales against these to crop deterministically.
++            "screen_width": primary_w,
++            "screen_height": primary_h,
++        }
++    except Exception:
++        return None
++
++
+ class _OcrEntriesMixin:
+     @plugin_entry(
+         id="study_dependency_status",
+@@ -57,9 +139,10 @@
+             "properties": {
+                 "capture_mode": {
                      "type": "string",
-                     "enum": ["fullscreen", "interactive"],
+-                    "enum": ["fullscreen", "interactive"],
++                    "enum": ["fullscreen", "interactive", "active_window"],
                      "default": "fullscreen",
 -                }
 +                },
@@ -315,16 +405,121 @@ index fb33240..f5ce70d 100644
              },
          },
          timeout=90.0,
-@@ -72,7 +73,7 @@ class _OcrEntriesMixin:
+@@ -70,21 +153,119 @@
+             "capture_mode_requested",
+             "capture_mode_used",
              "interactive_fallback_reason",
++            "active_window_fallback_reason",
++            "active_window_capture_detail",
++            "active_window_capture_route",
++            "capture_target_title",
          ],
      )
 -    async def study_ocr_snapshot(self, capture_mode: str = "fullscreen", **kwargs):
 +    async def study_ocr_snapshot(self, capture_mode: str = "fullscreen", allow_fullscreen_fallback: bool = True, **kwargs):
          if self._ocr_pipeline is None:
              return Err(SdkError("study OCR pipeline is not initialized"))
-         if capture_mode not in {"fullscreen", "interactive"}:
-@@ -85,6 +86,8 @@ class _OcrEntriesMixin:
+-        if capture_mode not in {"fullscreen", "interactive"}:
++        if capture_mode not in {"fullscreen", "interactive", "active_window"}:
+             return Err(SdkError("invalid capture_mode"))
+         capture_mode_used = capture_mode
+         interactive_fallback_reason = ""
+-        if capture_mode == "interactive":
++        active_window_fallback_reason = ""
++        active_window_capture_detail = ""
++        active_window_capture_route = ""
++        capture_target_title = ""
++        if capture_mode == "active_window":
++            target = await asyncio.to_thread(_foreground_window_target)
++            snapshot = None
++            if target is None:
++                active_window_capture_detail = "no_usable_foreground_window"
++            else:
++                snapshot = await asyncio.to_thread(
++                    self._ocr_pipeline.capture_snapshot, target
++                )
++                if str(getattr(snapshot, "status", "")) == "capture_failed":
++                    active_window_capture_detail = str(
++                        getattr(snapshot, "diagnostic", "") or "capture failed"
++                    )[:200]
++                    snapshot = None
++                else:
++                    capture_target_title = str(target.get("title") or "")
++                    active_window_capture_route = "pipeline_target"
++                if snapshot is None:
++                    # The region-aware capture backends (dxcam/mss/pyautogui) are not
++                    # guaranteed to be present in the packaged runtime, while the
++                    # fullscreen path works through PIL. Take one PIL grab and crop it
++                    # to the target rect instead of failing the whole capture.
++                    try:
++                        from PIL import ImageGrab
++
++                        frame = await asyncio.to_thread(lambda: ImageGrab.grab())
++                        width, height = frame.size
++                        screen_w = int(target.get("screen_width") or 0)
++                        screen_h = int(target.get("screen_height") or 0)
++                        scale_x = (width / screen_w) if screen_w and width else 1.0
++                        scale_y = (height / screen_h) if screen_h and height else 1.0
++                        box = (
++                            max(0, int(int(target["left"]) * scale_x)),
++                            max(0, int(int(target["top"]) * scale_y)),
++                            min(width, int(int(target["right"]) * scale_x)),
++                            min(height, int(int(target["bottom"]) * scale_y)),
++                        )
++                        if (
++                            box[2] - box[0] < _ACTIVE_WINDOW_MIN_SIDE
++                            or box[3] - box[1] < _ACTIVE_WINDOW_MIN_SIDE
++                        ):
++                            raise RuntimeError(f"cropped region too small: {box}")
++                        # Honour the same configured insets the pipeline's own
++                        # target path applies, so the two routes are equivalent.
++                        from .study_capture_backends import _crop_image_to_profile
++                        from .study_ocr_pipeline import StudyCaptureProfile
++
++                        config = self._cfg
++                        profile = StudyCaptureProfile(
++                            left_inset_ratio=config.ocr_left_inset_ratio,
++                            right_inset_ratio=config.ocr_right_inset_ratio,
++                            top_ratio=config.ocr_top_ratio,
++                            bottom_inset_ratio=config.ocr_bottom_inset_ratio,
++                        )
++                        target_frame = _crop_image_to_profile(frame.crop(box), profile)
++                        cropped = await asyncio.to_thread(
++                            self._ocr_pipeline.snapshot_from_image, target_frame
++                        )
++                        if str(getattr(cropped, "status", "")) != "capture_failed":
++                            snapshot = cropped
++                            capture_target_title = str(target.get("title") or "")
++                            active_window_capture_route = "pil_bbox_crop"
++                        else:
++                            active_window_capture_detail = (
++                                active_window_capture_detail
++                                + " | pil_bbox_crop: "
++                                + str(getattr(cropped, "diagnostic", "") or "capture failed")
++                            )[:240]
++                    except Exception as exc:
++                        active_window_capture_detail = (
++                            active_window_capture_detail + " | pil_bbox_crop: " + str(exc)
++                        )[:240]
++            if snapshot is None:
++                if not allow_fullscreen_fallback:
++                    return Err(
++                        SdkError(
++                            "active_window_capture: "
++                            + (active_window_capture_detail or "capture failed"),
++                            code="ACTIVE_WINDOW_CAPTURE_FAILED",
++                        )
++                    )
++                capture_mode_used = "fullscreen"
++                active_window_fallback_reason = (
++                    "no_usable_foreground_window"
++                    if target is None
++                    else "active_window_capture_failed"
++                )
++                snapshot = await asyncio.to_thread(self._ocr_pipeline.capture_snapshot)
++        elif capture_mode == "interactive":
+             try:
+                 capture = await capture_interactive_region(
                      lanlan_name=_ocr_request_lanlan(kwargs)
                  )
              except InteractiveCaptureError as exc:
@@ -333,7 +528,7 @@ index fb33240..f5ce70d 100644
                  exc_text = str(exc)
                  interactive_fallback_reason = next(
                      (
-@@ -93,6 +96,7 @@ class _OcrEntriesMixin:
+@@ -93,6 +274,7 @@
                              "no_renderer",
                              "main_server_unavailable",
                              "interactive_unavailable",
@@ -341,7 +536,7 @@ index fb33240..f5ce70d 100644
                          )
                          if code in exc_text
                      ),
-@@ -121,6 +125,8 @@ class _OcrEntriesMixin:
+@@ -121,11 +303,30 @@
          else:
              snapshot = await asyncio.to_thread(self._ocr_pipeline.capture_snapshot)
          payload = build_ocr_payload(snapshot)
@@ -350,9 +545,44 @@ index fb33240..f5ce70d 100644
          if capture_mode == "interactive":
              payload["capture_mode_requested"] = "interactive"
              payload["capture_mode_used"] = capture_mode_used
+             if interactive_fallback_reason:
+                 payload["interactive_fallback_reason"] = interactive_fallback_reason
++        elif capture_mode == "active_window":
++            payload["capture_mode_requested"] = "active_window"
++            payload["capture_mode_used"] = capture_mode_used
++            if active_window_fallback_reason:
++                payload["active_window_fallback_reason"] = (
++                    active_window_fallback_reason
++                )
++                if active_window_capture_detail:
++                    payload["active_window_capture_detail"] = (
++                        active_window_capture_detail
++                    )
++            elif capture_target_title:
++                payload["capture_target_title"] = capture_target_title
++                if active_window_capture_route:
++                    payload["active_window_capture_route"] = (
++                        active_window_capture_route
++                    )
+         if self._supervision is not None:
+             sensor_available = snapshot.status in {"ok", "empty"}
+             payload["supervision"] = self._supervision.observe_activity(
 --- a/plugin/plugins/study_companion/llm_prompts.py
 +++ b/plugin/plugins/study_companion/llm_prompts.py
-@@ -182,6 +182,14 @@
+@@ -62,10 +62,12 @@
+         "last_ocr_text",
+         "last_ocr_at",
+         "history",
++        "session_history",
+         "knowledge_summary",
+         "knowledge_session_summary",
+         "knowledge_guidance",
+         "knowledge_question_params",
++        "material_grounded_question",
+         "topic_hint",
+         "topic",
+         "selected_topic_id",
+@@ -182,6 +184,14 @@
  def _context_json_for_prompt(operation: str, context: dict[str, Any]) -> str:
      limit = STUDY_PROMPT_CONTEXT_MAX_TOKENS.get(operation, 4000)
      safe_context = _prompt_context(context)
@@ -367,7 +597,7 @@ index fb33240..f5ce70d 100644
      raw = _json_dump(safe_context)
      if count_tokens(raw) <= limit:
          return raw
-@@ -191,19 +199,20 @@
+@@ -191,19 +201,20 @@
          (4, 240, 16),
      ):
          compact = _compact_prompt_value(
@@ -391,6 +621,193 @@ index fb33240..f5ce70d 100644
          "context_excerpt": f"{excerpt}\n...[truncated {len(raw) - len(excerpt)} chars]",
      }
      while count_tokens(_json_dump(fallback)) > limit and excerpt:
+@@ -217,6 +228,108 @@
+ def _mode_guidance(mode: str) -> str:
+     selected_mode = normalize_mode(mode)
+     return STUDY_MODE_SYSTEM_GUIDANCE.get(selected_mode, STUDY_MODE_SYSTEM_GUIDANCE[MODE_COMPANION])
++
++
++# Bounds for the session-memory block injected into concept_explain. They are kept
++# deliberately small: the block travels with every explanation, so it must never
++# crowd out the study text itself.
++_RECENT_CONTEXT_OCR_CHARS = 1200
++_RECENT_CONTEXT_HISTORY_ITEMS = 4
++_RECENT_CONTEXT_HISTORY_INPUT_CHARS = 240
++_RECENT_CONTEXT_HISTORY_OUTPUT_CHARS = 560
++_RECENT_CONTEXT_EVENT_ITEMS = 6
++_RECENT_CONTEXT_TEXT_CHARS = 300
++
++
++def _bounded_text(value: Any, limit: int) -> str:
++    text = str(value or "").strip()
++    if len(text) <= limit:
++        return text
++    return f"{text[:limit].rstrip()}..."
++
++
++def _recent_history_items(history: Any) -> list[dict[str, str]]:
++    if not isinstance(history, list):
++        return []
++    rows = [item for item in history if isinstance(item, dict)]
++    return [
++        {
++            "kind": str(item.get("kind") or ""),
++            "input": _bounded_text(
++                item.get("input_text"), _RECENT_CONTEXT_HISTORY_INPUT_CHARS
++            ),
++            "output": _bounded_text(
++                item.get("output_text"), _RECENT_CONTEXT_HISTORY_OUTPUT_CHARS
++            ),
++        }
++        for item in rows[-_RECENT_CONTEXT_HISTORY_ITEMS:]
++        if str(item.get("input_text") or "").strip()
++        or str(item.get("output_text") or "").strip()
++    ]
++
++
++def _recent_learning_events(events: Any) -> list[dict[str, str]]:
++    if not isinstance(events, list):
++        return []
++    rows = [item for item in events if isinstance(item, dict)]
++    compact: list[dict[str, str]] = []
++    for item in rows[-_RECENT_CONTEXT_EVENT_ITEMS:]:
++        entry = {
++            "operation": str(item.get("operation") or item.get("kind") or ""),
++            "topic": _bounded_text(item.get("topic"), 80),
++            "screen_type": str(item.get("screen_type") or ""),
++        }
++        compact.append({key: value for key, value in entry.items() if value})
++    return compact
++
++
++def build_concept_recent_context(context: dict[str, Any] | None) -> str:
++    """Render the session-memory block for concept_explain prompts.
++
++    Only fields needed to resolve ``that example`` / ``the previous step`` style
++    references are included, and every string is bounded. Private fields never
++    reach this function's output because only named public fields are read.
++    """
++    context = context if isinstance(context, dict) else {}
++    memory: dict[str, Any] = {}
++    history = _recent_history_items(context.get("history"))
++    if history:
++        memory["recent_interactions"] = history
++    ocr_text = _bounded_text(context.get("last_ocr_text"), _RECENT_CONTEXT_OCR_CHARS)
++    if ocr_text:
++        memory["last_captured_material"] = ocr_text
++        ocr_at = str(context.get("last_ocr_at") or "").strip()
++        if ocr_at:
++            memory["last_captured_at"] = ocr_at
++    question = context.get("current_question")
++    if isinstance(question, dict) and str(question.get("question") or "").strip():
++        memory["current_practice_question"] = {
++            "question": _bounded_text(
++                question.get("question"), _RECENT_CONTEXT_TEXT_CHARS
++            ),
++            "topic": str(question.get("topic") or question.get("selected_topic_id") or ""),
++        }
++    evaluation = context.get("last_answer_evaluation")
++    if isinstance(evaluation, dict) and evaluation:
++        memory["last_answer_evaluation"] = {
++            key: evaluation.get(key)
++            for key in ("verdict", "score", "error_type")
++            if evaluation.get(key) not in (None, "")
++        }
++        feedback = _bounded_text(
++            evaluation.get("feedback"), _RECENT_CONTEXT_TEXT_CHARS
++        )
++        if feedback:
++            memory["last_answer_evaluation"]["feedback"] = feedback
++    events = _recent_learning_events(context.get("recent_learning_events"))
++    if events:
++        memory["recent_learning_events"] = events
++    if not memory:
++        return ""
++    return (
++        "\n\nRecent study context (this session's memory; use it to resolve "
++        "references to earlier material):\n" + _json_dump(memory)
++    )
+ 
+ 
+ def _build_structured_messages(
+@@ -285,6 +398,7 @@
+                 intent=str(context.get("study_semantic_intent") or "unknown"),
+                 response_guidance=STUDY_CONCEPT_RESPONSE_MODE_GUIDANCE[response_mode],
+                 text=f"{text.strip()}{guidance_block}",
++                recent_context=build_concept_recent_context(context),
+             ),
+         },
+     ]
+@@ -355,13 +469,60 @@
+     )
+ 
+ 
++_SUMMARY_HISTORY_LIMIT = 12
++_SUMMARY_HISTORY_INPUT_CHARS = 200
++_SUMMARY_HISTORY_OUTPUT_CHARS = 320
++
++
++def _summary_interaction_rows(rows: Any) -> list[dict[str, str]]:
++    if not isinstance(rows, list):
++        return []
++    compact: list[dict[str, str]] = []
++    for item in [row for row in rows if isinstance(row, dict)][-_SUMMARY_HISTORY_LIMIT:]:
++        input_text = _bounded_text(
++            item.get("input_text"), _SUMMARY_HISTORY_INPUT_CHARS
++        )
++        output_text = _bounded_text(
++            item.get("output_text"), _SUMMARY_HISTORY_OUTPUT_CHARS
++        )
++        if not input_text and not output_text:
++            continue
++        compact.append(
++            {
++                "kind": str(item.get("kind") or ""),
++                "input": input_text,
++                "output": output_text,
++            }
++        )
++    return compact
++
++
++def _summarize_context(context: dict[str, Any]) -> dict[str, Any]:
++    """Project the summary context onto this session's interactions.
++
++    The raw ``history`` window spans earlier sessions, so it is replaced by the
++    (much smaller) ``session_history`` derived by the caller. Without that
++    projection the 2000-token budget used to be spent on unrelated rows and the
++    model reported the session as "limited".
++    """
++    compact = dict(context)
++    session_rows = _summary_interaction_rows(compact.pop("session_history", None))
++    history_rows = _summary_interaction_rows(compact.pop("history", None))
++    if session_rows:
++        compact["session_history"] = session_rows
++    elif history_rows:
++        # No session boundary available (fresh state): fall back to the window.
++        compact["history"] = history_rows
++    return compact
++
++
+ def build_summarize_session_messages(
+     *,
+     language: str,
+     mode: str = MODE_COMPANION,
+     context: dict[str, Any] | None = None,
+ ) -> list[dict[str, str]]:
+-    context = dict(context or {})
++    context = _summarize_context(dict(context or {}))
+     context.setdefault("language", language)
+     context.setdefault("mode", normalize_mode(mode))
+     return _build_structured_messages(
+@@ -417,6 +578,7 @@
+ __all__ = [
+     "build_answer_evaluate_messages",
+     "build_concept_explain_messages",
++    "build_concept_recent_context",
+     "build_knowledge_track_messages",
+     "build_operation_messages",
+     "build_question_generate_messages",
 --- a/plugin/plugins/study_companion/static/main.js
 +++ b/plugin/plugins/study_companion/static/main.js
 @@ -58,6 +58,7 @@

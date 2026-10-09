@@ -1,0 +1,4 @@
+# Version-control artifacts must stay LF so `git apply` can rebuild the
+# extracted plugin sources byte-for-byte on any platform.
+patches/** text eol=lf
+*.patch text eol=lf
