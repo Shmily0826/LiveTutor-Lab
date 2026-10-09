@@ -57,6 +57,25 @@
 - `tutor_llm_agent_concept_explain.py` 不在该快照清单里，仓库也没有它的原始备份，因此 `_pre/` 是
   「反演本轮编辑」得到的改动前镜像（与 `../neko-study-2026-10-09-round2/README.md` 同类限制）。
 
+## 如何重建运行源码（已实测）
+
+仓库里存的补丁与 pre-image 都是 LF，而本机 `core.autocrlf=true` 会让 `git apply` 把输出写成 CRLF。
+已验证的逐字节重建方式（在临时目录里做，先别动真实源码）：
+
+```bash
+mkdir -p rebuild/plugin/plugins/study_companion
+for f in llm_prompts.py prompt_templates.py tutor_llm_agent_concept_explain.py; do
+  git show "HEAD:patches/neko-study-2026-10-09-ui/_pre/$f" > "rebuild/plugin/plugins/study_companion/$f"
+done
+git show HEAD:patches/neko-study-2026-10-09-ui/ui-real-tutor.patch > ../ui.patch
+git -c core.autocrlf=false apply ../ui.patch     # 必须关掉 autocrlf，否则结果只差行尾
+```
+
+本轮已用这条路径核对：三个文件重建后与
+`benchmarks/raw/neko-app/resources/bin/plugins/study_companion/` 里的运行版本**逐字节相同**。
+不带 `-c core.autocrlf=false` 时内容一致、仅行尾变成 CRLF。应用前请先按 v02 overlay 的方式
+逐个核对目标指纹，不要直接覆盖别人的在制改动。
+
 ## 验证
 
 - `node scripts/neko_study_ocr_ui_e2e.mjs --real-model` → `PASS_UNIFIED_OCR_STUDY_UI_REAL_MODEL_LOOP`

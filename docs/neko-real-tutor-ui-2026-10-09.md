@@ -183,7 +183,9 @@ results are only trustworthy if every locally edited file is recoverable from Gi
 - Chain verification, not just file listing: applying `ui-real-tutor.patch` onto its `_pre/` mirrors
   reproduces the currently running files exactly (only `git apply`'s CRLF translation differs), and two
   of the three pre-images are byte-identical to the tracked v02 overlay snapshot, so they are true
-  pre-images rather than reconstructions.
+  pre-images rather than reconstructions. Redoing it from the **committed** blobs with
+  `git -c core.autocrlf=false apply` gives byte-identical files for all three; the repo-level
+  `.gitattributes` added in this checkpoint keeps `patches/**` LF so that procedure stays reproducible.
 - Timeline check against the evidence: banner fix at 06:05Z → run `065018Z` reports
   `mode_banner_replies: 0` but `summaries_have_cjk: false`; language fix at 06:58Z → run `070226Z`
   reports all three CJK checks true. The newest accepted proof therefore corresponds to the source
