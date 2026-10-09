@@ -1,0 +1,20 @@
+{
+  "status": "PASS_PATCHED_SOURCE_AUDIO_BOUNDARIES",
+  "counts": {
+    "tts_provider_selection_blocked": 1,
+    "tts_worker_selection_blocked": 1,
+    "ordinary_tts_request_blocked": 1,
+    "speech_output_blocked": 1,
+    "audio_frame_blocked": 1,
+    "native_audio_callback_blocked": 1,
+    "native_realtime_connect_blocked": 1,
+    "agent_connectivity_probe_blocked": 1
+  },
+  "downstream": {
+    "provider": 0,
+    "websocket": 0,
+    "telemetry": 0
+  },
+  "real_host_booted": false,
+  "scope": "Patched upstream method bodies and real dev gate; no injected mute guard, network, devices, keys, or database."
+}

@@ -1,0 +1,165 @@
+--- /dev/null
++++ b/utils/dev_text_only.py
+@@ -0,0 +1,27 @@
++"""Explicit development-only mute for the isolated LiveTutor source host."""
++import json
++import os
++import threading
++from collections import Counter
++from pathlib import Path
++
++# Pin on import so a plugin reload cannot silently remove the process gate.
++ENABLED = os.environ.get("NEKO_DEV_TEXT_ONLY") == "1"
++COUNTS = Counter()
++_LOCK = threading.Lock()
++_AUDIT = os.environ.get("NEKO_DEV_AUDIO_AUDIT", "")
++
++
++def block(event):
++    """Count attempts without retaining any speech, image, or user text."""
++    if not ENABLED:
++        return False
++    with _LOCK:
++        COUNTS[event] += 1
++        if _AUDIT:
++            path = Path(_AUDIT)
++            path.parent.mkdir(parents=True, exist_ok=True)
++            with path.open("a", encoding="utf-8") as stream:
++                stream.write(json.dumps({"pid": os.getpid(), "event": event,
++                                         "count": COUNTS[event]}) + "\n")
++    return True
+--- a/main_logic/core/tts_runtime.py
++++ b/main_logic/core/tts_runtime.py
+@@ -81,6 +81,7 @@
+ # those names here: a from-import snapshots the value at import time and the
+ # facade patch would no longer reach this module's methods.
+ from main_logic import core as _core_facade
++from utils import dev_text_only
+ 
+ 
+ class _GameSpeechPreloadCancelled(Exception):
+@@ -687,6 +688,8 @@
+ 
+     def _build_tts_runtime_key(self) -> tuple:
+         """Return the effective TTS worker identity for ready-state reuse."""
++        if dev_text_only.ENABLED:
++            return ("dev_text_only",)
+         try:
+             core_config = self._config_manager.get_core_config()
+             if core_config.get('DISABLE_TTS', False):
+@@ -762,6 +765,8 @@
+ 
+     def _resolve_tts_worker_spec(self):
+         """Resolve the current project TTS worker without mutating runtime state."""
++        if dev_text_only.block("tts_worker_selection_blocked"):
++            return dummy_tts_worker, "", self.voice_id or "", None, True, {}
+         core_config = self._config_manager.get_core_config()
+         route_voice_id = self.voice_id or ""
+         if core_config.get("DISABLE_TTS", False):
+@@ -2292,6 +2297,8 @@
+ 
+     async def _write_audio_frame(self, websocket, header: dict, tts_audio) -> None:
+         """Write one header/payload pair. The caller holds the frame lock."""
++        if dev_text_only.block("audio_frame_blocked"):
++            return
+         async def write_frame():
+             try:
+                 async with asyncio.timeout(TTS_FRAME_WRITE_TIMEOUT_SECONDS):
+@@ -2406,6 +2413,8 @@
+ 
+     async def send_speech(self, tts_audio, speech_id: Optional[str] = None):
+         """Send speech data to the frontend, sending the speech_id header first for precise interruption control"""
++        if dev_text_only.block("speech_output_blocked"):
++            return False
+         try:
+             # Pinned once. The lock keeps other SENDERS out, but ``self.websocket``
+             # is reassigned by reconnect/teardown, which are not senders and do not
+--- a/main_logic/core/turn.py
++++ b/main_logic/core/turn.py
+@@ -1516,6 +1516,9 @@
+ 
+     async def handle_audio_data(self, audio_data: bytes):
+         """Qwen audio callback: push audio to the WebSocket frontend"""
++        from utils import dev_text_only
++        if dev_text_only.block("native_audio_callback_blocked"):
++            return
+         if self._takeover_active:
+             logger.info("[%s] session takeover active: dropping ordinary realtime audio bytes=%d", self.lanlan_name, len(audio_data or b""))
+             return
+--- a/main_logic/tts_client/__init__.py
++++ b/main_logic/tts_client/__init__.py
+@@ -30,6 +30,7 @@
+ import websockets
+ 
+ from utils.config_manager import get_config_manager
++from utils import dev_text_only
+ from utils.tts.native_voice_registry import get_native_tts_worker
+ from utils.tts.providers.mimo import MIMO_PRESET_CATALOG
+ from utils.tts import provider_registry as _tts_providers
+@@ -302,6 +303,8 @@
+           meta=None → the caller falls through and enables the normalizer);
+           None when native TTS is unsupported
+     """
++    if dev_text_only.block("tts_provider_selection_blocked"):
++        return dummy_tts_worker, None, None
+     cm = get_config_manager()
+     from utils.config_manager.imported_voices import is_imported_voice_ref
+     from .remote_voice import bind_imported_voice_worker, unavailable_imported_voice_worker
+--- a/main_logic/tts_client/workers/dummy.py
++++ b/main_logic/tts_client/workers/dummy.py
+@@ -16,6 +16,7 @@
+ 
+ from .._infra import TTS_SHUTDOWN_SENTINEL
+ from .._telemetry import _record_tts_telemetry
++from utils import dev_text_only
+ from utils.logger_config import get_module_logger
+ 
+ logger = get_module_logger(__name__, "Main")
+@@ -48,6 +49,8 @@
+             # 即便不合成音频也上报字符数 + 调用次数，方便分析"配置成无 TTS"
+             # 的用户产生了多少假装合成的请求；只传 len()，不传原文。
+             if tts_text:
++                if dev_text_only.block("ordinary_tts_request_blocked"):
++                    continue
+                 _record_tts_telemetry("dummy", len(tts_text))
+         except Exception as e:
+             logger.error(f"Dummy TTS Worker 错误: {e}")
+--- a/main_logic/omni_realtime_client/_transport.py
++++ b/main_logic/omni_realtime_client/_transport.py
+@@ -527,6 +527,10 @@
+ 
+     async def connect(self, instructions: str, native_audio=True) -> None:
+         """Establish WebSocket connection with the Realtime API."""
++        from utils import dev_text_only
++        if dev_text_only.block("native_realtime_connect_blocked"):
++            self._native_audio = False
++            raise RuntimeError("Native realtime is disabled in the development text-only host")
+         self._native_audio = native_audio
+         # Validate turn_detection_mode BEFORE any side effect (websockets.connect,
+         # silence-check task, or Gemini SDK init). Applies uniformly to all providers.
+--- a/app/agent_server/capabilities.py
++++ b/app/agent_server/capabilities.py
+@@ -199,6 +199,12 @@
+       BrowserUse just became available), where early-return would silently
+       drop the refresh.
+     """
++    from utils import dev_text_only
++    if dev_text_only.ENABLED:
++        dev_text_only.block("agent_connectivity_probe_blocked")
++        _set_capability("computer_use", False, "development_text_only")
++        _set_capability("browser_use", False, "development_text_only")
++        return
+     if not queue and _llm_check_lock.locked():
+         return
+ 
+--- a/plugin/plugins/web_search/plugin.toml
++++ b/plugin/plugins/web_search/plugin.toml
+@@ -20,7 +20,7 @@
+ 
+ [plugin_runtime]
+ enabled = true
+-auto_start = true
++auto_start = false
+ 
+ [plugin.store]
+ enabled = true

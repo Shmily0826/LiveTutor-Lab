@@ -1,0 +1,8 @@
+{"event": "started", "call": 1, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791550234.5474994}
+{"event": "completed", "call": 1, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791550236.4729943, "ms": 1922, "input_tokens": 522, "output_tokens": 73}
+{"event": "started", "call": 2, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791550236.483219}
+{"event": "completed", "call": 2, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791550238.0743406, "ms": 1593, "input_tokens": 3662, "output_tokens": 108}
+{"event": "started", "call": 3, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791550254.9635425}
+{"event": "completed", "call": 3, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791550256.113189, "ms": 1141, "input_tokens": 381, "output_tokens": 73}
+{"event": "started", "call": 4, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791550256.1171856}
+{"event": "completed", "call": 4, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791550258.1455996, "ms": 2016, "input_tokens": 3579, "output_tokens": 202}

@@ -1,0 +1,17 @@
+{
+  "final_host_stopped": true,
+  "closed_loopback_ports": [
+    48911,
+    48912,
+    48915,
+    48916
+  ],
+  "owned_browser_record_removed": true,
+  "task_owned_study_and_lesson_windows": [],
+  "personal_browsers_not_operated": true,
+  "real_microphone_or_sound_test": false,
+  "launcher_final_ready_without_manual_refresh": true,
+  "project_browser_stage_persisted": "College",
+  "authorized_native_capture_title": "LiveTutor Flutter Provider Lesson",
+  "capture_only_then_explicit_explain": true
+}

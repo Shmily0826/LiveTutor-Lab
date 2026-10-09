@@ -1,0 +1,16 @@
+{"event": "started", "call": 1, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791549591.373858}
+{"event": "completed", "call": 1, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791549593.292896, "ms": 1922, "input_tokens": 398, "output_tokens": 84}
+{"event": "started", "call": 2, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791549593.3078957}
+{"event": "completed", "call": 2, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791549596.4397037, "ms": 3125, "input_tokens": 2317, "output_tokens": 492}
+{"event": "started", "call": 3, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791549720.2228553}
+{"event": "completed", "call": 3, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791549721.968701, "ms": 1750, "input_tokens": 401, "output_tokens": 98}
+{"event": "started", "call": 4, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791549721.970701}
+{"event": "completed", "call": 4, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791549723.731719, "ms": 1766, "input_tokens": 515, "output_tokens": 248}
+{"event": "started", "call": 5, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791550037.344769}
+{"event": "completed", "call": 5, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791550038.7221425, "ms": 1375, "input_tokens": 385, "output_tokens": 71}
+{"event": "started", "call": 6, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791550038.7291512}
+{"event": "completed", "call": 6, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791550043.5483594, "ms": 4812, "input_tokens": 2794, "output_tokens": 899}
+{"event": "started", "call": 7, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791550060.6088011}
+{"event": "completed", "call": 7, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791550062.0657651, "ms": 1453, "input_tokens": 522, "output_tokens": 89}
+{"event": "started", "call": 8, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791550062.3407838}
+{"event": "completed", "call": 8, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791550064.8019037, "ms": 2453, "input_tokens": 3477, "output_tokens": 385}

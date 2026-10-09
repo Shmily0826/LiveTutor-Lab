@@ -1,0 +1,109 @@
+N.E.K.O STUDY
+Study Companion
+窗口读取成功；检查原始文字后点击 Explain。
+MODE
+Teaching
+DURATION
+0 min
+GOAL
+0/0
+STAGE
+College
+Screen Reading Question -
+Companion
+Interactive
+Teaching
+Mode
+Refresh
+读取指定窗口
+课程 ID（同一课程始终使用相同 ID）
+flutter-provider
+开始 / 重新开始 Session
+当前课程：flutter-provider
+授权学习窗口的完整标题（必须精确匹配）
+LiveTutor Flutter Provider Lesson
+窗口内容标记（每行一个，1–12 个，全部必须出现在画面中）
+ChangeNotifier
+notifyListeners
+context.watch
+context.read
+以上预填内容对应启动时打开的 Flutter 演示窗口，课程 ID 和窗口信息都可以修改。点击「读取指定窗口」后有 5 秒切换到授权窗口。读取只填入原始文字；检查后再点击「Explain」发送给 Tutor。
+已读取授权窗口：LiveTutor Flutter Provider Lesson
+Deck Management
+Manage decks, imports, and review goals
+Review
+Open due reviews in the side panel
+Knowledge Map
+Inspect weak topics and relationships
+Pomodoro
+Start or manage focus timing
+Check-in
+Track today and daily goals
+Export
+Export notes or session artifacts
+STUDY HUB
+✓ Ready for study
+823 knowledge topics loaded and OCR dependencies are ready.
+POMODORO STATUS
+Idle
+DUE
+0
+CHECK-IN
+Check-in pending
+Adaptive Practice
+-
+Quick Cards and Review
+0 CARDS / 0 DUE
++
+Input area
+EXPLAIN INPUT
+Input area
+LiveTutorFlutter Provider Lesson
+Flutter/ProviderCounter—lib/main.dart
+import 'package:flutter/material.dart';
+import'package:provider/provider.dart';
+class Counter extends ChangeNotifier{
+int count=0;
+void increment(）{
+count++;
+notifyListeners();
+void main()=>runApp（ChangeNotifierProvider(
+create:（_）=> Counter(),
+child:const MaterialApp(home:CounterPage()),
+));
+class CounterPage extends StatelessWidget{
+const CounterPage({super.key});
+@override
+Widget build(BuildContext context）{
+final counter = context.watch<Counter>();
+return Scaffold(
+appBar:AppBar(title:const Text('Provider Counter')),
+body:Center(child:Text('Count:${counter.count}')),
+floatingActionButton:FloatingActionButton(
+onPressed:()=> context.read<Counter>().increment(),
+child: const Icon(Icons.add),
+}
+Import file
+Drop a file here
+Explain
+根据输入内容出题
+￼
+Use previous explanation
+Advanced Settings
+NEKO COACH
+Catgirl Study Coach
+I will explain more actively and split the problem into smaller steps.
+SCENE
+Teaching
+MODE
+Teaching
+ROUND
+Idle
+GOAL
+0/0
+REVIEW
+0
+CURRENT SUGGESTION
+I will explain this first, then help generate practice.
+Explain This
+Generate Practice

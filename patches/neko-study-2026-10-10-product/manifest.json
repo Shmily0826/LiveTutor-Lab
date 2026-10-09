@@ -1,0 +1,93 @@
+{
+  "source_host_revision": "1d814cf32fba8c02b5727d2890710e4e7b8ece24",
+  "base_plugin": "benchmarks/raw/neko-app/resources/bin/plugins/study_companion (preserved existing patched release tree)",
+  "deployment": "benchmarks/raw/neko-product-data/plugin-code/study_companion",
+  "data_copied_from_base": false,
+  "files": [
+    {
+      "path": "payload/study_companion/__init__.py",
+      "sha256": "fc2cfe764ff2d27422492534c9f277bbf5866edfec0a77fb556ebf2bfe0d69a7",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/entry_ocr_entries.py",
+      "sha256": "15dbbffe16cc80132d280fc86a371dbbfa6e3ac656b40bd34f34483cc870e7e9",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/entry_tutor_context_support.py",
+      "sha256": "9f0cb295cabef9f64355737fe742b85c0cceb8febde00b14501b09782b0ca266",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/entry_tutor_question_entries.py",
+      "sha256": "622de1d896e61dc859536a3adeb7c35e87429bb04a014a73f25e22544b8ac471",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/entry_tutor_summary_entries.py",
+      "sha256": "cb1f3899220ae433d8d53ccdd9708642c224fb9853b8fe3fb68ff25eaf7a5017",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/knowledge_graph_guidance.py",
+      "sha256": "892f8e8b33d6053f48a01a14cfd8c1da67e8424e6321f801e05ca6b40cdd2e38",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/knowledge_tracker.py",
+      "sha256": "1620b6c863bfaec6fc7d0386c1e63ac3cb3552015ea98412270af6fc249f244d",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/llm_prompts.py",
+      "sha256": "322312ce94a2c66b34bf80c6733b9086d470d7266f821b222616ae5a64acd0a2",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/models.py",
+      "sha256": "a96276571ab56e6adea34adf5a7588d87f10a6ac64807dbae2fee3a8e2986552",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/prompt_templates.py",
+      "sha256": "4f256d5b990b0d4598a691b15722a3454be52f1d84fbd9480e01e4abbe81922f",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/service.py",
+      "sha256": "796fc42f5d1aeb35e5abd02581ca4eb27c699823a0a43edfa9264ac6892159e6",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/store.py",
+      "sha256": "787c30275f369931abd6725531d257063f31a7f61139be71963116107ab3aee4",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/store_qa.py",
+      "sha256": "56af14506f84064a6d4f45ef2a5095de50fdc4541704e5bb65da8705ba86d56d",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/store_schema.py",
+      "sha256": "e0b5114a5ebb6dc4fa7275fffa01c824865b64ae4711ea10c10ab38f550b4315",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/study_model_gateway.py",
+      "sha256": "926eb2ee7141851c97cd8927b9c6bef1741a678118b89a8b48e7dfc9df22d072",
+      "deployed_matches": true
+    },
+    {
+      "path": "static/index.html",
+      "sha256": "3da6dd42e866859781d732db4ceffec6c151295d0d67d99e539dcf1d1aebf18f",
+      "deployed_matches": true
+    },
+    {
+      "path": "static/main.js",
+      "sha256": "387ce8b3bf42e2f1506ca7a4022012f1e90a7b2e95083dc4348dd0cb590e7b17",
+      "deployed_matches": true
+    }
+  ]
+}

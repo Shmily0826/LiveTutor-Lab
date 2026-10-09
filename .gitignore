@@ -17,3 +17,5 @@ Thumbs.db
 # Local browser evidence and Python bytecode
 .playwright-cli/
 __pycache__/
+lessons/flutter_provider/.dart_tool/
+lessons/flutter_provider/build/

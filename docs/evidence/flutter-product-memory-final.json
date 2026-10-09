@@ -1,0 +1,152 @@
+{
+  "database": "isolated neko-product-data only; read-only final snapshot",
+  "sessions": [
+    {
+      "id": "study-13d3044ad25b4137abd1091ef2a42e00",
+      "course_id": "general",
+      "started_at": "2026-10-09 11:58:08",
+      "ended_at": "2026-10-09 11:59:36",
+      "question_count": 0,
+      "summary_markdown": null
+    },
+    {
+      "id": "study-dc1c43331f9941dd9cb9622b4a269664",
+      "course_id": "general",
+      "started_at": "2026-10-09 12:00:08",
+      "ended_at": "2026-10-09 12:00:53",
+      "question_count": 0,
+      "summary_markdown": null
+    },
+    {
+      "id": "study-ab9c492483a84010a69b4bbda1140f13",
+      "course_id": "flutter-provider",
+      "started_at": "2026-10-09 12:00:53",
+      "ended_at": "2026-10-09 12:08:33",
+      "question_count": 0,
+      "summary_markdown": null
+    },
+    {
+      "id": "study-cd97c26f9f9949319b1c8175e4dade58",
+      "course_id": "flutter-provider",
+      "started_at": "2026-10-09 12:08:36",
+      "ended_at": "2026-10-09 12:14:55",
+      "question_count": 0,
+      "summary_markdown": null
+    },
+    {
+      "id": "study-657ee23126774654bc022a5b38cf7e2b",
+      "course_id": "flutter-provider",
+      "started_at": "2026-10-09 12:14:59",
+      "ended_at": "2026-10-09 12:19:08",
+      "question_count": 0,
+      "summary_markdown": null
+    },
+    {
+      "id": "study-419c64bb9c6e403793a7c2c8df4ced29",
+      "course_id": "flutter-provider",
+      "started_at": "2026-10-09 12:19:11",
+      "ended_at": "2026-10-09 12:22:50",
+      "question_count": 0,
+      "summary_markdown": null
+    },
+    {
+      "id": "study-a35357d1fb0c45648a3e8502423dbab2",
+      "course_id": "flutter-provider",
+      "started_at": "2026-10-09 12:22:53",
+      "ended_at": "2026-10-09 12:28:05",
+      "question_count": 1,
+      "summary_markdown": null
+    },
+    {
+      "id": "study-1cc22ce966734bb6af128157739055da",
+      "course_id": "flutter-provider",
+      "started_at": "2026-10-09 12:28:09",
+      "ended_at": "2026-10-09 12:34:30",
+      "question_count": 2,
+      "summary_markdown": "本次课程围绕 Flutter Provider 计数器示例中删除 notifyListeners() 后的行为展开了两轮四选一单选题练习。第一题学习者答错，存在认为 watch 会自动监视并更新屏幕的误解；第二题学习者答对，正确说明了 count 内部变化与缺少通知时屏幕不更新的区别。"
+    },
+    {
+      "id": "study-5b6031d3eb514c8285ca45dbcebfa5b4",
+      "course_id": "flutter-provider",
+      "started_at": "2026-10-09 12:35:27",
+      "ended_at": "2026-10-09 12:37:24",
+      "question_count": 0,
+      "summary_markdown": null
+    },
+    {
+      "id": "study-3b7796ae3d704e978f5907e8b8585812",
+      "course_id": "flutter-provider",
+      "started_at": "2026-10-09 12:37:28",
+      "ended_at": "2026-10-09 12:39:31",
+      "question_count": 0,
+      "summary_markdown": null
+    },
+    {
+      "id": "study-bfe0e9dc437944a9aa626e7e5ce6ef07",
+      "course_id": "flutter-provider",
+      "started_at": "2026-10-09 12:39:31",
+      "ended_at": "2026-10-09 12:41:37",
+      "question_count": 0,
+      "summary_markdown": null
+    },
+    {
+      "id": "study-3555ccaf783e419e8b17eb75448c01b1",
+      "course_id": "discrete-math",
+      "started_at": "2026-10-09 12:41:37",
+      "ended_at": "2026-10-09 12:47:03",
+      "question_count": 0,
+      "summary_markdown": null
+    },
+    {
+      "id": "study-43b03026a1e84a6c9dd00d51704fa696",
+      "course_id": "flutter-provider",
+      "started_at": "2026-10-09 12:47:03",
+      "ended_at": "2026-10-09 12:48:17",
+      "question_count": 0,
+      "summary_markdown": null
+    },
+    {
+      "id": "study-a373e5f44bab4d059fc52d5b6e109214",
+      "course_id": "flutter-provider",
+      "started_at": "2026-10-09 12:49:18",
+      "ended_at": "2026-10-09 12:52:10",
+      "question_count": 0,
+      "summary_markdown": null
+    }
+  ],
+  "interaction_counts_by_course": [
+    {
+      "course_id": "discrete-math",
+      "kind": "concept_explain",
+      "count": 1
+    },
+    {
+      "course_id": "flutter-provider",
+      "kind": "answer_evaluate",
+      "count": 3
+    },
+    {
+      "course_id": "flutter-provider",
+      "kind": "concept_explain",
+      "count": 15
+    },
+    {
+      "course_id": "flutter-provider",
+      "kind": "question_generate",
+      "count": 6
+    },
+    {
+      "course_id": "flutter-provider",
+      "kind": "summarize_session",
+      "count": 1
+    }
+  ],
+  "runtime_memory_scene_records": [
+    "session_B_memory",
+    "course_isolation_math",
+    "course_return_flutter",
+    "constructor_brevity_retest",
+    "memory_plain_language_retest"
+  ],
+  "scope_note": "Course QA history retrieved after real host stop/restart; no automatic ontology-based teaching preference extraction is claimed."
+}

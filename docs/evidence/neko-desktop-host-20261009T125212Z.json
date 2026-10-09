@@ -1,0 +1,69 @@
+{
+  "api_budget": 4,
+  "health": {
+    "plugin_availability": {
+      "bytes": 81,
+      "html": false,
+      "note": "",
+      "status": 200,
+      "study_companion": false
+    },
+    "plugin_dashboard": {
+      "bytes": 0,
+      "html": false,
+      "note": "",
+      "status": 404,
+      "study_companion": false
+    },
+    "study_ui": {
+      "bytes": 3994,
+      "html": true,
+      "note": "",
+      "status": 200,
+      "study_companion": true
+    },
+    "study_ui_index": {
+      "bytes": 3994,
+      "html": true,
+      "note": "",
+      "status": 200,
+      "study_companion": true
+    },
+    "study_ui_main": {
+      "bytes": 0,
+      "html": false,
+      "note": "",
+      "status": 404,
+      "study_companion": false
+    }
+  },
+  "host_binary": "pinned_source_launcher",
+  "host_pid": 48988,
+  "host_ready_seconds": 4.3,
+  "host_running": false,
+  "observed_external_connections": [],
+  "plugin_refresh": {
+    "status": 200,
+    "study_companion_registered": true
+  },
+  "plugin_start": {
+    "running": true,
+    "status": 200
+  },
+  "safety_config": {
+    "DISABLE_TTS": true,
+    "proactive": false,
+    "proxy_sink_port": 60843,
+    "ttsProvider": "empty",
+    "wake_word": false
+  },
+  "sink_allowed_hosts": [
+    "api.deepseek.com"
+  ],
+  "sink_denied_hosts": [
+    "community.project-neko.cn"
+  ],
+  "source_text_only_gate": true,
+  "storage_root": "benchmarks/raw/neko-product-data",
+  "timestamp_utc": "2026-10-09T12:52:12.449015+00:00"
+}

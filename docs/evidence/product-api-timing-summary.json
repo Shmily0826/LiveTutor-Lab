@@ -1,0 +1,50 @@
+{
+  "audit_launches": {
+    "20261009T120000Z": 30,
+    "20261009T123518Z": 8,
+    "20261009T124909Z": 4
+  },
+  "total_started": 42,
+  "total_completed": 42,
+  "unplanned_initial_agent_connectivity_probe_before_fix": 1,
+  "explanation_chain": {
+    "samples": 16,
+    "median_seconds": 4.265,
+    "min_seconds": 2.815,
+    "max_seconds": 8.887,
+    "scope": "server gateway route started to explanation completed, not browser end-to-end"
+  },
+  "operation_timings": {
+    "knowledge_semantic_route": {
+      "samples": 16,
+      "median_seconds": 1.46,
+      "min_seconds": 1.062,
+      "max_seconds": 2.255
+    },
+    "concept_explain": {
+      "samples": 16,
+      "median_seconds": 2.796,
+      "min_seconds": 1.326,
+      "max_seconds": 6.848
+    },
+    "question_generate": {
+      "samples": 6,
+      "median_seconds": 3.077,
+      "min_seconds": 2.644,
+      "max_seconds": 3.601
+    },
+    "answer_evaluate": {
+      "samples": 3,
+      "median_seconds": 2.414,
+      "min_seconds": 2.099,
+      "max_seconds": 2.473
+    },
+    "summarize_session": {
+      "samples": 1,
+      "median_seconds": 2.48,
+      "min_seconds": 2.48,
+      "max_seconds": 2.48
+    }
+  },
+  "no_new_calls_after_final_brevity_retest": true
+}

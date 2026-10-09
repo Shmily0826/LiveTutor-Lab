@@ -1,0 +1,65 @@
+{
+  "evidence": "READ_ONLY_CURRENT_ISOLATED_PRODUCT_DB",
+  "database": "D:\\CODE\\project\\LiveTutor-Lab\\benchmarks\\raw\\neko-product-data\\N.E.K.O\\plugins\\study_companion\\data\\study_companion.db",
+  "qa_and_latest_mastery": [
+    {
+      "qa_id": 1,
+      "course_id": "flutter-provider",
+      "topic_id": "flutter-provider::Provider read/watch/notifyListeners 机制",
+      "topic_name": "Provider read/watch/notifyListeners 机制",
+      "verdict": "wrong",
+      "score": 0,
+      "mastery": 0.0,
+      "confidence": 0.1813,
+      "level": "未接触",
+      "attempts": 1
+    },
+    {
+      "qa_id": 2,
+      "course_id": "flutter-provider",
+      "topic_id": "flutter-provider::Provider notifyListeners 与重建",
+      "topic_name": "Provider notifyListeners 与重建",
+      "verdict": "wrong",
+      "score": 0,
+      "mastery": 0.0,
+      "confidence": 0.1813,
+      "level": "未接触",
+      "attempts": 1
+    },
+    {
+      "qa_id": 3,
+      "course_id": "flutter-provider",
+      "topic_id": "flutter-provider::Provider read/watch 与 notifyListeners",
+      "topic_name": "Provider read/watch 与 notifyListeners",
+      "verdict": "correct",
+      "score": 100,
+      "mastery": 0.6189,
+      "confidence": 0.1813,
+      "level": "熟练",
+      "attempts": 1
+    }
+  ],
+  "fsrs": [
+    {
+      "topic_id": "flutter-provider::Provider notifyListeners 与重建",
+      "last_rating": 1,
+      "fsrs_state": "learning"
+    },
+    {
+      "topic_id": "flutter-provider::Provider read/watch 与 notifyListeners",
+      "last_rating": 4,
+      "fsrs_state": "review"
+    },
+    {
+      "topic_id": "flutter-provider::Provider read/watch/notifyListeners 机制",
+      "last_rating": 1,
+      "fsrs_state": "learning"
+    }
+  ],
+  "saved_summaries": [
+    {
+      "course_id": "flutter-provider",
+      "saved_summary_count": 1
+    }
+  ]
+}

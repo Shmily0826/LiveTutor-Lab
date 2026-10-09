@@ -1,0 +1,65 @@
+{
+  "api_budget": 30,
+  "health": {
+    "plugin_availability": {
+      "bytes": 0,
+      "html": false,
+      "note": "",
+      "status": 409,
+      "study_companion": false
+    },
+    "plugin_dashboard": {
+      "bytes": 0,
+      "html": false,
+      "note": "",
+      "status": 409,
+      "study_companion": false
+    },
+    "study_ui": {
+      "bytes": 3994,
+      "html": true,
+      "note": "",
+      "status": 200,
+      "study_companion": true
+    },
+    "study_ui_index": {
+      "bytes": 3994,
+      "html": true,
+      "note": "",
+      "status": 200,
+      "study_companion": true
+    },
+    "study_ui_main": {
+      "bytes": 0,
+      "html": false,
+      "note": "",
+      "status": 409,
+      "study_companion": false
+    }
+  },
+  "host_binary": "pinned_source_launcher",
+  "host_pid": 66016,
+  "host_ready_seconds": 4.1,
+  "host_running": false,
+  "observed_external_connections": [],
+  "plugin_refresh": {
+    "status": 200,
+    "study_companion_registered": true
+  },
+  "plugin_start": {
+    "running": true,
+    "status": 200
+  },
+  "safety_config": {
+    "DISABLE_TTS": true,
+    "proactive": false,
+    "proxy_sink_port": 50754,
+    "ttsProvider": "empty",
+    "wake_word": false
+  },
+  "sink_allowed_hosts": [],
+  "sink_denied_hosts": [],
+  "source_text_only_gate": true,
+  "storage_root": "benchmarks/raw/neko-product-data",
+  "timestamp_utc": "2026-10-09T11:59:38.702513+00:00"
+}

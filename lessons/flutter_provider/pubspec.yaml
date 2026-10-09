@@ -1,0 +1,15 @@
+name: tutor_flutter_lesson
+description: Isolated Flutter Provider lesson for LiveTutor acceptance.
+publish_to: none
+version: 1.0.0+1
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: 6.1.5+1
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+flutter:
+  uses-material-design: true

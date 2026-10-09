@@ -1,0 +1,305 @@
+{
+  "phase": "closed_session_A",
+  "session_A": {
+    "id": "study-1cc22ce966734bb6af128157739055da",
+    "mode": "teaching",
+    "started_at": "2026-10-09 12:28:09",
+    "ended_at": "2026-10-09 12:34:30",
+    "duration_minutes": 6.349999755620956,
+    "question_count": 2,
+    "topics_touched": "[\"flutter-provider::Provider notifyListeners 与重建\", \"flutter-provider::Provider read/watch 与 notifyListeners\"]",
+    "summary_markdown": "本次课程围绕 Flutter Provider 计数器示例中删除 notifyListeners() 后的行为展开了两轮四选一单选题练习。第一题学习者答错，存在认为 watch 会自动监视并更新屏幕的误解；第二题学习者答对，正确说明了 count 内部变化与缺少通知时屏幕不更新的区别。",
+    "notes_exported": 0,
+    "course_id": "flutter-provider"
+  },
+  "session_A_qa": [
+    {
+      "id": 2,
+      "session_id": "study-1cc22ce966734bb6af128157739055da",
+      "topic_id": "flutter-provider::Provider notifyListeners 与重建",
+      "question": "{\"accepted_answers\": [\"C\"], \"answer\": \"C\", \"attempt_evaluated\": false, \"attempt_id\": \"a_d94e0756f23547c38eed9c74c4de3090\", \"course_family\": \"flutter-provider\", \"difficulty\": 2, \"hint\": \"注意区分模型内部状态变化与 UI 重建的触发条件。\", \"internal_private_payload\": {\"accepted_answers\": [\"C\"], \"answer\": \"C\", \"key_points\": [\"notifyListeners() 负责通知依赖组件重建，删除后不会触发重建\", \"increment 中 count++ 仍然执行，内部 count 变为 1\", \"屏幕上的 Count 文字来自重建时的 counter.count，由于未重建，仍显示 0\"], \"math_equivalence_engine\": {\"enabled\": false}, \"reference_answer\": \"C\", \"rubric\": {\"正确选项 C\": 100}, \"solution_steps\": [\"确认删除 notifyListeners() 后，count++ 仍执行，内部 count 增加为 1。\", \"notifyListeners() 被删除，ChangeNotifier 不会通知 Provider 重建依赖组件。\", \"没有其他重建原因时，Text 组件不更新，屏幕继续显示旧的 Count:0。\"]}, \"key_points\": [\"notifyListeners() 负责通知依赖组件重建，删除后不会触发重建\", \"increment 中 count++ 仍然执行，内部 count 变为 1\", \"屏幕上的 Count 文字来自重建时的 counter.count，由于未重建，仍显示 0\"], \"math_equivalence_engine\": {\"enabled\": false}, \"question\": \"在 Flutter Provider 计数器示例中，如果删除 increment 方法里的 notifyListeners() 调用，只点击一次加号，且没有其他原因触发重建，那么 Counter 内部的 count 值和屏幕显示的 Count 文字分别会变成什么？请从以下四个选项中选择一个正确答案。\\nA. 内部 count 变为 1，屏幕显示 Count:1。\\nB. 内部 count 仍为 0，屏幕显示 Count:0。\\nC. 内部 count 变为 1，屏幕显示 Count:0。\\nD. 内部 count 变为 0，屏幕显示 Count:1。\", \"question_id\": \"q_fab10de24be641ab8a455b880bcc09f1\", \"question_type\": \"multiple_choice\", \"reference_answer\": \"C\", \"rubric\": {\"正确选项 C\": 100}, \"screen_type\": \"reading\", \"selected_topic_id\": \"Provider notifyListeners 与重建\", \"solution_steps\": [\"确认删除 notifyListeners() 后，count++ 仍执行，内部 count 增加为 1。\", \"notifyListeners() 被删除，ChangeNotifier 不会通知 Provider 重建依赖组件。\", \"没有其他重建原因时，Text 组件不更新，屏幕继续显示旧的 Count:0。\"], \"source\": \"manual\", \"subject\": \"computer_science\", \"topic\": \"Provider notifyListeners 与重建\"}",
+      "user_answer": "A。watch 会一直监视 count 的值，所以它变为1后屏幕也会显示1。",
+      "eval_result": {
+        "covered_points": [],
+        "error_type": "misconception",
+        "feedback": "你选 A 并认为 watch 会一直监视 count 的变化，这是错误的。实际是 count++ 只修改内部数据，不会自动触发重建；只有 notifyListeners() 才会通知 Provider 刷新依赖组件。",
+        "final_answer_correct": false,
+        "math_equivalence_engine": {
+          "enabled": false
+        },
+        "misconceptions": [
+          "认为 watch 会一直监视 count 的值并自动发现变化",
+          "忽略 notifyListeners() 在触发重建中的作用"
+        ],
+        "missing_points": [
+          "count++ 只修改 Counter 内部状态",
+          "notifyListeners() 负责通知依赖组件重建",
+          "缺少 notifyListeners() 时屏幕不会随 count 更新"
+        ],
+        "next_action": "请用一句话解释 count++ 与 notifyListeners() 各自的作用，并说明缺少 notifyListeners() 后屏幕为何不变。",
+        "reference_answer": "C。内部 count 变为 1，屏幕显示 Count:0。",
+        "related_topics": [
+          "Provider read/watch/notifyListeners",
+          "ChangeNotifier 依赖通知"
+        ],
+        "score": 0,
+        "screen_type": "reading",
+        "step_feedback": [
+          "你正确选择了题目并要求判断内部值与屏幕值，但把 watch 的作用理解成主动监听数值变化。",
+          "关键区别是：watch 只在 build 中建立依赖，真正触发依赖组件重建的是 notifyListeners()；删除它后屏幕不会更新。"
+        ],
+        "topic": "flutter-provider::Provider notifyListeners 与重建",
+        "track": {
+          "confidence": 0.0,
+          "mastery_delta": -0.08,
+          "next_steps": [
+            "请用一句话解释 count++ 与 notifyListeners() 各自的作用，并说明缺少 notifyListeners() 后屏幕为何不变。"
+          ],
+          "screen_type": "reading",
+          "topic": "Provider notifyListeners 与重建",
+          "weak_points": [
+            "count++ 只修改 Counter 内部状态",
+            "notifyListeners() 负责通知依赖组件重建",
+            "缺少 notifyListeners() 时屏幕不会随 count 更新",
+            "认为 watch 会一直监视 count 的值并自动发现变化",
+            "忽略 notifyListeners() 在触发重建中的作用",
+            "misconception"
+          ]
+        },
+        "verdict": "wrong"
+      },
+      "mode": "teaching",
+      "response_time_ms": null,
+      "created_at": "2026-10-09 12:30:04",
+      "course_id": "flutter-provider"
+    },
+    {
+      "id": 3,
+      "session_id": "study-1cc22ce966734bb6af128157739055da",
+      "topic_id": "flutter-provider::Provider read/watch 与 notifyListeners",
+      "question": "{\"accepted_answers\": [\"C\", \"C。count=1，屏幕 Count:0\"], \"answer\": \"C\", \"attempt_evaluated\": false, \"attempt_id\": \"a_07ed97c2376c49f78fb16ad09f313859\", \"course_family\": \"flutter-provider\", \"difficulty\": 2, \"hint\": \"先判断内部数值是否变化，再判断删除通知后依赖组件会不会重建。\", \"internal_private_payload\": {\"accepted_answers\": [\"C\", \"C。count=1，屏幕 Count:0\"], \"answer\": \"C\", \"key_points\": [\"点击后先执行 count++，内部 count 变为 1\", \"删掉 notifyListeners() 后没有发出变化通知\", \"build 中的 context.watch 虽登记依赖，但不会被通知，页面不重建\", \"屏幕文字保持之前的 Count:0\"], \"math_equivalence_engine\": {\"enabled\": false}, \"reference_answer\": \"C。内部 count 会变成 1，因为没有 notifyListeners() 页面不会重建，所以屏幕仍显示 Count:0。\", \"rubric\": {\"内部 count 变为 1\": 50, \"屏幕显示仍为 Count:0\": 50}, \"solution_steps\": [\"看 increment()：count++ 会先把内部值改为 1\", \"检查是否有 notifyListeners()：已删除，Provider 不会通知依赖者\", \"build 中的 watch 只登记依赖，收不到通知就不会重建\", \"因此屏幕上的 Text 仍使用旧值，显示 Count:0\"]}, \"key_points\": [\"点击后先执行 count++，内部 count 变为 1\", \"删掉 notifyListeners() 后没有发出变化通知\", \"build 中的 context.watch 虽登记依赖，但不会被通知，页面不重建\", \"屏幕文字保持之前的 Count:0\"], \"math_equivalence_engine\": {\"enabled\": false}, \"question\": \"在给的 Provider 计数器示例中，仍设 count 初始为0，删掉 increment() 里的 notifyListeners()。点击一次加号，且不发生其他重建时，内部 count 的值和屏幕显示的文字分别是什么？请从 A、B、C、D 中选出一个正确答案。\\nA. 内部 count=1，屏幕显示 Count:1\\nB. 内部 count=0，屏幕显示 Count:0\\nC. 内部 count=1，屏幕显示 Count:0\\nD. 内部 count=0，屏幕显示 Count:1\", \"question_id\": \"q_1c08caf92d05445f8284d6c62b229a3e\", \"question_type\": \"multiple_choice\", \"reference_answer\": \"C。内部 count 会变成 1，因为没有 notifyListeners() 页面不会重建，所以屏幕仍显示 Count:0。\", \"rubric\": {\"内部 count 变为 1\": 50, \"屏幕显示仍为 Count:0\": 50}, \"screen_type\": \"reading\", \"selected_topic_id\": \"Provider read/watch 与 notifyListeners\", \"solution_steps\": [\"看 increment()：count++ 会先把内部值改为 1\", \"检查是否有 notifyListeners()：已删除，Provider 不会通知依赖者\", \"build 中的 watch 只登记依赖，收不到通知就不会重建\", \"因此屏幕上的 Text 仍使用旧值，显示 Count:0\"], \"source\": \"manual\", \"subject\": \"computer_science\", \"topic\": \"Provider read/watch 与 notifyListeners\"}",
+      "user_answer": "C。count++ 会把同一个 Counter 对象里的 count 改为1，但没有 notifyListeners 就没有通知 watch 的依赖者；没有其他重建时，屏幕仍显示 Count:0。",
+      "eval_result": {
+        "covered_points": [
+          "内部 count 变为 1",
+          "没有 notifyListeners 就不会通知依赖者",
+          "没有其他重建时屏幕仍显示 Count:0"
+        ],
+        "error_type": "none",
+        "feedback": "选 C 正确；内部 count 变为 1，屏幕仍显示 Count:0。",
+        "final_answer_correct": true,
+        "math_equivalence_engine": {
+          "enabled": false
+        },
+        "misconceptions": [],
+        "missing_points": [],
+        "next_action": "继续练习：说明 watch 在什么条件下会触发重建，以及 notifyListeners 的作用。",
+        "reference_answer": "C。count++ 会把同一个 Counter 对象里的 count 改为 1，但没有 notifyListeners 就没有通知 watch 的依赖者；没有其他重建时，屏幕仍显示 Count:0。",
+        "related_topics": [
+          "Provider read/watch 与 notifyListeners",
+          "ChangeNotifier 依赖通知"
+        ],
+        "score": 100,
+        "screen_type": "reading",
+        "step_feedback": [
+          "count++ 直接修改 Counter 对象内部字段，因此内部 count=1。",
+          "删除 notifyListeners() 后，watch 依赖者不会收到变化通知，也不会重建。",
+          "因此屏幕保持原样，显示 Count:0。"
+        ],
+        "topic": "flutter-provider::Provider read/watch 与 notifyListeners",
+        "track": {
+          "confidence": 1.0,
+          "mastery_delta": 0.08,
+          "next_steps": [
+            "继续练习：说明 watch 在什么条件下会触发重建，以及 notifyListeners 的作用。"
+          ],
+          "screen_type": "reading",
+          "topic": "Provider read/watch 与 notifyListeners",
+          "weak_points": []
+        },
+        "verdict": "correct"
+      },
+      "mode": "teaching",
+      "response_time_ms": null,
+      "created_at": "2026-10-09 12:32:29",
+      "course_id": "flutter-provider"
+    }
+  ],
+  "all_flutter_qa": [
+    {
+      "id": 1,
+      "session_id": "study-a35357d1fb0c45648a3e8502423dbab2",
+      "topic_id": "flutter-provider::Provider read/watch/notifyListeners 机制",
+      "question": "{\"accepted_answers\": [\"B\"], \"answer\": \"B\", \"attempt_evaluated\": false, \"attempt_id\": \"a_90941ebe7cee48b089a2dbf583abca3b\", \"course_family\": \"flutter-provider\", \"difficulty\": 2, \"hint\": \"注意 watch 和 read 在用法的位置限制以及是否建立依赖关系。\", \"internal_private_payload\": {\"accepted_answers\": [\"B\"], \"answer\": \"B\", \"key_points\": [\"watch 应在 build 中调用，返回模型并建立依赖\", \"notifyListeners 会通知监听者，触发依赖组件重建\", \"read 获取模型但不建立依赖，不会使页面自动重建\", \"在 onPressed 中调用 watch 属于错误用法\"], \"math_equivalence_engine\": {\"enabled\": false}, \"reference_answer\": \"B\", \"rubric\": {\"机制理解\": 30, \"正确选择B\": 70}, \"solution_steps\": [\"回顾源码：build 里用 context.watch<Counter>() 显示 count，onPressed 原本用 context.read<Counter>().increment()\", \"分析 watch：建立依赖，count 变化后 notifyListeners 通知，页面重建\", \"分析 read：只取一次，不建立依赖，不会自动重建\", \"逐一排除错误选项，确认 B 正确\"]}, \"key_points\": [\"watch 应在 build 中调用，返回模型并建立依赖\", \"notifyListeners 会通知监听者，触发依赖组件重建\", \"read 获取模型但不建立依赖，不会使页面自动重建\", \"在 onPressed 中调用 watch 属于错误用法\"], \"math_equivalence_engine\": {\"enabled\": false}, \"question\": \"在 Provider 计数器示例中，关于 read、watch 和 notifyListeners 的机制，以下哪项描述是正确的？请从 A、B、C、D 中选出一个正确答案。\\nA. 把 onPressed 中的 read 改为 watch 可以正常工作，因为 watch 可以在任意位置调用。\\nB. build 中使用 watch 获取 Counter 并显示 count；当 count 变化时 notifyListeners 被触发，依赖该 Counter 的页面会重建。\\nC. read 会建立依赖，因此用 read 获取的 count 变化时页面也会自动重建。\\nD. notifyListeners 只负责更新 Counter 内部字段，不会通知 Provider 刷新依赖组件。\", \"question_id\": \"q_c52290229b9b47f4a1688f3201ba7c0b\", \"question_type\": \"multiple_choice\", \"reference_answer\": \"B\", \"rubric\": {\"机制理解\": 30, \"正确选择B\": 70}, \"screen_type\": \"reading\", \"selected_topic_id\": \"Provider read/watch/notifyListeners 机制\", \"solution_steps\": [\"回顾源码：build 里用 context.watch<Counter>() 显示 count，onPressed 原本用 context.read<Counter>().increment()\", \"分析 watch：建立依赖，count 变化后 notifyListeners 通知，页面重建\", \"分析 read：只取一次，不建立依赖，不会自动重建\", \"逐一排除错误选项，确认 B 正确\"], \"source\": \"manual\", \"subject\": \"computer_science\", \"topic\": \"Provider read/watch/notifyListeners 机制\"}",
+      "user_answer": "C。我觉得 read 拿到的也是同一个 Counter，所以 count 改变后页面就会自动重建。",
+      "eval_result": {
+        "covered_points": [],
+        "error_type": "misconception",
+        "feedback": "你把 read 和 watch 的依赖建立机制弄反了：read 只取对象，不会建立依赖，所以 count 变化后页面不会自动重建；build 中应使用 watch 才能订阅重建，触发重建的是 notifyListeners。",
+        "final_answer_correct": false,
+        "math_equivalence_engine": {
+          "enabled": false
+        },
+        "misconceptions": [
+          "认为 read 拿到的也是同一个 Counter，所以 count 改变后页面就会自动重建"
+        ],
+        "missing_points": [
+          "build 中使用 watch 获取 Counter 并显示 count",
+          "count 变化时 notifyListeners 被触发，依赖该 Counter 的页面会重建",
+          "read 不会建立依赖，因此用 read 获取的 count 变化时页面不会自动重建"
+        ],
+        "next_action": "请用一句话说明 read 与 watch 在依赖建立上的区别，并指出本示例中 build 应该用哪一个以及为什么。",
+        "reference_answer": "B",
+        "related_topics": [
+          "Provider read/watch/notifyListeners",
+          "ChangeNotifier 依赖通知"
+        ],
+        "score": 0,
+        "screen_type": "reading",
+        "step_feedback": [
+          "你正确注意到 read 和 watch 获取的是同一个 Counter 对象，但错误地认为对象相同就会自动重建。",
+          "关键区别在于依赖建立：watch 在 build 中登记依赖，read 不登记依赖；只有 notifyListeners 通知时才会重建依赖者。"
+        ],
+        "topic": "flutter-provider::Provider read/watch/notifyListeners 机制",
+        "track": {
+          "confidence": 0.0,
+          "mastery_delta": -0.08,
+          "next_steps": [
+            "请用一句话说明 read 与 watch 在依赖建立上的区别，并指出本示例中 build 应该用哪一个以及为什么。"
+          ],
+          "screen_type": "reading",
+          "topic": "Provider read/watch/notifyListeners 机制",
+          "weak_points": [
+            "build 中使用 watch 获取 Counter 并显示 count",
+            "count 变化时 notifyListeners 被触发，依赖该 Counter 的页面会重建",
+            "read 不会建立依赖，因此用 read 获取的 count 变化时页面不会自动重建",
+            "认为 read 拿到的也是同一个 Counter，所以 count 改变后页面就会自动重建",
+            "misconception"
+          ]
+        },
+        "verdict": "wrong"
+      },
+      "mode": "teaching",
+      "response_time_ms": null,
+      "created_at": "2026-10-09 12:23:53",
+      "course_id": "flutter-provider"
+    },
+    {
+      "id": 2,
+      "session_id": "study-1cc22ce966734bb6af128157739055da",
+      "topic_id": "flutter-provider::Provider notifyListeners 与重建",
+      "question": "{\"accepted_answers\": [\"C\"], \"answer\": \"C\", \"attempt_evaluated\": false, \"attempt_id\": \"a_d94e0756f23547c38eed9c74c4de3090\", \"course_family\": \"flutter-provider\", \"difficulty\": 2, \"hint\": \"注意区分模型内部状态变化与 UI 重建的触发条件。\", \"internal_private_payload\": {\"accepted_answers\": [\"C\"], \"answer\": \"C\", \"key_points\": [\"notifyListeners() 负责通知依赖组件重建，删除后不会触发重建\", \"increment 中 count++ 仍然执行，内部 count 变为 1\", \"屏幕上的 Count 文字来自重建时的 counter.count，由于未重建，仍显示 0\"], \"math_equivalence_engine\": {\"enabled\": false}, \"reference_answer\": \"C\", \"rubric\": {\"正确选项 C\": 100}, \"solution_steps\": [\"确认删除 notifyListeners() 后，count++ 仍执行，内部 count 增加为 1。\", \"notifyListeners() 被删除，ChangeNotifier 不会通知 Provider 重建依赖组件。\", \"没有其他重建原因时，Text 组件不更新，屏幕继续显示旧的 Count:0。\"]}, \"key_points\": [\"notifyListeners() 负责通知依赖组件重建，删除后不会触发重建\", \"increment 中 count++ 仍然执行，内部 count 变为 1\", \"屏幕上的 Count 文字来自重建时的 counter.count，由于未重建，仍显示 0\"], \"math_equivalence_engine\": {\"enabled\": false}, \"question\": \"在 Flutter Provider 计数器示例中，如果删除 increment 方法里的 notifyListeners() 调用，只点击一次加号，且没有其他原因触发重建，那么 Counter 内部的 count 值和屏幕显示的 Count 文字分别会变成什么？请从以下四个选项中选择一个正确答案。\\nA. 内部 count 变为 1，屏幕显示 Count:1。\\nB. 内部 count 仍为 0，屏幕显示 Count:0。\\nC. 内部 count 变为 1，屏幕显示 Count:0。\\nD. 内部 count 变为 0，屏幕显示 Count:1。\", \"question_id\": \"q_fab10de24be641ab8a455b880bcc09f1\", \"question_type\": \"multiple_choice\", \"reference_answer\": \"C\", \"rubric\": {\"正确选项 C\": 100}, \"screen_type\": \"reading\", \"selected_topic_id\": \"Provider notifyListeners 与重建\", \"solution_steps\": [\"确认删除 notifyListeners() 后，count++ 仍执行，内部 count 增加为 1。\", \"notifyListeners() 被删除，ChangeNotifier 不会通知 Provider 重建依赖组件。\", \"没有其他重建原因时，Text 组件不更新，屏幕继续显示旧的 Count:0。\"], \"source\": \"manual\", \"subject\": \"computer_science\", \"topic\": \"Provider notifyListeners 与重建\"}",
+      "user_answer": "A。watch 会一直监视 count 的值，所以它变为1后屏幕也会显示1。",
+      "eval_result": {
+        "covered_points": [],
+        "error_type": "misconception",
+        "feedback": "你选 A 并认为 watch 会一直监视 count 的变化，这是错误的。实际是 count++ 只修改内部数据，不会自动触发重建；只有 notifyListeners() 才会通知 Provider 刷新依赖组件。",
+        "final_answer_correct": false,
+        "math_equivalence_engine": {
+          "enabled": false
+        },
+        "misconceptions": [
+          "认为 watch 会一直监视 count 的值并自动发现变化",
+          "忽略 notifyListeners() 在触发重建中的作用"
+        ],
+        "missing_points": [
+          "count++ 只修改 Counter 内部状态",
+          "notifyListeners() 负责通知依赖组件重建",
+          "缺少 notifyListeners() 时屏幕不会随 count 更新"
+        ],
+        "next_action": "请用一句话解释 count++ 与 notifyListeners() 各自的作用，并说明缺少 notifyListeners() 后屏幕为何不变。",
+        "reference_answer": "C。内部 count 变为 1，屏幕显示 Count:0。",
+        "related_topics": [
+          "Provider read/watch/notifyListeners",
+          "ChangeNotifier 依赖通知"
+        ],
+        "score": 0,
+        "screen_type": "reading",
+        "step_feedback": [
+          "你正确选择了题目并要求判断内部值与屏幕值，但把 watch 的作用理解成主动监听数值变化。",
+          "关键区别是：watch 只在 build 中建立依赖，真正触发依赖组件重建的是 notifyListeners()；删除它后屏幕不会更新。"
+        ],
+        "topic": "flutter-provider::Provider notifyListeners 与重建",
+        "track": {
+          "confidence": 0.0,
+          "mastery_delta": -0.08,
+          "next_steps": [
+            "请用一句话解释 count++ 与 notifyListeners() 各自的作用，并说明缺少 notifyListeners() 后屏幕为何不变。"
+          ],
+          "screen_type": "reading",
+          "topic": "Provider notifyListeners 与重建",
+          "weak_points": [
+            "count++ 只修改 Counter 内部状态",
+            "notifyListeners() 负责通知依赖组件重建",
+            "缺少 notifyListeners() 时屏幕不会随 count 更新",
+            "认为 watch 会一直监视 count 的值并自动发现变化",
+            "忽略 notifyListeners() 在触发重建中的作用",
+            "misconception"
+          ]
+        },
+        "verdict": "wrong"
+      },
+      "mode": "teaching",
+      "response_time_ms": null,
+      "created_at": "2026-10-09 12:30:04",
+      "course_id": "flutter-provider"
+    },
+    {
+      "id": 3,
+      "session_id": "study-1cc22ce966734bb6af128157739055da",
+      "topic_id": "flutter-provider::Provider read/watch 与 notifyListeners",
+      "question": "{\"accepted_answers\": [\"C\", \"C。count=1，屏幕 Count:0\"], \"answer\": \"C\", \"attempt_evaluated\": false, \"attempt_id\": \"a_07ed97c2376c49f78fb16ad09f313859\", \"course_family\": \"flutter-provider\", \"difficulty\": 2, \"hint\": \"先判断内部数值是否变化，再判断删除通知后依赖组件会不会重建。\", \"internal_private_payload\": {\"accepted_answers\": [\"C\", \"C。count=1，屏幕 Count:0\"], \"answer\": \"C\", \"key_points\": [\"点击后先执行 count++，内部 count 变为 1\", \"删掉 notifyListeners() 后没有发出变化通知\", \"build 中的 context.watch 虽登记依赖，但不会被通知，页面不重建\", \"屏幕文字保持之前的 Count:0\"], \"math_equivalence_engine\": {\"enabled\": false}, \"reference_answer\": \"C。内部 count 会变成 1，因为没有 notifyListeners() 页面不会重建，所以屏幕仍显示 Count:0。\", \"rubric\": {\"内部 count 变为 1\": 50, \"屏幕显示仍为 Count:0\": 50}, \"solution_steps\": [\"看 increment()：count++ 会先把内部值改为 1\", \"检查是否有 notifyListeners()：已删除，Provider 不会通知依赖者\", \"build 中的 watch 只登记依赖，收不到通知就不会重建\", \"因此屏幕上的 Text 仍使用旧值，显示 Count:0\"]}, \"key_points\": [\"点击后先执行 count++，内部 count 变为 1\", \"删掉 notifyListeners() 后没有发出变化通知\", \"build 中的 context.watch 虽登记依赖，但不会被通知，页面不重建\", \"屏幕文字保持之前的 Count:0\"], \"math_equivalence_engine\": {\"enabled\": false}, \"question\": \"在给的 Provider 计数器示例中，仍设 count 初始为0，删掉 increment() 里的 notifyListeners()。点击一次加号，且不发生其他重建时，内部 count 的值和屏幕显示的文字分别是什么？请从 A、B、C、D 中选出一个正确答案。\\nA. 内部 count=1，屏幕显示 Count:1\\nB. 内部 count=0，屏幕显示 Count:0\\nC. 内部 count=1，屏幕显示 Count:0\\nD. 内部 count=0，屏幕显示 Count:1\", \"question_id\": \"q_1c08caf92d05445f8284d6c62b229a3e\", \"question_type\": \"multiple_choice\", \"reference_answer\": \"C。内部 count 会变成 1，因为没有 notifyListeners() 页面不会重建，所以屏幕仍显示 Count:0。\", \"rubric\": {\"内部 count 变为 1\": 50, \"屏幕显示仍为 Count:0\": 50}, \"screen_type\": \"reading\", \"selected_topic_id\": \"Provider read/watch 与 notifyListeners\", \"solution_steps\": [\"看 increment()：count++ 会先把内部值改为 1\", \"检查是否有 notifyListeners()：已删除，Provider 不会通知依赖者\", \"build 中的 watch 只登记依赖，收不到通知就不会重建\", \"因此屏幕上的 Text 仍使用旧值，显示 Count:0\"], \"source\": \"manual\", \"subject\": \"computer_science\", \"topic\": \"Provider read/watch 与 notifyListeners\"}",
+      "user_answer": "C。count++ 会把同一个 Counter 对象里的 count 改为1，但没有 notifyListeners 就没有通知 watch 的依赖者；没有其他重建时，屏幕仍显示 Count:0。",
+      "eval_result": {
+        "covered_points": [
+          "内部 count 变为 1",
+          "没有 notifyListeners 就不会通知依赖者",
+          "没有其他重建时屏幕仍显示 Count:0"
+        ],
+        "error_type": "none",
+        "feedback": "选 C 正确；内部 count 变为 1，屏幕仍显示 Count:0。",
+        "final_answer_correct": true,
+        "math_equivalence_engine": {
+          "enabled": false
+        },
+        "misconceptions": [],
+        "missing_points": [],
+        "next_action": "继续练习：说明 watch 在什么条件下会触发重建，以及 notifyListeners 的作用。",
+        "reference_answer": "C。count++ 会把同一个 Counter 对象里的 count 改为 1，但没有 notifyListeners 就没有通知 watch 的依赖者；没有其他重建时，屏幕仍显示 Count:0。",
+        "related_topics": [
+          "Provider read/watch 与 notifyListeners",
+          "ChangeNotifier 依赖通知"
+        ],
+        "score": 100,
+        "screen_type": "reading",
+        "step_feedback": [
+          "count++ 直接修改 Counter 对象内部字段，因此内部 count=1。",
+          "删除 notifyListeners() 后，watch 依赖者不会收到变化通知，也不会重建。",
+          "因此屏幕保持原样，显示 Count:0。"
+        ],
+        "topic": "flutter-provider::Provider read/watch 与 notifyListeners",
+        "track": {
+          "confidence": 1.0,
+          "mastery_delta": 0.08,
+          "next_steps": [
+            "继续练习：说明 watch 在什么条件下会触发重建，以及 notifyListeners 的作用。"
+          ],
+          "screen_type": "reading",
+          "topic": "Provider read/watch 与 notifyListeners",
+          "weak_points": []
+        },
+        "verdict": "correct"
+      },
+      "mode": "teaching",
+      "response_time_ms": null,
+      "created_at": "2026-10-09 12:32:29",
+      "course_id": "flutter-provider"
+    }
+  ],
+  "counts": {
+    "qa_records": 3,
+    "wrong_questions": 2,
+    "mastery_snapshots": 3,
+    "fsrs_cards": 3
+  }
+}

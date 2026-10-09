@@ -1,0 +1,60 @@
+{"event": "started", "call": 1, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791547555.9174552}
+{"event": "completed", "call": 1, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791547557.9525568, "ms": 2031, "input_tokens": 630, "output_tokens": 79}
+{"event": "started", "call": 2, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791547557.9565556}
+{"event": "completed", "call": 2, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791547564.8041763, "ms": 6860, "input_tokens": 839, "output_tokens": 1407}
+{"event": "started", "call": 3, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791547577.1995254}
+{"event": "completed", "call": 3, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791547578.3481994, "ms": 1141, "input_tokens": 2329, "output_tokens": 81}
+{"event": "started", "call": 4, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791547578.355427}
+{"event": "completed", "call": 4, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791547582.8573527, "ms": 4500, "input_tokens": 2901, "output_tokens": 706}
+{"event": "started", "call": 5, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791547615.5318203}
+{"event": "completed", "call": 5, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791547616.789202, "ms": 1265, "input_tokens": 1267, "output_tokens": 73}
+{"event": "started", "call": 6, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791547616.7932143}
+{"event": "completed", "call": 6, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791547619.172963, "ms": 2375, "input_tokens": 2238, "output_tokens": 391}
+{"event": "started", "call": 7, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791547649.1766539}
+{"event": "completed", "call": 7, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791547650.6398754, "ms": 1469, "input_tokens": 891, "output_tokens": 82}
+{"event": "started", "call": 8, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791547650.6448538}
+{"event": "completed", "call": 8, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791547654.5851746, "ms": 3937, "input_tokens": 2560, "output_tokens": 684}
+{"event": "started", "call": 1, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791547728.3514667}
+{"event": "completed", "call": 1, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791547730.2380939, "ms": 1875, "input_tokens": 1240, "output_tokens": 81}
+{"event": "started", "call": 2, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791547732.2255995}
+{"event": "completed", "call": 2, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791547736.3610637, "ms": 4141, "input_tokens": 3413, "output_tokens": 730}
+{"event": "started", "call": 3, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791547779.863761}
+{"event": "completed", "call": 3, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791547780.9255974, "ms": 1062, "input_tokens": 1240, "output_tokens": 81}
+{"event": "started", "call": 4, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791547780.9365568}
+{"event": "completed", "call": 4, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791547784.2010536, "ms": 3265, "input_tokens": 3529, "output_tokens": 526}
+{"event": "started", "call": 5, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791547823.462242}
+{"event": "completed", "call": 5, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791547825.7176752, "ms": 2250, "input_tokens": 1056, "output_tokens": 70}
+{"event": "started", "call": 6, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791547825.7216747}
+{"event": "completed", "call": 6, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791547831.8729484, "ms": 6156, "input_tokens": 3458, "output_tokens": 1243}
+{"event": "started", "call": 7, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791547886.394847}
+{"event": "completed", "call": 7, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791547887.6463265, "ms": 1250, "input_tokens": 1944, "output_tokens": 79}
+{"event": "started", "call": 8, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791547887.6483264}
+{"event": "completed", "call": 8, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791547889.2099187, "ms": 1546, "input_tokens": 4728, "output_tokens": 92}
+{"event": "started", "call": 17, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791548132.5296068}
+{"event": "completed", "call": 17, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791548134.6787517, "ms": 2140, "input_tokens": 399, "output_tokens": 76}
+{"event": "started", "call": 18, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791548134.680751}
+{"event": "completed", "call": 18, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791548136.006762, "ms": 1312, "input_tokens": 1953, "output_tokens": 126}
+{"event": "started", "call": 19, "operation": "question_generate", "model": "deepseek-flash", "time": 1791548238.666794}
+{"event": "completed", "call": 19, "operation": "question_generate", "model": "deepseek-flash", "time": 1791548241.311254, "ms": 2641, "input_tokens": 4863, "output_tokens": 513}
+{"event": "started", "call": 20, "operation": "question_generate", "model": "deepseek-flash", "time": 1791548361.2410984}
+{"event": "completed", "call": 20, "operation": "question_generate", "model": "deepseek-flash", "time": 1791548364.841963, "ms": 3609, "input_tokens": 4848, "output_tokens": 506}
+{"event": "started", "call": 21, "operation": "question_generate", "model": "deepseek-flash", "time": 1791548580.9724228}
+{"event": "completed", "call": 21, "operation": "question_generate", "model": "deepseek-flash", "time": 1791548584.4738822, "ms": 3500, "input_tokens": 4834, "output_tokens": 454}
+{"event": "started", "call": 22, "operation": "answer_evaluate", "model": "deepseek-flash", "time": 1791548630.7812552}
+{"event": "completed", "call": 22, "operation": "answer_evaluate", "model": "deepseek-flash", "time": 1791548633.254435, "ms": 2468, "input_tokens": 3557, "output_tokens": 361}
+{"event": "started", "call": 23, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791548679.6041543}
+{"event": "completed", "call": 23, "operation": "knowledge_semantic_route", "model": "deepseek-flash", "time": 1791548680.8194382, "ms": 1203, "input_tokens": 395, "output_tokens": 79}
+{"event": "started", "call": 24, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791548680.8252678}
+{"event": "completed", "call": 24, "operation": "concept_explain", "model": "deepseek-flash", "time": 1791548682.8389843, "ms": 2016, "input_tokens": 2719, "output_tokens": 224}
+{"event": "started", "call": 25, "operation": "question_generate", "model": "deepseek-flash", "time": 1791548730.8724518}
+{"event": "completed", "call": 25, "operation": "question_generate", "model": "deepseek-flash", "time": 1791548733.691222, "ms": 2813, "input_tokens": 5250, "output_tokens": 470}
+{"event": "started", "call": 26, "operation": "question_generate", "model": "deepseek-flash", "time": 1791548940.4011114}
+{"event": "completed", "call": 26, "operation": "question_generate", "model": "deepseek-flash", "time": 1791548943.720793, "ms": 3312, "input_tokens": 5317, "output_tokens": 410}
+{"event": "started", "call": 27, "operation": "answer_evaluate", "model": "deepseek-flash", "time": 1791549001.935678}
+{"event": "completed", "call": 27, "operation": "answer_evaluate", "model": "deepseek-flash", "time": 1791549004.3494914, "ms": 2406, "input_tokens": 3524, "output_tokens": 358}
+{"event": "started", "call": 28, "operation": "question_generate", "model": "deepseek-flash", "time": 1791549065.6240125}
+{"event": "completed", "call": 28, "operation": "question_generate", "model": "deepseek-flash", "time": 1791549068.4578745, "ms": 2828, "input_tokens": 5314, "output_tokens": 455}
+{"event": "started", "call": 29, "operation": "answer_evaluate", "model": "deepseek-flash", "time": 1791549147.7627363}
+{"event": "completed", "call": 29, "operation": "answer_evaluate", "model": "deepseek-flash", "time": 1791549149.8620188, "ms": 2094, "input_tokens": 3522, "output_tokens": 304}
+{"event": "started", "call": 30, "operation": "summarize_session", "model": "deepseek-flash", "time": 1791549211.090841}
+{"event": "completed", "call": 30, "operation": "summarize_session", "model": "deepseek-flash", "time": 1791549213.5706944, "ms": 2469, "input_tokens": 1722, "output_tokens": 439}
