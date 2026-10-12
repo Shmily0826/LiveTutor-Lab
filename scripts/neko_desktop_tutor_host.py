@@ -105,6 +105,17 @@ def prepare_store(key: str, store: Path) -> Path:
     return store
 
 
+def apply_voice_host_patch() -> str:
+    """Replay reliability and realtime barge-in patches onto the vendored host trees."""
+    import neko_voice_host_patch as voice_patch
+    results = []
+    for host_root in voice_patch.HOSTS:
+        for relative, _ in voice_patch.TARGETS:
+            target = host_root / relative
+            results.append(f"{host_root.name}/{relative}={voice_patch.apply_to(target)}")
+    return ",".join(results)
+
+
 def prepare_product_plugin(store: Path) -> None:
     """Deploy only source/assets into the new isolated store; never copy learning data."""
     source = APP / "plugins/study_companion"
@@ -328,6 +339,7 @@ def main() -> int:
 
     key = read_key()
     if args.source:
+        print(f"宿主侧可靠性补丁：{apply_voice_host_patch()}")
         verify_source_audio_gate()
     store = (ROOT / "benchmarks/raw" / args.store).resolve()
     if not store.is_relative_to(ROOT / "benchmarks/raw"):

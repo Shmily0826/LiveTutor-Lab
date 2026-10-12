@@ -37,3 +37,21 @@ with `NEKO_MERGED=1`. All storage variables, `APPDATA` and `LOCALAPPDATA` must
 point to disposable project data before imports. The system Python is 3.14;
 the preserved frozen distribution has `python311.dll` but no interpreter exe.
 Use the existing isolated Python 3.11 and the source `uv.lock` for dependencies.
+
+## Native realtime barge-in
+
+The native free-proxy barge-in handoff is replayed by `scripts/neko_voice_host_patch.py` before the source host starts. It isolates the replacement connection, replays bounded captured PCM, and retires playback owned by the old connection. Game speech keeps its existing request-owned cancellation path.
+
+The patch expects the official N.E.K.O source revision recorded in `manifest.json` at `benchmarks/raw/neko-product-host` and a matching source tree at `candidates/N.E.K.O`. Use the source host's Python 3.11 environment and dependency lock (`uv.lock`). The patcher requires unique replacement anchors, and the launch-time source gate checks recorded target hashes; a moved upstream implementation fails closed.
+
+Replay the patch and run the offline checks with:
+
+```powershell
+python -B scripts/neko_voice_host_patch.py
+python -X utf8 -B scripts/test_neko_native_barge_in.py
+node scripts/test_neko_native_barge_in_playback.js
+python -B scripts/test_neko_realtime_barge_in.py
+python -B scripts/test_neko_tool_result_lifecycle.py
+```
+
+These checks use the vendored source and offline fixtures. They do not establish real-microphone acceptance. The corrected real-microphone trial remains unverified; no provider or CONNECT quota is consumed by the offline checks.

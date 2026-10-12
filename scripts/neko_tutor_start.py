@@ -147,6 +147,7 @@ def main() -> int:
                 return 1
     try:
         host.read_key()
+        print(f"宿主侧可靠性补丁：{host.apply_voice_host_patch()}")
         host.verify_source_audio_gate()
         browser_args = chrome_command(UI_URL) if not args.no_browser else None
         if browser_args and BROWSER_OWNER_FILE.is_file():
