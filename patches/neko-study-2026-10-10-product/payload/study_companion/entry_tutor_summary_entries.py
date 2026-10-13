@@ -102,12 +102,15 @@ class _TutorSummaryEntriesMixin:
             "next_actions",
         ],
     )
-    async def study_summarize_session(self, focus: str = "", _material_context=None, **_):
+    async def study_summarize_session(self, focus: str = "", _material_context=None,
+                                      _narration_target_lanlan="", **_):
         if self._agent is None:
             return Err(SdkError("study tutor agent is not initialized"))
         # Capture before the first await; a history summary follows its course
         # and session, not a picture submitted while the request is waiting.
         observed = material_context(self, include_material=False)
+        narration_target = (_narration_target_lanlan.strip()
+                            if isinstance(_narration_target_lanlan, str) and len(_narration_target_lanlan) <= 256 else "")
         expected = dict(_material_context) if isinstance(_material_context, dict) else observed
         try:
             if (_material_context is not None and not isinstance(_material_context, dict)
@@ -167,7 +170,8 @@ class _TutorSummaryEntriesMixin:
                 # Preserve provenance for the narration consumer; its queue's
                 # eventual delivery guard is separate from this entry check.
                 narration = {**payload, "_material_context": dict(expected),
-                             "_session_summary_seed": dict(tutor_context.get("session_summary_seed") or {})}
+                             "_session_summary_seed": dict(tutor_context.get("session_summary_seed") or {}),
+                             "_narration_target_lanlan": narration_target}
                 try:
                     await self._emit_session_summarized_event(narration)
                 except MaterialContextChanged:

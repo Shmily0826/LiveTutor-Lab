@@ -6,7 +6,7 @@
   "files": [
     {
       "path": "payload/study_companion/__init__.py",
-      "sha256": "c5dbd2f776dd06d7a7530e55f6b894927e160ca0db8304546963a97f34756d69",
+      "sha256": "5c3a35b21c34d69f662156669f205af017e37306140d041099ca56a046fd3030",
       "deployed_matches": true
     },
     {
@@ -26,7 +26,7 @@
     },
     {
       "path": "payload/study_companion/entry_tutor_summary_entries.py",
-      "sha256": "88ebef93c6bfd61b68f67cba6a32dda79e884a1bcb8844f2772eca5e86bc6ab0",
+      "sha256": "a950b912983b02db13d692cb6f12a6dd248d23cea7fb41270b45118b0f3483a4",
       "deployed_matches": true
     },
     {
@@ -41,7 +41,7 @@
     },
     {
       "path": "payload/study_companion/llm_prompts.py",
-      "sha256": "0c5be37a956cf4f7ddf76f5977abe9f2cd1734508136cafe298db8f29db77e59",
+      "sha256": "17ee9efa904c21a4abbff1bc76011c445d869967b9037e5ce6461718620c7a57",
       "deployed_matches": true
     },
     {
@@ -91,7 +91,7 @@
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
-      "sha256": "02bb6838beb72eec27297a6109963d5ffd4363162e3c074b448512847996ad6e",
+      "sha256": "452ba4f01667cab752c2fa01917cc56828594a132c48e1c31dc3e155d8be268b",
       "deployed_matches": true
     },
     {
@@ -123,6 +123,16 @@
     {
       "path": "payload/study_companion/entry_tutor_answer_entries.py",
       "sha256": "5c886dedde451dadb24ce7187f605f74d62265a68a26dac134d4e4a02d52d140",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/entry_communication_tutor_events.py",
+      "sha256": "2afb661423ab6f42a2f0324ce49d84ea4935058a16c37cbe848a8ca14c316c60",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/_event_bus.py",
+      "sha256": "5459855d18381ebeb80c09e874c88261f390487c33adda0f1e5ef5f435ab019f",
       "deployed_matches": true
     }
   ],
@@ -227,12 +237,12 @@
     "report": "docs/evidence/daily-companion-teaching-core-sdk-2026-10-14.md"
   },
   "daily_teaching_device_update": {
-    "result": "PARTIAL",
-    "report": "docs/evidence/daily-companion-teaching-device-2026-10-14.md",
-    "grade": "real model wrong/0, unique held-question grade, correct REZ->NUD->WEX correction, 15 Native PCM/40 WASAPI loud bins",
-    "quiz": "real current-picture question committed but scope-retired before Native relay, 0 PCM/0 loud bins",
-    "summary": "18 Native PCM/37 loud bins but no study_summary tool, wrong return-flow gloss; not grounded-tool acceptance",
-    "scope": "fixed WAV, no room mic/volume change, one CONNECT, complete245s capture; human pending; post-review probe/guidance only source"
+    "result": "PASS_FIXED_INPUT_THREE_TOOL_DEVICE_ROUTE; teaching quality PARTIAL, human PENDING",
+    "report": "docs/evidence/daily-companion-phase7-teaching-device-2026-10-14.md",
+    "quiz": "actual current-picture study_quiz, 9Native PCM/18WASAPI loud bins; first arguments precede ASR130ms; pending output audible",
+    "grade": "same held question, unique grade/QA wrong10 with one rubric-relevant single-direction point; correct REZ->NUD->WEX, 17PCM/34loud bins; feedback direction explanation incomplete",
+    "summary": "actual study_summary, saved same session/Native text matches, 26PCM/64loud bins; requested next action absent, question-generation input misattributed as completed explanation",
+    "scope": "one CONNECT; fixed WAV/fake silent input/no room mic/no volume change; complete311s capture covers last turn; no generalized natural-pause or human acceptance"
   },
   "daily_phase6_publication_lf": {
     "scope": "CRLF->LF only in4 artifacts, all original bytes backed up locally; source syntax/24 fixed daily plugin-code hashes matched; no DB/config data modified",
@@ -242,5 +252,19 @@
       "static/main.js",
       "payload/study_companion/study_avatar_tools.py"
     ]
+  },
+  "daily_narration_local_update": {
+    "proof": "SOURCE_OFFLINE local producer/queue guards; normal Core/SDK/SQLite teaching5 integration with local model stub3 requests passed; host final admission/Native/device narration pending",
+    "tests": "14 actual communication mixin/event bus/material helper cases plus summary14/Native5; trusted private target forwarded before awaits, prompt provenance filtered",
+    "scope": "explicit targeted session summary only; missing/unknown target/origin drop, captured seed/course/session, queue and final pre-push recheck, old image notification binding preserved; default OFF",
+    "sdk_scope": "default OFF narration, actual new26-file plugin constructor/summary private target integration; no narration-enabled host or model/device proof"
+  },
+  "prior_daily_teaching_device_update": {
+    "result": "PARTIAL",
+    "report": "docs/evidence/daily-companion-teaching-device-2026-10-14.md",
+    "grade": "real model wrong/0, unique held-question grade, correct REZ->NUD->WEX correction, 15 Native PCM/40 WASAPI loud bins",
+    "quiz": "real current-picture question committed but scope-retired before Native relay, 0 PCM/0 loud bins",
+    "summary": "18 Native PCM/37 loud bins but no study_summary tool, wrong return-flow gloss; not grounded-tool acceptance",
+    "scope": "fixed WAV, no room mic/volume change, one CONNECT, complete245s capture; human pending; post-review probe/guidance only source"
   }
 }

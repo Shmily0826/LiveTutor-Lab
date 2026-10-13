@@ -748,6 +748,7 @@ TARGETS, _NATIVE_BARGE_IN_REPLAY = _native_barge_in_targets(TARGETS)
 _OWNER_TRACE_REPLAY += _NATIVE_BARGE_IN_REPLAY
 
 from neko_late_asr_tool_patch import upgrade_targets as _late_asr_tool_targets
+from neko_late_asr_tool_patch import normalize_ordering_helpers
 TARGETS, _LATE_ASR_TOOL_REPLAY = _late_asr_tool_targets(TARGETS)
 _OWNER_TRACE_REPLAY += _LATE_ASR_TOOL_REPLAY
 
@@ -775,6 +776,8 @@ def state(path: Path) -> str:
     if not path.is_file():
         return "missing"
     text = path.read_text(encoding="utf-8")
+    if path.as_posix().endswith("main_logic/omni_realtime_client/_tools.py") and normalize_ordering_helpers(text) != text:
+        return "partial(reviewed-ordering-helper)"
     if path.as_posix().endswith("static/app/app-audio-playback.js") and normalize_playback_feedback(text) != text:
         return "partial(duplicate-playback-feedback)"
     replacements = hunks_for(path)
@@ -795,6 +798,8 @@ def apply_to(path: Path) -> str:
         text = normalize_playback_feedback(text)
     if path.as_posix().endswith("main_logic/core/tool_calling.py"):
         text = normalize_material_audio(text)
+    if path.as_posix().endswith("main_logic/omni_realtime_client/_tools.py"):
+        text = normalize_ordering_helpers(text)
     for relative, old, new in _OWNER_TRACE_REPLAY:
         if path.as_posix().endswith(relative) and new not in text and text.count(old) == 1:
             text = text.replace(old, new)

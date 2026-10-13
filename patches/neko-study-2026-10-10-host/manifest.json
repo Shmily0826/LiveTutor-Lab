@@ -39,7 +39,7 @@
     {
       "path": "main_logic/omni_realtime_client/_transport.py",
       "base_sha256": "2d6c058206c1beafc3e1d35a8f5111042ff509a31f398053ce7b97a825242423",
-      "patched_sha256": "e038037b3130d44d08ec44662a22802b1e18c94615dad122da5abfa0bb007a23",
+      "patched_sha256": "9ce6a44928b967b1260aff49c0be217b6727bb47c357c70228222111bbccb28c",
       "resealed_utc": "2026-10-13T14:38:47.980810+00:00",
       "resealed_reason": "Bounded free-route late-ASR raw tool dispatch, pinned original connection/session, one expected scope advance, foreign retirement rejects; onset, PCM, response lifecycle unchanged; 6 candidate, 5 existing tool lifecycle and 19 barge guards passed; actual role/voice not yet verified.",
       "verified_by": {
@@ -183,7 +183,7 @@
     {
       "path": "main_logic/omni_realtime_client/_tools.py",
       "base_sha256": "51afd6f606a4c011b1bb1a88f35da2d443a458f335c0cbc177601c5a648b3514",
-      "patched_sha256": "8b8ebca6158afdc416ecbd3cd7ba70b4d034950ec78138faabf326b25abb1e17",
+      "patched_sha256": "41c50034fbba268f58214df34e5f167fb2f45b906d8d8bd4d854ec4922cc05cc",
       "resealed_utc": "2026-10-13T18:23:15.001215+00:00",
       "resealed_reason": "Opt-in all-Study admission, current received-ASR/quiet/ready plus at most 200ms neighboring-ASR promotion; older prefix args cannot acquire final scope. Daily default off.",
       "verified_by": {
@@ -288,6 +288,21 @@
     "report": "docs/evidence/daily-companion-teaching-core-sdk-2026-10-14.md"
   },
   "daily_teaching_device_update": {
+    "result": "PASS_FIXED_INPUT_THREE_TOOL_DEVICE_ROUTE; teaching quality PARTIAL, human PENDING",
+    "report": "docs/evidence/daily-companion-phase7-teaching-device-2026-10-14.md",
+    "quiz": "actual current-picture study_quiz, 9Native PCM/18WASAPI loud bins; first arguments precede ASR130ms; pending output audible",
+    "grade": "same held question, unique grade/QA wrong10 with one rubric-relevant single-direction point; correct REZ->NUD->WEX, 17PCM/34loud bins; feedback direction explanation incomplete",
+    "summary": "actual study_summary, saved same session/Native text matches, 26PCM/64loud bins; requested next action absent, question-generation input misattributed as completed explanation",
+    "scope": "one CONNECT; fixed WAV/fake silent input/no room mic/no volume change; complete311s capture covers last turn; no generalized natural-pause or human acceptance"
+  },
+  "daily_first_asr_ordering_update": {
+    "proof": "SOURCE_OFFLINE_ONLY; actual model/Native/device pending",
+    "tests": "first-ASR8 actual tooling tests including both sides of2s and foreign input before call; ordering7 including actual apply refusal/idempotence; opt-in gate14",
+    "scope": "first transcript on exact connection, quiet0..8s, .4s ASR adjacency, unchanged speech observations, initial foreign-scope baseline; no executing-owner resurrection/onset/PCM/replay change; later natural pauses incomplete",
+    "sealed_utc": "2026-10-13T21:41:57.283831+00:00",
+    "device": "voice17 initial args precede ASR130ms at fixed speech end+2.182s; first quiz9PCM/18loopback loud bins. Limited real ordering trace, not all utterance identity or natural pauses."
+  },
+  "prior_daily_teaching_device_update": {
     "result": "PARTIAL",
     "report": "docs/evidence/daily-companion-teaching-device-2026-10-14.md",
     "grade": "real model wrong/0, unique held-question grade, correct REZ->NUD->WEX correction, 15 Native PCM/40 WASAPI loud bins",

@@ -339,6 +339,7 @@ class StudyCompanionPlugin(
                 StudyEventBus(
                     plugin_ctx=self.ctx,
                     silent_mode=self._cfg.communication.silent_mode,
+                    material_validator=self._narration_material_is_current,
                 )
                 if self._cfg.communication.enabled and not self._cfg.communication.silent_mode
                 else None

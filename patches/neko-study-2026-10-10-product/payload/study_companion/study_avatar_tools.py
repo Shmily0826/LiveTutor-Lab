@@ -1074,7 +1074,8 @@ class _StudyAvatarToolsMixin:
         if snapshot is None:
             return self._study_changed_native_material_result()
         context = snapshot["context"]
-        payload = _envelope(await self.study_summarize_session(focus=str(focus or ""), _material_context=context))
+        payload = _envelope(await self.study_summarize_session(focus=str(focus or ""), _material_context=context,
+                                                             _narration_target_lanlan=target))
         summary = _first_text(payload, "summary", "reply", "text")
         if not summary:
             return payload

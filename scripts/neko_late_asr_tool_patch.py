@@ -151,6 +151,27 @@ ORDERING_ONLY_HELPERS = HELPERS
 from neko_study_speech_gate_patch import upgrade_ordering_helpers
 HELPERS = upgrade_ordering_helpers(HELPERS)
 
+
+def normalize_ordering_helpers(source):
+    """Migrate only reviewed helper fingerprints; refuse unknown edited drafts."""
+    import hashlib
+    start_marker = '    # late-asr-tool-ordering-v1\n'
+    end_marker = '    def _start_raw_tool_call_now(\n'
+    if start_marker not in source:
+        return source
+    if source.count(start_marker) != 1 or source.count(end_marker) != 1:
+        raise RuntimeError('ambiguous late-ASR helper; inspect before migration')
+    start = source.index(start_marker)
+    end = source.index(end_marker, start)
+    observed = source[start:end]
+    if observed == HELPERS or observed in (LEGACY_HELPERS, ORDERING_ONLY_HELPERS):
+        return source
+    if hashlib.sha256(observed.encode()).hexdigest() not in {
+            '1c4daa3a51f82ffa76db0c83fbc8c912557b4c14a0fada44a149d4975ca1c988',
+            '234cb32877637209697594e635d6b012432bf0e4e64c7770f94a86e3fd82c30c'}:
+        raise RuntimeError('unknown edited late-ASR helper; preserve and inspect')
+    return source[:start] + HELPERS + source[end:]
+
 UPGRADES = {
     "main_logic/omni_realtime_client/_tools.py": (
         ('    def _start_raw_tool_call(\n', HELPERS + '    def _start_raw_tool_call_now(\n'),
@@ -160,6 +181,10 @@ UPGRADES = {
          '        self._tool_scope_generation = getattr(self, "_tool_scope_generation", 0) + 1\n'),
     ),
     "main_logic/omni_realtime_client/_transport.py": (
+        ('        self._on_connection_attached()\n        # Do not reopen the arbiter until the replacement transport exists.\n',
+         '        self._on_connection_attached()\n'
+         '        self._late_raw_connection_foreign_scope = getattr(self, "_late_raw_foreign_scope", 0)\n'
+         '        # Do not reopen the arbiter until the replacement transport exists.\n'),
         ('                        self.note_user_turn_started()\n                    self._print_input_transcript = True\n',
          '                        self._late_raw_expected_asr_advance = True\n'
          '                        try:\n                            self.note_user_turn_started()\n'

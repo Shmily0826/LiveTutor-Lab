@@ -24,3 +24,39 @@ A固定入口/图片已交付；C现有SQLite偏好/题/错答/纠正/重启/返
 最多两个既有Agent，文件范围明确；只有Main安排online/audio/ledger。当前learning_memory仅idle只读报告、screen_guidance仅narration只读报告，均已冻结，无生产并发写。Main持有工具/host/probe/部署/整合/发布。后续分工先精确边界。
 
 最新事实看status，失败尝试/恢复条件看blockers；历史完整plan存 `docs/evidence/daily-companion-plan-history-through-phase6-core-sdk-2026-10-14.md`，旧snapshot不作当前额度/进程。不因时间、测试数量或小功能完成Goal。
+
+## 阶段六发布后确认（最新，覆盖上文待发布快照）
+
+38必要source/test/doc文件已commit并push `537e573f5d951b9ebc6a548072c3ce8d6a3f1f15`，parent4a33054231ce1e7487c76b32e6c9237bbf6f2fd0，现有codex/daily-learning-companion；managed clean/远端feature已核，master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。root HEAD2c541755344eb8bcf35e310f871c513ea809e1a5/index空/.workbuddy及无关dirty保留。无merge/force/密钥/raw录音/用户学习DB发布。
+
+24产品Git index blobs实际sha与manifest全匹配，四处CRLF→LF仅格式、原bytes本地备份；固定daily plugin-code24匹配，四host fresh-LF重放/部署/AST/idempotence/未知draft拒绝过。两限定Agent审查已冻结；量具覆盖P2已source修/4checks过，new summary路由guidance仅source。正常Core/SDK/DB三tool proof与Native16 PARTIAL明确分层，未冒称quiz/summary设备或真人通过。
+
+最新ledger552/2000 DS、55/null app、tech0/0，same round不重置；无活动online/host/native，48911/48916 free。现有Goal再次核active，不重建/暂停/完成。下一优先16同条语音ASR/工具epoch源时序离线复现，再修summary实际工具/历史依据；不提升过期owner、不伪onset、不重放旧PCM，继续queue/细字/源码/其他A–F。压缩/自动续跑先完整读contract/plan/status/blockers，后续明确指令优先。
+
+## 阶段七源码与本地集成（最新；尚未发布）
+
+仍沿用现有 active Goal 和完整 contract；自动续跑/压缩先完整读取 contract、plan、status、blockers。后续明确指令优先。账本不重置、房间麦克风关闭、局部阻塞继续其他项、完成只据实际证据。
+
+voice16 首题失声已离线复现：tool 在固定输入结束后2.117秒到达，ASR迟225ms，原执行任务按旧scope退休。新修仅当前连接首条ASR的0..8秒待执行Study调用，ASR邻接上限0.4秒；连接初始foreign scope、speech sequence/last-loud负保护、socket/provider/scope/第二ASR/fatal/handoff均核，不复活执行任务，不修改onset/PCM/普通打断。无ASR/满队列拒绝付费执行。later-prefix/自然停顿仍未解决，不把观察序号冒充utterance ID。
+
+两独立审查P2已修并由Main运行：first-ASR8项（含1.999/2.000/2.001边界与call前foreign输入）、ordering7项（含真实apply_to重复/未知helper拒绝且原文件不变）、opt-in gate14项通过。两个host仅_tools/_transport改动、字节/AST/idempotence/全启动指纹检查通过；无关TTS保留。独立复审已派既有只读Agent，结论待收。
+
+产品26文件与固定daily plugin-code逐文件sha匹配。summary producer保留目标/course/session/seed快照，queue/发送前重查；14叙述guard、summary14、Native integration5源码/离线通过。默认OFF；宿主intake/claim/drain/media-final当前来源权威校验未做，不声称完整叙述设备安全。
+
+实际Core→remote HTTP→SDK→Study→SQLite teaching5本地stub通过（exec76645终态、3local请求、共享ledger未变）；验证26文件插件构造/三工具/题ID/唯一grade/summary scope/target binding正常集成。fake owner和local model不算真实模型、Native播放或真人体验。raw只本地保留。
+
+当前共享实际账本DeepSeek552/2000、app55/null、tech0/0，同round bargein-autocheck-20261012；本阶段没有外部/音频请求。48911/48916无listener，本地SDK已结束；两Agent最多2，只有Main在线/额度。已发布仍537e573f5d951b9ebc6a548072c3ce8d6a3f1f15，root脏树/空index/.workbuddy不动，本阶段未发布。
+
+下一步收独立复审、fresh-LF重放必要changed targets后，一场固定WAV验证首题能否朗读和新summary路由；复用现有隔离反向图/已有WAV/同账本，默认不开speech gate，不采房间mic、不改音量、有界时长和失败停止。其他局部待办继续，真人集中验收仍等明确“准备好了”。
+
+### voice17 已启动（覆盖上一 no-online 快照）
+
+Main exec82095，host launcher39604/sourcehost59244监听48911/48916；fixed三WAV/已有隔离反向图/回环311秒上界，无房间mic/音量改动。启动552/55/0，当前552/56/0；单场有界不重连循环。未终态，不能称设备通过。独立首ASR两P2复审收口，fresh原revision LF重放_tools/_transport与双部署bytes/AST/幂等/启动指纹过。证据 `docs/evidence/daily-companion-first-asr-implementation-2026-10-14.md`。下一步等待本场终态并核完整回环/DB/ASR工具owner/summary实际调用与语义，失败保留转其他项；不暂停整个Goal。
+
+## 阶段七设备终态（最新；覆盖进行中快照）
+
+voice17 exec82095已terminal/finalized、无failure/timeout：study_quiz9PCM/18响声bins、study_answer17/34、study_summary26/64，完整311秒WASAPI覆盖末轮，单CONNECT/同图/同qid及attempt/QA只+1；首call早ASR130ms，初题在本场真实输出，旧16失败保留。wrong10分，不能套用旧0；三项Core/SDK/DB/Native/设备链限定PASS，教学质量PARTIAL，真人pending。
+
+纠错仍未直说左右方向相反，summary漏下一步且把question_generate材料/请求当作学习者先完成讲解；只3条当前session交互，原历史保留，下一步按kind/答案证据修反馈和总结口语。独立narration本地producer/queue保护已交付，默认OFF；host权威准入/owner取消待，继续其他项。报告 `docs/evidence/daily-companion-phase7-teaching-device-2026-10-14.md`。
+
+当前实际共享ledger577/2000、app56/null、tech0/0；same round不重置。本场+25/+1，rawJSON/WAV/DB不发布。launcher39604/sourcehost59244/Native28220均不在，48911/48916 free，无活动online。两Agent冻结；source26产品字节匹配/SDK5 localstub和首ASR8/ordering7/gate14、freshLF重放/启动指纹分层保留。本阶段尚未发布，已发布仍537e573；下一步必要allowlist审查发布codex分支（无merge/force/无关脏改动），再修已见教学缺口并继续A–F；Goal active，不因阶段通过完成。

@@ -7,6 +7,8 @@ The original connection/scope owns each queued call; a later ASR cannot adopt it
 START = '''    _STUDY_SPEECH_QUIET_SECONDS = 1.2
     _STUDY_SPEECH_GATE_SECONDS = 20.0
     _STUDY_ASR_NEIGHBOR_SECONDS = 0.2
+    _STUDY_LATE_ORDERING_QUIET_SECONDS = 8.0
+    _STUDY_LATE_ORDERING_ASR_SECONDS = 0.4
 
     def _start_raw_tool_call(self, call, owner, *, response_id=None):
         route = getattr(getattr(self, "_realtime_protocol_capabilities", None), "route_key", None)
@@ -16,7 +18,6 @@ START = '''    _STUDY_SPEECH_QUIET_SECONDS = 1.2
         if (route == "lanlan_app_gemini" and getattr(self, "_is_free_proxy", False)
                 and not getattr(self, "_has_server_vad", False)
                 and str(call.name).startswith("study_")
-                and __import__("os").environ.get("NEKO_STUDY_SPEECH_GATE") == "1"
                 and (getattr(self, "_native_barge_in_pending", False) or getattr(self, "_fatal_error_occurred", False))):
             async def release_retiring_call():
                 logger.info("study voice admission abandoned name=%s reason=arrived_during_handoff scope=%s", call.name, owner.scope_generation)
@@ -28,6 +29,19 @@ START = '''    _STUDY_SPEECH_QUIET_SECONDS = 1.2
                        and not getattr(self, "_has_server_vad", False)
                        and not getattr(self, "_native_barge_in_pending", False))
         ordered = voice_route and loud_at > transcript_at and 0 <= now - loud_at <= 2.0
+        # Observed first quiz: call 2.117s after speech, ASR 225ms later.
+        # There is no stable proxy utterance ID, so this compatibility wait is
+        # only for the first transcript of this connection, not later prefixes.
+        # Fence both sides of the legacy two-second ordering boundary.
+        # A known foreign input since connection attachment excludes this wait.
+        # Delay NOT-YET-EXECUTED Study calls in that quiet interval;
+        # never resurrect an executing task that scope retirement cancelled.
+        late_ordering = (voice_route and str(call.name).startswith("study_")
+                         and getattr(self, "_late_raw_transcript_connection", None) != owner.connection_generation
+                         and getattr(self, "_late_raw_connection_foreign_scope", None) is not None
+                         and self._late_raw_connection_foreign_scope == getattr(self, "_late_raw_foreign_scope", 0)
+                         and loud_at > transcript_at and 0 <= now-loud_at <= self._STUDY_LATE_ORDERING_QUIET_SECONDS
+                         and not getattr(self, "_fatal_error_occurred", False))
         # Read-only lookups and preference/session changes can also trigger an
         # early provider reply or consume a prefix's incomplete instructions.
         gated = (voice_route and str(call.name).startswith("study_")
@@ -45,7 +59,7 @@ START = '''    _STUDY_SPEECH_QUIET_SECONDS = 1.2
                                  and (r.get("current", r["owner"]).scope_generation == owner.scope_generation
                                       or (r["released"] and r["owner"].scope_generation + 1 == owner.scope_generation))
                                  for r in pending)
-        if not ordered and not gated:
+        if not ordered and not gated and not late_ordering:
             return self._start_raw_tool_call_now(call, owner, response_id=response_id)
         if pending is None:
             pending = self._late_raw_tool_pending = []
@@ -55,10 +69,12 @@ START = '''    _STUDY_SPEECH_QUIET_SECONDS = 1.2
         # while continuing PCM has already advanced last_loud. Keep that
         # call in the ready fragment's scope; do not await/promote its suffix.
         adjacent_ready = ready_here and 0 <= now - transcript_at <= 0.2
-        needs_asr = ordered if not gated else (not ready_here or (loud_at > transcript_at and not adjacent_ready))
+        needs_asr = (ordered or late_ordering) if not gated else (not ready_here or (loud_at > transcript_at and not adjacent_ready))
         record = {"event": asyncio.Event(), "owner": owner, "needs_asr": needs_asr,
                   "call": call, "response_id": response_id, "gated": gated, "admitted": False,
                   "queued_mono": time.monotonic(),
+                  "late_ordering": late_ordering, "loud_snapshot": loud_at,
+                  "input_sequence": getattr(self, "_voice_handoff_input_sequence", 0),
                   "foreign_scope": getattr(self, "_late_raw_foreign_scope", 0),
                   "released": False, "asr_observed": False}
 
@@ -67,6 +83,10 @@ START = '''    _STUDY_SPEECH_QUIET_SECONDS = 1.2
             return (owner.connection_generation == self._connection_generation
                     and owner.provider_session is live
                     and record["foreign_scope"] == getattr(self, "_late_raw_foreign_scope", 0)
+                    and (not record["late_ordering"] or (
+                        record["input_sequence"] == getattr(self, "_voice_handoff_input_sequence", 0)
+                        and record["loud_snapshot"] == getattr(self, "_last_local_loud_time", 0.0)
+                        and not getattr(self, "_fatal_error_occurred", False)))
                     and not getattr(self, "_native_barge_in_pending", False)
                     and not (gated and getattr(self, "_fatal_error_occurred", False)))
 
@@ -98,7 +118,7 @@ START = '''    _STUDY_SPEECH_QUIET_SECONDS = 1.2
                     current = self._capture_tool_task_owner(owner.provider_session,
                                                            connection_generation=owner.connection_generation)
                 else:
-                    if scope != owner.scope_generation or (gated and record["needs_asr"]):
+                    if scope != owner.scope_generation or ((gated or late_ordering) and record["needs_asr"]):
                         await abandoned("transcript_not_ready"); return
                     current = owner
                 # Fixed once. Never adopt a second fragment's scope while waiting.
@@ -145,7 +165,7 @@ START = '''    _STUDY_SPEECH_QUIET_SECONDS = 1.2
                     pending.remove(record)
 
         if len(pending) >= 16:
-            if not gated:
+            if not gated and not late_ordering:
                 return self._start_raw_tool_call_now(call, owner, response_id=response_id)
             return asyncio.create_task(abandoned("queue_full"))
         pending.append(record)
@@ -163,6 +183,7 @@ TRANSCRIPT = '''    def _begin_raw_input_transcript(self):
         # Called synchronously after scoped completion, before the host callback awaits.
         # Callback completion time cannot stand in for ASR receipt time.
         self._late_raw_transcript_at = time.time()
+        self._late_raw_transcript_connection = self._connection_generation
         received_mono = time.monotonic()
         self._late_raw_transcript_scope = getattr(self, "_tool_scope_generation", 0)
         self._late_raw_transcript_ready_scope = None
@@ -173,7 +194,13 @@ TRANSCRIPT = '''    def _begin_raw_input_transcript(self):
                 # The observed final call can precede its ASR by milliseconds.
                 # A prefix from seconds earlier must never acquire that final
                 # scope with its old question/preferences still in arguments.
-                if record["gated"] and received_mono - record["queued_mono"] > self._STUDY_ASR_NEIGHBOR_SECONDS:
+                if record.get("late_ordering"):
+                    if (received_mono - record["queued_mono"] > self._STUDY_LATE_ORDERING_ASR_SECONDS
+                            or record["input_sequence"] != getattr(self, "_voice_handoff_input_sequence", 0)
+                            or record["loud_snapshot"] != getattr(self, "_last_local_loud_time", 0.0)):
+                        record["event"].set()
+                        continue
+                elif record["gated"] and received_mono - record["queued_mono"] > self._STUDY_ASR_NEIGHBOR_SECONDS:
                     record["event"].set()
                     continue
                 record["asr_observed"] = True

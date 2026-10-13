@@ -7,9 +7,9 @@ import types
 import unittest
 from pathlib import Path
 import test_neko_late_asr_tools as original
-from neko_late_asr_tool_patch import UPGRADES, MIGRATIONS
+from neko_late_asr_tool_patch import UPGRADES, MIGRATIONS, normalize_ordering_helpers
 
-source=original.SOURCE.read_text(encoding='utf-8')
+source=normalize_ordering_helpers(original.SOURCE.read_text(encoding='utf-8'))
 for relative,before,after in MIGRATIONS:
     if relative.endswith('_tools.py') and after not in source and source.count(before)==1:
         source=source.replace(before,after,1)
@@ -33,6 +33,7 @@ class Harness(candidate._ToolingMixin, original.Harness):
         original.Harness.__init__(self)
         self._realtime_protocol_capabilities=types.SimpleNamespace(route_key='lanlan_app_gemini')
         self._is_free_proxy=True;self._has_server_vad=False
+        self._late_raw_connection_foreign_scope=0
         self._last_local_loud_time=time.time();self._LATE_ASR_TOOL_WAIT_SECONDS=.04
         self.abandoned=[]
 
@@ -79,6 +80,8 @@ class LateAsrPatch(unittest.IsolatedAsyncioTestCase):
 
     async def test_no_asr_timeout_keeps_exact_original_owner(self):
         h=Harness();owner=h._capture_tool_task_owner(h.ws)
+        # Existing later-input fallback, outside the bounded first-ASR wait.
+        h._late_raw_transcript_connection=h._connection_generation
         pending=h._start_raw_tool_call(self.call(),owner,response_id='unannounced')
         await pending;await h.entered.wait();h.release.set()
         await asyncio.gather(*tuple(h._tool_tasks),return_exceptions=True)
@@ -121,7 +124,7 @@ class LateAsrPatch(unittest.IsolatedAsyncioTestCase):
         for relative,pairs in targets:
             if not relative.endswith(('_tools.py','_transport.py')):continue
             path=Path(__file__).resolve().parents[1]/'candidates/N.E.K.O'/relative
-            text=path.read_text(encoding='utf-8')
+            text=normalize_ordering_helpers(path.read_text(encoding='utf-8'))
             for rel,before,after in replay:
                 if rel==relative and after not in text and text.count(before)==1:text=text.replace(before,after,1)
             for before,after in pairs:
@@ -135,6 +138,25 @@ class LateAsrPatch(unittest.IsolatedAsyncioTestCase):
             for before,after in pairs:
                 if after not in again:again=again.replace(before,after,1)
             self.assertEqual(again,text)
+
+    async def test_actual_apply_validates_even_canonical_hunks_and_preserves_unknown_files(self):
+        import tempfile
+        import neko_voice_host_patch as voice
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'main_logic/omni_realtime_client/_tools.py'
+            path.parent.mkdir(parents=True)
+            path.write_text(source,encoding='utf-8',newline='\n')
+            voice.apply_to(path)
+            canonical=path.read_text(encoding='utf-8')
+            self.assertEqual(voice.apply_to(path),'already patched')
+            for invalid in (canonical+'\n    # late-asr-tool-ordering-v1\n',
+                            canonical.replace('_STUDY_LATE_ORDERING_ASR_SECONDS = 0.4',
+                                              '_STUDY_LATE_ORDERING_ASR_SECONDS = 99.0',1)):
+                path.write_text(invalid,encoding='utf-8',newline='\n')
+                original_bytes=path.read_bytes()
+                with self.assertRaises(RuntimeError):voice.state(path)
+                with self.assertRaises(RuntimeError):voice.apply_to(path)
+                self.assertEqual(path.read_bytes(),original_bytes)
 
 
 if __name__=='__main__':unittest.main(verbosity=2)
