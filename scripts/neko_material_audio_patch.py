@@ -39,14 +39,14 @@ HELPERS = '''    @staticmethod
     def _capture_study_material_tool_owner(self, call, invoking_session):
         definition = self.tool_registry.get(call.name)
         source = invoking_session
-        if call.name == "study_explain":
+        if call.name in ("study_explain", "study_quiz", "study_answer", "study_summary"):
             logger.info("[study-material-audio] binding admission trusted=%s current=%s class=%s free=%s tts=%s route=%s lease=%s native_class=%s takeover=%s token_present=%s",
                 getattr(definition, "metadata", {}).get("source") == "plugin:study_companion", source is self.session,
                 type(source).__name__, getattr(source, "_is_free_proxy", False),
                 getattr(self, "use_tts", False), self._asr_route_mode, self._voice_lease_owner,
                 isinstance(source, OmniRealtimeClient), self._takeover_active,
                 str(getattr(source, "_native_output_connection_token", "")).startswith("native_connection_"))
-        if (call.name != "study_explain" or definition is None
+        if (call.name not in ("study_explain", "study_quiz", "study_answer", "study_summary") or definition is None
                 or definition.metadata.get("source") != "plugin:study_companion"
                 or source is not self.session or not isinstance(source, OmniRealtimeClient)
                 or not getattr(source, "_is_free_proxy", False)
@@ -63,7 +63,7 @@ HELPERS = '''    @staticmethod
             owner = entry.owner # preserve the actual unannounced-response fence
         else:
             owner = source._capture_tool_task_owner(provider)
-        return {"source": source, "tool_owner": owner,
+        return {"source": source, "tool_owner": owner, "tool_name": call.name,
                 "socket": self.websocket, "activation": self._capture_voice_session_activation_generation(),
                 "input_route": self._asr_route_mode, "input_lease": self._voice_lease_owner}
 
@@ -81,17 +81,18 @@ HELPERS = '''    @staticmethod
         if not isinstance(payload, dict):
             return
         record = payload.get("_study_material_binding")
+        spoken_field = "question" if captured["tool_name"] == "study_quiz" else "reply"
         logger.info("[study-material-audio] result binding present=%s valid=%s reply=%s",
             record is not None, self._valid_study_material_record(record, binding=True),
-            isinstance(payload.get("reply"), str) and bool(payload.get("reply")))
+            isinstance(payload.get(spoken_field), str) and bool(payload.get(spoken_field)))
         if not self._valid_study_material_record(record, binding=True):
             return
         # Host-only provenance does not need to enter the provider's prompt.
         result.output = {key: value for key, value in payload.items() if key != "_study_material_binding"}
         source = captured["source"]
         owner = captured["tool_owner"]
-        if (payload.get("degraded") or payload.get("ok") is False or not payload.get("reply")
-                or not isinstance(payload.get("reply"), str)
+        if (payload.get("degraded") or payload.get("ok") is False or not payload.get(spoken_field)
+                or not isinstance(payload.get(spoken_field), str)
                 or source is not self.session or self.websocket is not captured["socket"]
                 or not source._tool_task_owner_is_current(owner)
                 or self._capture_voice_session_activation_generation() != captured["activation"]):
@@ -314,6 +315,31 @@ _EXECUTE = _EXECUTE.replace('        if result.images:', '''        if (call.nam
                 result.output = {key: value for key, value in payload.items() if key != "_study_material_binding"}
         if result.images:''')
 
+_EXECUTE_EXPLAIN_PRIOR = _EXECUTE
+_EXECUTE = _EXECUTE.replace('call.name == "study_explain"',
+    'call.name in ("study_explain", "study_quiz", "study_answer", "study_summary")')
+
+_EXECUTE_QUAD_PRIOR = _EXECUTE
+_EXECUTE = _EXECUTE.replace(
+    '        definition = self.tool_registry.get(call.name)\n',
+    '''        definition = self.tool_registry.get(call.name)
+        if (call.name in ("study_explain", "study_quiz", "study_answer", "study_summary")
+                and definition is not None and definition.metadata.get("source") == "plugin:study_companion"
+                and invoking_session is not None and invoking_session is not self.session):
+            return ToolResult(call_id=call.call_id, name=call.name,
+                output={"ok": False, "error": "stale_study_role_scope"}, is_error=True,
+                error_message="the invoking Study role session was replaced")
+''', 1
+).replace(
+    '                and definition.metadata.get("source") == "plugin:study_companion"\n'
+    '                and invoking_session is not None and invoking_session is self.session):',
+    '                and definition.metadata.get("source") == "plugin:study_companion"):'
+).replace(
+    '            role = str(getattr(self, "lanlan_name", "") or "").strip()',
+    '''            role = (str(getattr(self, "lanlan_name", "") or "").strip()
+                    if invoking_session is not None and invoking_session is self.session else "")'''
+)
+
 EVENT = '''        if (event_type == "proactive_message" and isinstance(event.get("metadata"), dict)
                 and "study_material_control" in event["metadata"]):
             # Routing provenance is derived by the plugin bridge, never by model text.
@@ -355,7 +381,9 @@ def upgrade_targets(targets):
     return _upgrade_targets(targets, UPGRADES,
         [('main_logic/core/tool_calling.py', _EXECUTE_PRIOR, _EXECUTE),
          ('main_logic/core/tool_calling.py', _EXECUTE_ROUTED_PRIOR, _EXECUTE),
-         ('main_logic/core/tool_calling.py', _EXECUTE_CURRENT_PRIOR, _EXECUTE)])
+         ('main_logic/core/tool_calling.py', _EXECUTE_CURRENT_PRIOR, _EXECUTE),
+         ('main_logic/core/tool_calling.py', _EXECUTE_EXPLAIN_PRIOR, _EXECUTE),
+         ('main_logic/core/tool_calling.py', _EXECUTE_QUAD_PRIOR, _EXECUTE)])
 
 def normalize_material_audio(text):
     """Upgrade only the exact locally deployed first draft; reject unknown edits."""
@@ -368,6 +396,7 @@ def normalize_material_audio(text):
     if digest not in {'eb6d593cece24b9bef57e2429d3bfb30807e6be56c4a8d7eaf01c32e9781e979',
                       '50bf4784d64b2a634f25ad7bc6ead997457d838faa0c095a1ea97be73a44b309',
                       'f0bce743af91f02f33cb70797e17e324770cd41026bb08adb53da6b4be0a7a9c',
-                      '0abcfcddf6079a9f0d8966d46defad53170313676faa4d1d03a4e775696c54ed'}:
+                      '0abcfcddf6079a9f0d8966d46defad53170313676faa4d1d03a4e775696c54ed',
+                      '21c9f6362e26df2fcfb0e892378d3a92d910919a82b3eb1c6f60824d281cd40a'}:
         raise RuntimeError('unknown material audio helper draft; preserve source')
     return text[:start] + HELPERS + text[end:]

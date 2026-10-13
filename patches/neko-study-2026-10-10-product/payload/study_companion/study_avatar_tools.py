@@ -912,11 +912,42 @@ class _StudyAvatarToolsMixin:
                 self._cfg.language = previous
 
 
+    def _study_changed_native_material_result(self):
+        return {"ok": False, "code": "course_context_changed", "error": "course_context_changed",
+                "reply": "课程、会话或题目已切换，请确认当前材料后重新提问。"}
+
+    async def _study_native_material_snapshot(self, *, include_material=False):
+        from .study_materials import material_context
+        observed = material_context(self, include_material=include_material)
+        await self._ensure_active_study_session()
+        async with self._lock:
+            current = material_context(self, include_material=include_material)
+            if any(current.get(key) != value for key, value in observed.items()
+                   if key != "session_id" or value):
+                return None
+            return {"context": current,
+                    "image": str(getattr(self._state, "last_vision_image_base64", "") or "") if include_material else "",
+                    "text": str(getattr(self._state, "last_ocr_text", "") or "") if include_material else ""}
+
+    async def _study_bind_native_teaching_result(self, payload, result, context, target, *, question_identity=None):
+        from .study_materials import material_context_current, bind_material_output
+        async with self._lock:
+            if not material_context_current(self, context):
+                return self._study_changed_native_material_result()
+            if question_identity is not None:
+                current = self._state.current_question
+                if any(str(current.get(key) or "") != value for key, value in question_identity.items()):
+                    return self._study_changed_native_material_result()
+            if payload.get("ok", True) and not payload.get("degraded") and not result.get("degraded"):
+                result["_study_material_binding"] = bind_material_output(self, context, target)
+        return result
+
     @llm_tool(
         name="study_quiz",
         description=(
             "Give the learner a practice question. With topic set it targets that topic; "
-            "with topic empty it targets their weakest tracked topic in the current course. "
+            "with topic empty it uses the current submitted Study picture when available; "
+            "otherwise it can target their weakest tracked topic in the current course. "
             "Ask the question and then stop and wait for their answer."
         ),
         parameters={
@@ -931,17 +962,28 @@ class _StudyAvatarToolsMixin:
     async def study_quiz_tool(self, *, topic: str = "", target_weak: bool = True, **_):
         self._study_effective_language()
         topic = str(topic or "").strip()
-        if topic or not target_weak:
+        from .study_materials import material_output_target
+        target = material_output_target(self, _)
+        picture_quiz = bool(not topic and self._cfg.llm_vision_enabled
+                            and getattr(self._state, "last_vision_image_base64", ""))
+        snapshot = await self._study_native_material_snapshot(include_material=picture_quiz)
+        if snapshot is None:
+            return self._study_changed_native_material_result()
+        context = snapshot["context"]
+        if picture_quiz:
+            raw = await self.study_generate_question(text=snapshot["text"], vision_image_base64=snapshot["image"],
+                                                     _material_context=context)
+        elif topic or not target_weak:
             raw = await self.study_generate_question(
                 text=self._study_language_directive("", topic) if topic else "",
-                topic=topic)
+                topic=topic, _material_context=context)
         else:
-            raw = await self.study_generate_targeted_question()
+            raw = await self.study_generate_targeted_question(_material_context=context)
         payload = _envelope(raw)
         question = _first_text(payload, "question", "prompt", "reply")
         if not question:
             return payload
-        return json.loads(_teaching(
+        result = json.loads(_teaching(
             tool="study_quiz",
             question=question,
             hint=_first_text(payload, "hint"),
@@ -953,6 +995,8 @@ class _StudyAvatarToolsMixin:
             failure_language=self._study_effective_language(),
             relay=_relay_for(question, self._study_effective_language()),
         ))
+        identity = {key: str(payload.get(key) or "") for key in ("question_id", "attempt_id")}
+        return await self._study_bind_native_teaching_result(payload, result, context, target, question_identity=identity)
 
     @llm_tool(
         name="study_answer",
@@ -970,11 +1014,23 @@ class _StudyAvatarToolsMixin:
     )
     async def study_answer_tool(self, *, answer: str = "", **_):
         self._study_effective_language()
+        from .study_materials import material_output_target, material_context_current
+        target = material_output_target(self, _)
+        snapshot = await self._study_native_material_snapshot()
+        if snapshot is None:
+            return self._study_changed_native_material_result()
+        context = snapshot["context"]
         # The persisted current-course question survives restart; an avatar-only cache does not.
-        held = dict(self._state.current_question)
+        async with self._lock:
+            if not material_context_current(self, context):
+                return self._study_changed_native_material_result()
+            held = dict(self._state.current_question)
+        origin = (held.get("internal_private_payload") or {}).get("source_material_context")
+        if isinstance(origin, dict) and origin.get("course_id") and origin["course_id"] != context["course_id"]:
+            return self._study_changed_native_material_result()
         # A generated question carries an identity, and the entry refuses to grade
         # it without both ids echoed back - so the tool has to hold on to them.
-        kwargs: dict[str, str] = {"answer": str(answer or "")}
+        kwargs: dict[str, Any] = {"answer": str(answer or ""), "_material_context": context}
         if held.get("question_id"):
             kwargs["question_id"] = held["question_id"]
         if held.get("attempt_id"):
@@ -983,7 +1039,7 @@ class _StudyAvatarToolsMixin:
         feedback = _first_text(payload, "feedback", "reply", "summary", "explanation")
         if not feedback:
             return payload
-        return json.loads(_teaching(
+        result = json.loads(_teaching(
             tool="study_answer",
             reply=feedback,
             verdict=payload.get("verdict", ""),
@@ -994,6 +1050,8 @@ class _StudyAvatarToolsMixin:
             failure_language=self._study_effective_language(),
             relay=_relay_for(feedback, self._study_effective_language()),
         ))
+        identity = {key: str(held.get(key) or "") for key in ("question_id", "attempt_id")}
+        return await self._study_bind_native_teaching_result(payload, result, context, target, question_identity=identity)
 
     @llm_tool(
         name="study_summary",
@@ -1010,12 +1068,19 @@ class _StudyAvatarToolsMixin:
     )
     async def study_summary_tool(self, *, focus: str = "", **_):
         self._study_effective_language()
-        payload = _envelope(await self.study_summarize_session(focus=str(focus or "")))
+        from .study_materials import material_output_target
+        target = material_output_target(self, _)
+        snapshot = await self._study_native_material_snapshot()
+        if snapshot is None:
+            return self._study_changed_native_material_result()
+        context = snapshot["context"]
+        payload = _envelope(await self.study_summarize_session(focus=str(focus or ""), _material_context=context))
         summary = _first_text(payload, "summary", "reply", "text")
         if not summary:
             return payload
-        return json.loads(_teaching(tool="study_summary", reply=summary,
+        result = json.loads(_teaching(tool="study_summary", reply=summary,
                                     degraded=bool(payload.get("degraded")),
                                     diagnostic=payload.get("diagnostic", ""),
                                     failure_language=self._study_effective_language(),
                                     relay=_relay_for(summary, self._study_effective_language())))
+        return await self._study_bind_native_teaching_result(payload, result, context, target)

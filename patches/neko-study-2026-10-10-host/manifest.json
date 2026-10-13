@@ -201,6 +201,12 @@
         "offline": "28 host/event/owner/delivery tests including current role independent of native capture and host-private stripping without capture; 11 producer SQLite/push tests; 14 UI checks; 4 host fresh-LF replay/deployed/idempotence/AST matched, unknown edits refused; real Core registry/remote dispatcher plus SDK local-model-stub probe passed; current-picture native13 preserves literal image identifiers/negative-picture requests",
         "scope": "trusted targeted blind material control, original tool batch owner, per-boot sequence, exact native token retire and one bounded reconnect without PCM replay; input arriving after irreversible same-token cancel requires explicit voice restart; narration and quiz/grade output provenance not newly covered",
         "sealed_utc": "2026-10-13T19:53:01.326409+00:00"
+      },
+      "teaching_material_update": {
+        "proof": "SOURCE_OFFLINE_NEGATIVES; normal actual Core/SDK/local-stub proof separate; Native quiz/summary partial",
+        "tests": "31 actual patched host owner/event/native delivery/swap methods; trusted exact tool allowlist; quiz question field, answer/summary reply; private metadata stripping, unchanged original model args",
+        "scope": "reuses prior exact native-token cancellation algorithm; not new human/barge-in acceptance",
+        "sealed_utc": "2026-10-13T20:29:59.037665+00:00"
       }
     },
     {
@@ -212,17 +218,29 @@
         "offline": "28 host/event/owner/delivery tests including current role independent of native capture and host-private stripping without capture; 11 producer SQLite/push tests; 14 UI checks; 4 host fresh-LF replay/deployed/idempotence/AST matched, unknown edits refused; real Core registry/remote dispatcher plus SDK local-model-stub probe passed; current-picture native13 preserves literal image identifiers/negative-picture requests",
         "scope": "trusted targeted blind material control, original tool batch owner, per-boot sequence, exact native token retire and one bounded reconnect without PCM replay; input arriving after irreversible same-token cancel requires explicit voice restart; narration and quiz/grade output provenance not newly covered",
         "sealed_utc": "2026-10-13T19:53:01.286658+00:00"
+      },
+      "teaching_material_update": {
+        "proof": "SOURCE_OFFLINE_NEGATIVES; normal actual Core/SDK/local-stub proof separate; Native quiz/summary partial",
+        "tests": "31 actual patched host owner/event/native delivery/swap methods; trusted exact tool allowlist; quiz question field, answer/summary reply; private metadata stripping, unchanged original model args",
+        "scope": "reuses prior exact native-token cancellation algorithm; not new human/barge-in acceptance",
+        "sealed_utc": "2026-10-13T20:29:59.031395+00:00"
       }
     },
     {
       "path": "main_logic/core/tool_calling.py",
       "base_sha256": "f33ce8396ba6a1dbc8d39cd8db34e312fea2a7e1ec6cf62395b040ee275b5faa",
-      "patched_sha256": "5b923be9aaacc40c7de70f84b45ebea0ebcdc4a0f70cf8a629135b252e04843c",
+      "patched_sha256": "05737010792086a92c8cf98d9122f4bd71b29d59e1103a8c8212cff51af3cea8",
       "material_audio_update": {
         "proof": "SOURCE/OFFLINE and fixed-input replacement14 cross-process/native-token/loopback/fresh reverse-picture reply passed; human, long-quiet recovery, other teaching output provenance pending",
         "offline": "28 host/event/owner/delivery tests including current role independent of native capture and host-private stripping without capture; 11 producer SQLite/push tests; 14 UI checks; 4 host fresh-LF replay/deployed/idempotence/AST matched, unknown edits refused; real Core registry/remote dispatcher plus SDK local-model-stub probe passed; current-picture native13 preserves literal image identifiers/negative-picture requests",
         "scope": "trusted targeted blind material control, original tool batch owner, per-boot sequence, exact native token retire and one bounded reconnect without PCM replay; input arriving after irreversible same-token cancel requires explicit voice restart; narration and quiz/grade output provenance not newly covered",
         "sealed_utc": "2026-10-13T19:53:01.364642+00:00"
+      },
+      "teaching_material_update": {
+        "proof": "SOURCE_OFFLINE_NEGATIVES; normal actual Core/SDK/local-stub proof separate; Native quiz/summary partial",
+        "tests": "31 actual patched host owner/event/native delivery/swap methods; trusted exact tool allowlist; quiz question field, answer/summary reply; private metadata stripping, unchanged original model args",
+        "scope": "reuses prior exact native-token cancellation algorithm; not new human/barge-in acceptance",
+        "sealed_utc": "2026-10-13T20:29:59.040671+00:00"
       }
     },
     {
@@ -234,6 +252,12 @@
         "offline": "28 host/event/owner/delivery tests including current role independent of native capture and host-private stripping without capture; 11 producer SQLite/push tests; 14 UI checks; 4 host fresh-LF replay/deployed/idempotence/AST matched, unknown edits refused; real Core registry/remote dispatcher plus SDK local-model-stub probe passed; current-picture native13 preserves literal image identifiers/negative-picture requests",
         "scope": "trusted targeted blind material control, original tool batch owner, per-boot sequence, exact native token retire and one bounded reconnect without PCM replay; input arriving after irreversible same-token cancel requires explicit voice restart; narration and quiz/grade output provenance not newly covered",
         "sealed_utc": "2026-10-13T19:53:01.404046+00:00"
+      },
+      "teaching_material_update": {
+        "proof": "SOURCE_OFFLINE_NEGATIVES; normal actual Core/SDK/local-stub proof separate; Native quiz/summary partial",
+        "tests": "31 actual patched host owner/event/native delivery/swap methods; trusted exact tool allowlist; quiz question field, answer/summary reply; private metadata stripping, unchanged original model args",
+        "scope": "reuses prior exact native-token cancellation algorithm; not new human/barge-in acceptance",
+        "sealed_utc": "2026-10-13T20:29:59.048061+00:00"
       }
     }
   ],
@@ -250,5 +274,25 @@
     "owner_accessor_fix": "Reuse production read_current_speech_id() contract; fixture no longer invents manager.speech_id. 12 focused offline scenarios PASS; no real-mic PASS.",
     "prior_live_acceptance": "Pre-fix human trial FAIL: onset raised AttributeError on LLMSessionManager.speech_id at 2026-10-12 21:17:33 NZDT, then generic close handling dropped later PCM. Corrected build requires future live acceptance; not run.",
     "live_evidence": "docs/evidence/native-barge-in-direct-takeover-2026-10-13.md"
+  },
+  "daily_teaching_sdk_local_verification": {
+    "result": "PASS_TEACHING_CORE_SDK_LOCAL_STUB_ONLY",
+    "tools": [
+      "study_quiz",
+      "study_answer",
+      "study_summary"
+    ],
+    "scope": "actual patched Core, ToolRegistry/remote HTTP, SDK/Study and SQLite with local model stub and fake output owner; not Native/device/human",
+    "requests": 3,
+    "global_ledger_unchanged": true,
+    "report": "docs/evidence/daily-companion-teaching-core-sdk-2026-10-14.md"
+  },
+  "daily_teaching_device_update": {
+    "result": "PARTIAL",
+    "report": "docs/evidence/daily-companion-teaching-device-2026-10-14.md",
+    "grade": "real model wrong/0, unique held-question grade, correct REZ->NUD->WEX correction, 15 Native PCM/40 WASAPI loud bins",
+    "quiz": "real current-picture question committed but scope-retired before Native relay, 0 PCM/0 loud bins",
+    "summary": "18 Native PCM/37 loud bins but no study_summary tool, wrong return-flow gloss; not grounded-tool acceptance",
+    "scope": "fixed WAV, no room mic/volume change, one CONNECT, complete245s capture; human pending; post-review probe/guidance only source"
   }
 }

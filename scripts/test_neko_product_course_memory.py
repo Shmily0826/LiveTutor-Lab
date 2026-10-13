@@ -63,6 +63,13 @@ namespace = {"asyncio": asyncio, "uuid": uuid, "time": time,
 materials = importlib.import_module("product_study.study_materials")
 namespace.update({name: getattr(materials, name) for name in
                   ("material_context", "material_changes", "submit_material_changes")})
+namespace.update({"material_context_current": materials.material_context_current,
+                  "MaterialContextChanged": materials.MaterialContextChanged,
+                  "Err": lambda error: {"error": str(error), "code": getattr(error, "code", "")}})
+class SummaryFixtureError(Exception):
+    def __init__(self, message, *, code=""):
+        super().__init__(message);self.code=code
+namespace["SdkError"] = SummaryFixtureError
 exec(compile(ast.fix_missing_locations(methods), str(SOURCE / "__init__.py"), "exec"), namespace)
 summary_tree = ast.parse((SOURCE / "entry_tutor_summary_entries.py").read_text(encoding="utf-8"))
 summary_class = next(node for node in summary_tree.body if isinstance(node, ast.ClassDef))

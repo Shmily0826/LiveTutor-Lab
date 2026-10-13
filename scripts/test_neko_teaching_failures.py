@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 import re
 import sys
-from types import SimpleNamespace
+from types import SimpleNamespace, MethodType, ModuleType
 import unittest
 import importlib.util
 
@@ -20,6 +20,9 @@ ROOT = Path(__file__).resolve().parents[1]
 PAYLOAD = ROOT / "patches/neko-study-2026-10-10-product/payload/study_companion"
 material_spec=importlib.util.spec_from_file_location('failure_materials',PAYLOAD/'study_materials.py')
 materials=importlib.util.module_from_spec(material_spec);material_spec.loader.exec_module(materials)
+failure_package=ModuleType('failure_product');failure_package.__path__=[str(PAYLOAD)]
+sys.modules['failure_product']=failure_package
+sys.modules['failure_product.study_materials']=materials
 sys.path.insert(0, str(ROOT / "scripts"))
 import neko_desktop_tutor_host as host
 
@@ -34,7 +37,7 @@ def definitions(path, names, namespace, *, method=""):
             selected.append(node)
         elif method and isinstance(node, ast.ClassDef):
             for child in node.body:
-                if getattr(child, "name", "") == method:
+                if getattr(child, "name", "") == method or getattr(child, "name", "") in names:
                     child.decorator_list = []
                     selected.append(child)
     module = ast.Module(body=[ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0),
@@ -131,8 +134,11 @@ class TeachingFailureTest(unittest.TestCase):
 
     def test_restarted_avatar_uses_persisted_current_course_question(self):
         names = {"RELAY_NOTE", "_FENCE_LINE", "_FENCE_MARK", "_CODE_SPAN", "_SPEAKABLE_FIELDS",
-                 "_speakable", "_teaching_failure_wording", "_teaching", "_envelope", "_first_text", "_relay_for"}
-        ns = definitions(PAYLOAD / "study_avatar_tools.py", names, {"json": json, "re": re}, method="study_answer_tool")
+                 "_speakable", "_teaching_failure_wording", "_teaching", "_envelope", "_first_text", "_relay_for",
+                 "_study_native_material_snapshot", "_study_changed_native_material_result", "_study_bind_native_teaching_result"}
+        ns = definitions(PAYLOAD / "study_avatar_tools.py", names,
+                         {"json": json, "re": re, "asyncio": asyncio, "__name__":"failure_product.avatar", "__package__":"failure_product"},
+                         method="study_answer_tool")
         method = ns["study_answer_tool"]
 
         async def scenario():
@@ -140,12 +146,16 @@ class TeachingFailureTest(unittest.TestCase):
             async def evaluate(**kwargs):
                 calls.append(kwargs)
                 return {"feedback": "参数是函数接收的输入。", "verdict": "correct", "score": 100}
-            plugin = SimpleNamespace(_state=SimpleNamespace(current_question={"question_id": "course-B-question",
+            async def ensure():return "persisted-session"
+            plugin = SimpleNamespace(_state=SimpleNamespace(study_course_id="course-B",current_question={"question_id": "course-B-question",
                 "attempt_id": "persisted-attempt"}), _avatar_last_question={"question_id": "stale-course-A",
-                "attempt_id": "stale-attempt"}, _study_effective_language=lambda: "zh-CN", study_evaluate_answer=evaluate)
+                "attempt_id": "stale-attempt"}, _study_effective_language=lambda: "zh-CN", study_evaluate_answer=evaluate,
+                _lock=asyncio.Lock(),_study_session_id="persisted-session",_ensure_active_study_session=ensure)
+            for name in ("_study_native_material_snapshot","_study_changed_native_material_result","_study_bind_native_teaching_result"):
+                setattr(plugin,name,MethodType(ns[name],plugin))
             reply = await method(plugin, answer="参数是输入")
             self.assertEqual(calls, [{"answer": "参数是输入", "question_id": "course-B-question",
-                                     "attempt_id": "persisted-attempt"}])
+                                     "attempt_id": "persisted-attempt", "_material_context": {"course_id":"course-B","session_id":"persisted-session"}}])
             self.assertEqual(reply["score"], 100)
             # No cached question in a freshly re-created avatar is required.
             del plugin._avatar_last_question

@@ -27,7 +27,7 @@ RAW = ROOT / "benchmarks/raw"
 GLOBAL_LEDGER = RAW / "neko-desktop-egress-cap"
 DUMMY_KEY = "sk-neko-local-fixture-only-20261014"
 KIND = "neko-local-failure-fixture-v1"
-MODES = {"http503", "drop", "question", "answer", "explain"}
+MODES = {"http503", "drop", "question", "answer", "explain", "summary"}
 TRACKED_TABLES = ("interactions", "qa_records", "mastery_snapshots", "wrong_questions", "fsrs_cards")
 
 
@@ -153,6 +153,9 @@ class FailureHandler(BaseHTTPRequestHandler):
                     "error_type": "none", "next_action": "finish protocol test", "reference_answer": "函数的输入",
                     "covered_points": ["输入"], "missing_points": [], "misconceptions": []},
                 "explain": "【本地 HTTP stub】连接已恢复；这是协议量具回复，不是真实模型教学。",
+                "summary": {"summary": "【本地 HTTP stub】已练习函数输入；仅验证总结通道。",
+                    "markdown": "本地协议量具：函数参数是函数接收的输入。", "highlights": ["函数输入"],
+                    "weak_points": [], "next_actions": ["结束本地协议测试"]},
             }
             value = values[mode]
             content = json.dumps(value, ensure_ascii=False) if isinstance(value, dict) else value

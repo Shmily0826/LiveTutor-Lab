@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 import types
 import unittest
-from neko_material_audio_patch import UPGRADES,normalize_material_audio,_EXECUTE_PRIOR,_EXECUTE_ROUTED_PRIOR,_EXECUTE_CURRENT_PRIOR,_EXECUTE
+from neko_material_audio_patch import UPGRADES,normalize_material_audio,_EXECUTE_PRIOR,_EXECUTE_ROUTED_PRIOR,_EXECUTE_CURRENT_PRIOR,_EXECUTE_EXPLAIN_PRIOR,_EXECUTE_QUAD_PRIOR,_EXECUTE
 
 ROOT=Path(__file__).resolve().parents[1]
 RUNTIME=ROOT/'benchmarks/raw/neko-product-host'
@@ -15,7 +15,7 @@ def patched(relative):
     source=(RUNTIME/relative).read_text(encoding='utf-8')
     if relative=='main_logic/core/tool_calling.py':
         source=normalize_material_audio(source)
-        for prior in (_EXECUTE_CURRENT_PRIOR, _EXECUTE_ROUTED_PRIOR, _EXECUTE_PRIOR):
+        for prior in (_EXECUTE_QUAD_PRIOR, _EXECUTE_EXPLAIN_PRIOR, _EXECUTE_CURRENT_PRIOR, _EXECUTE_ROUTED_PRIOR, _EXECUTE_PRIOR):
             if _EXECUTE not in source and source.count(prior)==1:source=source.replace(prior,_EXECUTE,1)
     for before,after in UPGRADES[relative]:
         if after in source:continue
@@ -40,7 +40,8 @@ class Provider:
         if self.fail_connect:raise RuntimeError('bounded provider refusal')
         self._fatal_error_occurred=False;self._interrupted=False
 
-scope={'asyncio':asyncio,'OmniRealtimeClient':Provider,'ToolCall':object,'ToolResult':object,
+scope={'asyncio':asyncio,'OmniRealtimeClient':Provider,'ToolCall':object,
+       'ToolResult':lambda **kwargs:types.SimpleNamespace(images=[],**kwargs),
        'logger':logging.getLogger('material-audio-test')}
 node=next(n for n in patched('main_logic/core/tool_calling.py').body if isinstance(n,ast.ClassDef))
 keep=[n for n in node.body if getattr(n,'name','').startswith(('_study_material_native','_valid_study_material','_capture_study_material','_bind_study_material','_apply_study_material','_replace_study_material')) or getattr(n,'name','')=='_on_tool_call']
@@ -328,11 +329,43 @@ class MaterialAudio(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(h.result.output['reply'],'current answer')
             self.assertIsNone(getattr(h,'_study_material_output_owner',None))
 
+    async def test_quiz_question_field_and_answer_summary_reply_bind_their_own_scope(self):
+        for name in ('study_quiz','study_answer','study_summary'):
+            with self.subTest(name=name):
+                h=Harness()
+                if name=='study_quiz':
+                    h.result.output.pop('reply');h.result.output['question']='Which module calls NUD?'
+                call=types.SimpleNamespace(name=name,call_id='actual-call',arguments={})
+                await h._on_tool_call(call,invoking_session=h.session)
+                self.assertEqual(h._study_material_output_owner['tool_name'],name)
+                self.assertEqual(h.dispatched[0].arguments['_ctx'],{'lanlan_name':'OwnedRole'})
+                self.assertNotIn('_study_material_binding',h.result.output)
+                self.assertTrue(await h._apply_study_material_control(control()))
+                self.assertEqual(h.session.connects,1)
+
+    async def test_quiz_reply_only_cannot_bind_or_claim_a_question(self):
+        h=Harness();call=types.SimpleNamespace(name='study_quiz',call_id='actual-call',arguments={})
+        await h._on_tool_call(call,invoking_session=h.session)
+        self.assertIsNone(getattr(h,'_study_material_output_owner',None))
+        self.assertNotIn('_study_material_binding',h.result.output)
+
+    async def test_other_readonly_study_result_is_not_a_teaching_binding(self):
+        h=Harness();call=types.SimpleNamespace(name='study_material',call_id='actual-call',arguments={})
+        await h._on_tool_call(call,invoking_session=h.session)
+        self.assertIsNone(getattr(h,'_study_material_output_owner',None))
+        self.assertIs(h.dispatched[0],call)
+        self.assertIn('_study_material_binding',h.result.output)
+
     async def test_stale_or_absent_source_never_gets_manager_role(self):
         for source in (None,Provider()):
-            h=Harness();call=types.SimpleNamespace(name='study_explain',call_id='actual-call',arguments={})
-            await h._on_tool_call(call,invoking_session=source)
-            self.assertIs(h.dispatched[0],call)
+            h=Harness();call=types.SimpleNamespace(name='study_explain',call_id='actual-call',arguments={'_ctx':{'lanlan_name':'ForgedRole'}})
+            result=await h._on_tool_call(call,invoking_session=source)
+            if source is None:
+                self.assertEqual(h.dispatched[0].arguments['_ctx'],{'lanlan_name':''})
+            else:
+                self.assertEqual(h.dispatched,[]);self.assertTrue(result.is_error)
+                self.assertEqual(result.output['error'],'stale_study_role_scope')
+            self.assertEqual(call.arguments['_ctx'],{'lanlan_name':'ForgedRole'})
 
     async def test_input_route_or_lease_change_and_tts_takeover_cannot_be_retired_by_old_binding(self):
         for mutation in ('route','lease','tts','takeover'):

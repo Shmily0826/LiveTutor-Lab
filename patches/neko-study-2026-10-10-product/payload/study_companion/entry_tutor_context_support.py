@@ -842,6 +842,15 @@ class _TutorContextSupportMixin:
                 return
             if request_session_id and request_session_id != str(self._study_session_id):
                 return
+            if (operation == LLM_OPERATION_ANSWER_EVALUATE
+                    and (extra or {}).get("question_source") == "current_question"):
+                origin = {key: str((extra or {}).get(key) or "") for key in ("question_id", "attempt_id")}
+                if any(origin.values()) and any(str(self._state.current_question.get(key) or "") != value
+                                               for key, value in origin.items()):
+                    # The committed grade/tracker row still belongs to its
+                    # held question; do not label the new on-screen question
+                    # with that old verdict or seed a new live response.
+                    return
             event = {
                 "operation": operation,
                 "kind": operation,

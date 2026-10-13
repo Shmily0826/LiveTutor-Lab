@@ -6,6 +6,7 @@ import base64
 from datetime import datetime, timezone
 import json
 import hashlib
+import math
 import os
 import re
 from pathlib import Path
@@ -26,6 +27,18 @@ from neko_native_telemetry import NativeTelemetry
 from neko_tutor_start import plugin_server_ready
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def teaching_capture_seconds(paths):
+    duration = 0.0
+    for path in paths:
+        with wave.open(str(path)) as wav:
+            duration += wav.getnframes() / wav.getframerate()
+    if duration > 120:
+        raise ValueError('three fixed teaching inputs must total at most 120 seconds')
+    # Each input gets 4s padding, 75s response deadline, 3s tail and a bounded
+    # SQLite read; include all three, plus capture/scheduling headroom.
+    return math.ceil(duration + 3*(4+75+3+5) + 20)
 
 
 class ObservedSurface(LearningSurface):
@@ -80,6 +93,12 @@ def material_retirement_observed(replacement, snapshot):
 
 async def main(args):
     if args.output.exists(): raise RuntimeError("do not overwrite or repeat a voice attempt")
+    if args.teaching_text_chain:
+        raise ValueError('fixed text on a superseded controller is intentionally unauthorized; use --teaching-wav')
+    teaching_chain = bool(args.teaching_wav)
+    if teaching_chain and (not args.verify_picture_state or args.wav or args.followup_wav
+            or args.manual_turn_probe or args.point_code or args.replace_picture_on_playback):
+        raise ValueError('teaching WAV chain requires existing isolated picture only; no mixed probe modes')
     if args.replace_picture_on_playback:
         if not args.verify_picture_state or not args.followup_wav:
             raise ValueError("replacement scene requires existing isolated picture state and fixed follow-up")
@@ -91,8 +110,9 @@ async def main(args):
         raise ValueError("same-session follow-up requires fixed WAV picture mode, no manual/point probe")
     if args.followup_wav and not (args.prepare_picture or args.verify_picture_state):
         raise ValueError("same-session follow-up requires isolated picture mode")
-    for wav_path in (args.wav, args.followup_wav):
+    for wav_path in (args.wav, args.followup_wav, *(args.teaching_wav or [])):
         if wav_path and not wav_path.is_file(): raise ValueError("fixed WAV missing; do not start host")
+    capture_seconds = teaching_capture_seconds(args.teaching_wav) if teaching_chain else (195 if args.followup_wav else 75)
     store_path = (ROOT / 'benchmarks/raw' / args.store).resolve()
     if not store_path.is_relative_to((ROOT / 'benchmarks/raw').resolve()):
         raise ValueError('voice fixture store must stay under project raw directory')
@@ -106,6 +126,11 @@ async def main(args):
                 raise RuntimeError("an existing host owns the ports; leave it running")
     report = {"events": [], "room_microphone": False, "input": "text inside actual audio session",
               "volume_changed": False, "started_at": datetime.now(timezone.utc).isoformat()}
+    report['store'] = args.store
+    if teaching_chain:
+        report['teaching_wav_chain'] = True
+        report['loopback_deadline_seconds'] = capture_seconds
+        report['input_scope'] = 'three fixed WAVs through RNNoise/native ASR; fake silent input device, no room mic'
     ledger_path = ROOT / "benchmarks/raw/neko-desktop-egress-cap"
     report["before"] = json.loads(ledger_path.read_text())
     assert report["before"]["round"] == "bargein-autocheck-20261012"
@@ -128,10 +153,11 @@ async def main(args):
     report['startup_log'] = str(startup_log)
     process = subprocess.Popen([str(host.SOURCE_PYTHON), "-X", "utf8", str(ROOT / "scripts/neko_desktop_tutor_host.py"),
         "--source", "--voice", "--core-provider", "free", "--store", args.store,
-        "--hold", "360", "--seconds", "100", "--api-budget", "30", "--egress-budget", "2000",
+        "--hold", str(max(360,capture_seconds+120)), "--seconds", "100", "--api-budget", "30", "--egress-budget", "2000",
         "--allow-host", "www.lanlan.app:unlimited", "--allow-host", "www.lanlan.tech:0",
         "--budget-round", "bargein-autocheck-20261012"] + (["--study-vision"] if args.prepare_picture or args.verify_picture_state else []), cwd=ROOT, env=env,
         stdout=startup_handle, stderr=subprocess.STDOUT)
+    report['host_launcher_pid'] = process.pid
     shell, meter, observer, observer_task, replacement_task = None, None, None, None, None
     log_path = ROOT / "benchmarks/raw/neko-desktop-host.log"
     log_start = log_path.stat().st_size if log_path.exists() else 0
@@ -174,6 +200,10 @@ async def main(args):
                 raise RuntimeError('current Study picture unavailable; no voice connection')
             report['preferences_before_voice'] = await asyncio.to_thread(call, 'study_preferences', {})
             report['study_before_voice'] = await asyncio.to_thread(client.call, 'study_status')
+            if teaching_chain:
+                from neko_daily_failure_probe import database_snapshot
+                report['teaching_db_before'] = await asyncio.to_thread(database_snapshot,
+                    store_path/'N.E.K.O/plugins/study_companion/data/study_companion.db')
         if args.point_code:
             from neko_native_avatar_toolchain import call
             from neko_role_point_browser import RolePointHandler
@@ -221,7 +251,8 @@ async def main(args):
                     event = json.loads(frame)
                     if event.get("type") != "audio_chunk": report["events"].append({"at": at, **event})
                     if event.get("type") == "session_started": started.set()
-                    if event.get("type") in ("session_failed", "session_ended_by_server"):
+                    if event.get("type") in ("session_failed", "session_ended_by_server") or (
+                            event.get('type')=='status' and 'CHARACTER_SWITCHING_TERMINAL' in str(event.get('message',''))):
                         failed.set(); started.set(); ended.set()
                     if event.get("type") == "system" and event.get("data") == "turn end": ended.set()
             receiver = asyncio.create_task(receive())
@@ -305,10 +336,11 @@ async def main(args):
                 if args.replace_picture_on_playback:
                     replacement_task = asyncio.create_task(replace_picture_when_playing())
                 meter = subprocess.Popen([str(host.SOURCE_PYTHON), "-X", "utf8", str(ROOT / "scripts/neko_loopback_meter.py"),
-                    "--seconds", "195" if args.followup_wav else "75", "--out", str(args.output.with_suffix(".loopback.wav"))],
+                    "--seconds", str(capture_seconds), "--out", str(args.output.with_suffix(".loopback.wav"))],
                     cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
                 report["turns"] = []
-                for turn_index, input_wav in enumerate([args.wav, args.followup_wav] if args.followup_wav else [args.wav]):
+                input_wavs = args.teaching_wav if teaching_chain else ([args.wav, args.followup_wav] if args.followup_wav else [args.wav])
+                for turn_index, input_wav in enumerate(input_wavs):
                     if failed.is_set(): break
                     frames_before = (report.get("native_final") or {}).get("trace", {}).get("binaryFrames", 0)
                     report["input_submitted_at"] = round(time.monotonic() - origin, 3)
@@ -343,7 +375,7 @@ async def main(args):
                     else:
                         await send({"action": "stream_data", "input_type": "text",
                             "data": "请先调用 study_material 检查我刚交给 Study 的图片，再调用 study_explain，用中文两句话讲天气请求路线。不要用你自己的直接看图路线，不出题。",
-                            "request_id": "daily-picture-voice-20261014"})
+                            "request_id": "daily-picture-voice-20261014-"+str(turn_index)})
                     deadline = time.monotonic() + 75
                     while time.monotonic() < deadline:
                         if observer_task.done():
@@ -382,12 +414,21 @@ async def main(args):
                     turn["playback_first_scheduled_wall"] = next((event["wall"] for event in turn_events
                         if event.get("type") == "native_speech_playback_state" and event.get("active")), None)
                     report["turns"].append(turn)
+                    if teaching_chain:
+                        from neko_daily_failure_probe import database_snapshot
+                        turn['study_database'] = await asyncio.to_thread(database_snapshot,
+                            store_path/'N.E.K.O/plugins/study_companion/data/study_companion.db')
+                        question = turn['study_database']['current_question']
+                        previous_question=(report.get('teaching_db_before') or {}).get('current_question',{})
+                        if turn_index == 0 and (not question.get('question_id') or not question.get('attempt_id') or question.get('attempt_evaluated')
+                                or question.get('question_id')==previous_question.get('question_id')):
+                            raise RuntimeError('role did not create a new pending quiz; do not grade a missing or consumed question')
                     if turn_index == 0 and replacement_task is not None:
                         await replacement_task
                         report['material_replacement']['first_turn_trace'] = (report.get('native_final') or {}).get('trace', {}).get('events', [])
                     save()
                     if failed.is_set() or report.get("turn_timeout"): break
-                if args.followup_wav:
+                if args.followup_wav or teaching_chain:
                     report["native_reply"] = "\n".join(turn.get("native_reply", "") for turn in report["turns"])
                 if args.point_code:
                     report['role_point_command'] = surface.command
@@ -421,8 +462,15 @@ async def main(args):
             except Exception as exc: report["telemetry_cleanup_error"] = type(exc).__name__
         if meter is not None:
             try:
-                out, err = await asyncio.to_thread(meter.communicate, timeout=205 if args.followup_wav else 85)
+                if report.get('failure'):
+                    meter.terminate()
+                    report['loopback_incomplete'] = True
+                out, err = await asyncio.to_thread(meter.communicate, timeout=capture_seconds+10)
                 report["loopback"] = json.loads(out.strip().splitlines()[-1]) if out.strip() else {"error": err[-400:]}
+                if teaching_chain and not report.get('loopback_incomplete') and report['loopback'].get('wav'):
+                    with wave.open(report['loopback']['wav']) as captured:
+                        report['loopback_end_wall'] = report['loopback']['device']['capture_start_wall'] + captured.getnframes()/captured.getframerate()
+                    report['loopback_covers_last_turn'] = bool(report.get('turns')) and report['loopback_end_wall'] >= report['turns'][-1]['observation_end_wall']
             except Exception as exc:
                 meter.terminate(); report["loopback_error"] = type(exc).__name__
         if shell is not None:
@@ -446,7 +494,7 @@ async def main(args):
                     except ValueError: pass
             report["wire_trace"] = wire_records
         report["proof"] = "separate actual provider/native/loopback; fixed input proves this device route, human listening remains unverified"
-        if (args.prepare_picture or args.verify_picture_state) and not args.followup_wav:
+        if (args.prepare_picture or args.verify_picture_state) and not args.followup_wav and not teaching_chain:
             speech_end = report.get('fixed_speech_end_wall')
             audio = [e['t'] for e in report.get('wire_trace',[]) if e.get('dir') == 'recv' and e.get('type') == 'response.audio.delta']
             calls = [line for line in report.get('timing_log',[]) if "TRIGGER entry='__llm_tool__study_explain'" in line]
@@ -538,6 +586,7 @@ async def main(args):
                 report['speech_gate_acceptance'] = {'checks': gate_checks,
                     'result': 'PASS_THIS_SINGLE_UTTERANCE' if all(gate_checks.values()) and all(checks.values()) else 'FAIL_OR_PARTIAL',
                     'scope': 'this fixed source pointing utterance only; paid teaching constraints and human listening remain separate'}
+        report['finalized'] = True
         save()
         print(json.dumps({"report": str(args.output), "failure": report.get("failure"), "reply": report.get("reply"),
                           "audio_bytes": report.get("socket_audio_bytes"), "loopback_loud": (report.get("loopback") or {}).get("loud_chunks"),
@@ -556,4 +605,6 @@ if __name__ == "__main__":
     parser.add_argument("--speech-gate", action="store_true", help="one opt-in Study execution-admission scene; never changes onset/cancel")
     parser.add_argument("--prepare-picture", action="store_true", help="fresh isolated course with an existing image, Chinese preference and no proactive quiz")
     parser.add_argument("--verify-picture-state", action="store_true", help="reuse the existing isolated picture course, read before/after; no extra image model preparation")
+    parser.add_argument("--teaching-text-chain", action="store_true", help="disabled: a superseded controller must not gain text authority")
+    parser.add_argument("--teaching-wav", type=Path, nargs=3, help="three fixed WAVs: picture quiz, wrong answer, history summary; existing isolated picture only")
     asyncio.run(main(parser.parse_args()))

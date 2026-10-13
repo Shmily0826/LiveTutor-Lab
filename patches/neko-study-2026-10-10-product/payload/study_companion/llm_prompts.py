@@ -92,6 +92,10 @@ _PROMPT_CONTEXT_ALLOWED_FIELDS = frozenset(
 )
 _PROMPT_PRIVATE_FIELDS = frozenset(
     {
+        "material_context",
+        "source_material_context",
+        "_material_context",
+        "_study_material_binding",
         "vision_image_base64",
         "last_vision_image_base64",
         "image_base64",

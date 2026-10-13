@@ -1,7 +1,10 @@
 """Only the intentional first-answer retirement path; no host/audio/network."""
 import copy
 import unittest
-from neko_daily_voice_probe import material_retirement_observed
+import tempfile
+from pathlib import Path
+import wave
+from neko_daily_voice_probe import material_retirement_observed, teaching_capture_seconds
 
 class ReplacementObservation(unittest.TestCase):
     def setUp(self):
@@ -24,5 +27,19 @@ class ReplacementObservation(unittest.TestCase):
     def test_ordinary_or_missing_observation_does_not_gain_retirement_shortcut(self):
         self.assertFalse(material_retirement_observed(None,self.snapshot))
         self.assertFalse(material_retirement_observed(self.change,{}))
+    def test_teaching_capture_covers_three_input_response_and_database_deadlines(self):
+        with tempfile.TemporaryDirectory() as directory:
+            paths=[]
+            for index,seconds in enumerate((20,25,30)):
+                path=Path(directory)/f'{index}.wav'
+                with wave.open(str(path),'wb') as wav:
+                    wav.setparams((1,2,8000,0,'NONE','not compressed'))
+                    wav.writeframes(b'\0\0'*8000*seconds)
+                paths.append(path)
+            self.assertGreaterEqual(teaching_capture_seconds(paths),75+3*(4+75+3+5)+20)
+            with wave.open(str(paths[0]),'wb') as wav:
+                wav.setparams((1,2,8000,0,'NONE','not compressed'))
+                wav.writeframes(b'\0\0'*8000*121)
+            with self.assertRaises(ValueError):teaching_capture_seconds(paths)
 
 if __name__=='__main__':unittest.main(verbosity=2)

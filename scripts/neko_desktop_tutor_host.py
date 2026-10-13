@@ -435,6 +435,12 @@ TUTOR_ROLE_GUIDANCE = (
     "After a correction, recheck the submitted image or source evidence before answering. "
     "For an image submitted in Study, call study_material then study_explain with the learner's "
     "question and no invented observations in text. Study vision is the reliable image route.\n"
+    "For an explicitly requested quiz, call study_quiz; for a current-picture quiz omit topic "
+    "so the saved pixels remain its source. Grade a learner answer with study_answer. "
+    "For a recap of mistakes, corrections or learning progress, call study_summary before "
+    "speaking; your own earlier wording is not a substitute for the stored learning record. "
+    "Keep the relation's meaning: an arrow for a call is not evidence of data returning "
+    "in the opposite direction.\n"
     "About yourself: when the learner asks what you can see, which files are in scope, or "
     "how the authorization works, call study_scope and answer from what it returns - never "
     "from impression, and never claim more reach than one authorized directory plus a window "
@@ -721,6 +727,11 @@ class Sink(threading.Thread):
             up = socket.create_connection((host, 443), timeout=20)
         except OSError:
             return
+        # The 20s deadline bounds CONNECT/header setup, not an established
+        # realtime conversation. Quiet in either direction must not close it.
+        # The owning host's bounded lifetime and peer EOF still end the relay.
+        conn.settimeout(None)
+        up.settimeout(None)
         threading.Thread(target=self._pump, args=(conn, up), daemon=True).start()
         self._pump(up, conn)
 
@@ -736,6 +747,10 @@ class Sink(threading.Thread):
             pass
         finally:
             for sock in (source, dest):
+                try:
+                    sock.shutdown(socket.SHUT_RDWR)
+                except OSError:
+                    pass
                 try:
                     sock.close()
                 except OSError:

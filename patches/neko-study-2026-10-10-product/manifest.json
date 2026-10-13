@@ -6,27 +6,27 @@
   "files": [
     {
       "path": "payload/study_companion/__init__.py",
-      "sha256": "c23839606a9e8f142594702a490808e357adf456639fba95120191eab880042a",
+      "sha256": "c5dbd2f776dd06d7a7530e55f6b894927e160ca0db8304546963a97f34756d69",
       "deployed_matches": true
     },
     {
       "path": "payload/study_companion/entry_ocr_entries.py",
-      "sha256": "940bd60679a458121a9e15b602a526601dcf44266daa3eafecd72b2b33e545b8",
+      "sha256": "12bf26b19ba671f0458996ca48957aa707b625d80ebafc2537a3369a48402217",
       "deployed_matches": true
     },
     {
       "path": "payload/study_companion/entry_tutor_context_support.py",
-      "sha256": "72b836989fe3b40f358f3a5d20e2376e6091dcaa1ef2aa3de695cd3ba77a2a77",
+      "sha256": "d201a761890707d9ea22a544e18a37820d9fa07a492b0dfaabd9c73209f4f49f",
       "deployed_matches": true
     },
     {
       "path": "payload/study_companion/entry_tutor_question_entries.py",
-      "sha256": "4d0e559545173b657edc57cd5981d41524576513562d282328ad118b81cc591b",
+      "sha256": "e174b2ecdd1eb6a92315c609dd81449dd940038ac1fca0056436ecd10dbbb46b",
       "deployed_matches": true
     },
     {
       "path": "payload/study_companion/entry_tutor_summary_entries.py",
-      "sha256": "cb1f3899220ae433d8d53ccdd9708642c224fb9853b8fe3fb68ff25eaf7a5017",
+      "sha256": "88ebef93c6bfd61b68f67cba6a32dda79e884a1bcb8844f2772eca5e86bc6ab0",
       "deployed_matches": true
     },
     {
@@ -41,7 +41,7 @@
     },
     {
       "path": "payload/study_companion/llm_prompts.py",
-      "sha256": "2d622071c365d0e6787748f1ef16a4fff30690fc81f772bb91ff92e95b3a2471",
+      "sha256": "0c5be37a956cf4f7ddf76f5977abe9f2cd1734508136cafe298db8f29db77e59",
       "deployed_matches": true
     },
     {
@@ -86,12 +86,12 @@
     },
     {
       "path": "static/main.js",
-      "sha256": "ac0660050b259c953c94beac5f72c3b44038deba4c9098947e55c6ba49495d85",
+      "sha256": "c8a8bb5e4a5dc51b2e3dedd9a18f5723b739baf38ab9014d6701f3e9009ff2ba",
       "deployed_matches": true
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
-      "sha256": "e920c9a29fd6b41ab906d4a94b25f524ae0efee4d206033e2aec66918efb8999",
+      "sha256": "02bb6838beb72eec27297a6109963d5ffd4363162e3c074b448512847996ad6e",
       "deployed_matches": true
     },
     {
@@ -118,6 +118,11 @@
     {
       "path": "payload/study_companion/study_materials.py",
       "sha256": "8daf86aa6c6c76e306f189b422d9aaefebf7184cc92856d5efe2ab95649f82e0",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/entry_tutor_answer_entries.py",
+      "sha256": "5c886dedde451dadb24ce7187f605f74d62265a68a26dac134d4e4a02d52d140",
       "deployed_matches": true
     }
   ],
@@ -202,5 +207,40 @@
     "proof": "SOURCE/OFFLINE plus fixed-input replacement14 actual old-token cancel/native queue stop/loopback silence/fresh reverse reply passed; human, long-quiet recovery, other output provenance pending",
     "tests": "11 producer SQLite/push tests; 28 host owner/event/delivery/swap tests including current role independent of capture/private stripping without capture; 14 UI checks; affected course6/image4/failure5/nativeguard13/language4 passed; native13 includes current-picture ignores stale model text, missing picture honest, replacement guard and literal identifiers/negative-picture requests; 4 host replay/deployed/idempotence/AST match; real Core/registry/remote→SDK local stub passed",
     "scope": "accepted image/course/session changes notify only bound targets via blind control, per-instance boot/sequence, current success explain binds; no PCM replay, no infinite reconnect, same old token input after irreversible cancel requires explicit voice restart; communication narration and quiz/grade provenance remain separate"
+  },
+  "daily_teaching_material_update": {
+    "proof": "SOURCE_OFFLINE_NEGATIVES plus NORMAL_REAL_SDK_LOCAL_STUB; Native quiz/summary partial, grade device verified only this scene",
+    "tests": "quiz12, summary14, grade10, Native wrapper integration5, host31; affected course6/language4/native-material13/producer11/failure5 passed; audit4 P2 fixed with stale role rejection/blank context, foreign session refusal, immutable grade no saved image/OCR, late question no feedback/live verdict",
+    "scope": "current picture quiz full context/private origin; immutable topic/held question/history subset; existing Store/attempt/scoped history retained; recursive prompt excludes provenance; queued independent narration still pending",
+    "sealed_utc": "2026-10-13T20:29:59.351248+00:00"
+  },
+  "daily_teaching_sdk_local_verification": {
+    "result": "PASS_TEACHING_CORE_SDK_LOCAL_STUB_ONLY",
+    "tools": [
+      "study_quiz",
+      "study_answer",
+      "study_summary"
+    ],
+    "scope": "actual patched Core, ToolRegistry/remote HTTP, SDK/Study and SQLite with local model stub and fake output owner; not Native/device/human",
+    "requests": 3,
+    "global_ledger_unchanged": true,
+    "report": "docs/evidence/daily-companion-teaching-core-sdk-2026-10-14.md"
+  },
+  "daily_teaching_device_update": {
+    "result": "PARTIAL",
+    "report": "docs/evidence/daily-companion-teaching-device-2026-10-14.md",
+    "grade": "real model wrong/0, unique held-question grade, correct REZ->NUD->WEX correction, 15 Native PCM/40 WASAPI loud bins",
+    "quiz": "real current-picture question committed but scope-retired before Native relay, 0 PCM/0 loud bins",
+    "summary": "18 Native PCM/37 loud bins but no study_summary tool, wrong return-flow gloss; not grounded-tool acceptance",
+    "scope": "fixed WAV, no room mic/volume change, one CONNECT, complete245s capture; human pending; post-review probe/guidance only source"
+  },
+  "daily_phase6_publication_lf": {
+    "scope": "CRLF->LF only in4 artifacts, all original bytes backed up locally; source syntax/24 fixed daily plugin-code hashes matched; no DB/config data modified",
+    "files": [
+      "payload/study_companion/__init__.py",
+      "payload/study_companion/entry_ocr_entries.py",
+      "static/main.js",
+      "payload/study_companion/study_avatar_tools.py"
+    ]
   }
 }

@@ -18,6 +18,7 @@ from .entry_common import (
     LLM_OPERATION_QUESTION_GENERATE,
 )
 from .models import public_current_question_payload
+from .study_materials import material_context, material_context_current, MaterialContextChanged
 from .practice_scope import (
     filter_question_params_to_scope,
     ordered_scope_topics,
@@ -82,8 +83,31 @@ def _targeted_public_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return public_payload
 
 
+def _require_question_material_current(self, expected: dict[str, Any] | None) -> None:
+    if not material_context_current(self, expected):
+        raise SdkError(
+            "课程已切换或材料已更新，请重新选择当前材料后出题。",
+            code="course_context_changed",
+        )
+
+
+async def _resolve_question_material_context(self, expected: dict[str, Any]) -> dict[str, Any]:
+    _require_question_material_current(self, expected)
+    await self._ensure_active_study_session()
+    current = material_context(self, include_material="material_identity" in expected)
+    if any(current.get(key) != value for key, value in expected.items()
+           if key != "session_id" or value):
+        raise SdkError("the requested question material changed during session initialization", code="course_context_changed")
+    resolved = dict(expected)
+    if not resolved.get("session_id"):
+        resolved["session_id"] = current["session_id"]
+    _require_question_material_current(self, resolved)
+    return resolved
+
+
 def _question_private_payload(
-    payload: dict[str, Any], context: dict[str, Any]
+    payload: dict[str, Any], context: dict[str, Any],
+    *, source_material_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     private_payload = dict(payload or {})
     answer = str(private_payload.get("answer") or "").strip()
@@ -106,6 +130,8 @@ def _question_private_payload(
             private_payload.get("math_equivalence_engine") or {"enabled": False}
         ),
     }
+    if source_material_context:
+        private_payload["internal_private_payload"]["source_material_context"] = dict(source_material_context)
     private_payload.update(context)
     private_payload.setdefault("question_id", f"q_{uuid.uuid4().hex}")
     private_payload.setdefault("attempt_id", f"a_{uuid.uuid4().hex}")
@@ -470,8 +496,14 @@ class _TutorQuestionEntriesMixin:
         source: str = "manual",
         vision_image_payload: str = "",
         targeted_context: dict[str, Any] | None = None,
+        _material_context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        expected_material = dict(_material_context) if _material_context else None
+        if expected_material:
+            _require_question_material_current(self, expected_material)
         async with self._lock:
+            if expected_material:
+                _require_question_material_current(self, expected_material)
             active_mode = self._state.active_mode
         extra_context = {
             "source": source,
@@ -511,14 +543,27 @@ class _TutorQuestionEntriesMixin:
             extra_context.update(
                 {"vision_enabled": True, "vision_image_base64": vision_image_payload}
             )
+        elif targeted_context or (expected_material and "material_identity" not in expected_material):
+            # Topic/text practice has its own source; do not borrow a saved picture.
+            extra_context.update(vision_enabled=False, vision_image_base64="", vision_snapshot={})
+        if expected_material:
+            extra_context["_material_context"] = expected_material
         tutor_context = await self._build_learning_context(
             LLM_OPERATION_QUESTION_GENERATE,
             input_text=source_text,
             extra=extra_context,
+            session_id=expected_material["session_id"] if expected_material else None,
         )
+        if expected_material:
+            _require_question_material_current(self, expected_material)
+            if (tutor_context.get("course_id") != expected_material["course_id"]
+                    or tutor_context.get("session_id") != expected_material["session_id"]):
+                raise SdkError("question context does not match the requested course/session", code="course_context_changed")
         reply = await self._agent.question_generate(
             source_text, mode=active_mode, context=tutor_context
         )
+        if expected_material:
+            _require_question_material_current(self, expected_material)
         if targeted_context:
             async with self._lock:
                 active_revision = int(
@@ -565,6 +610,7 @@ class _TutorQuestionEntriesMixin:
                     "practice_scope": targeted_context.get("practice_scope") or {},
                     "scope_topic_count": targeted_context.get("scope_topic_count") or 0,
                 },
+                source_material_context=expected_material,
             )
             reply = TutorReply(
                 operation=reply.operation,
@@ -579,7 +625,8 @@ class _TutorQuestionEntriesMixin:
             if model_topic_label:
                 public_payload["question_topic_label"] = model_topic_label
         else:
-            private_payload = _question_private_payload(dict(reply.payload or {}), {"source": source})
+            private_payload = _question_private_payload(dict(reply.payload or {}), {"source": source},
+                                                       source_material_context=expected_material)
             selected_topic = str(tutor_context.get("selected_topic_id") or "").strip()
             if selected_topic:
                 # Repeating a learner-selected concept must update its existing card.
@@ -606,6 +653,9 @@ class _TutorQuestionEntriesMixin:
             "payload": metadata_payload,
             "screen_classification": tutor_context.get("screen_classification") or {},
         }
+        if expected_material:
+            finalize_metadata["source_material_context"] = dict(expected_material)
+            _require_question_material_current(self, expected_material)
         if targeted_context:
             async with self._practice_scope_write_lock():
                 async with self._lock:
@@ -641,6 +691,8 @@ class _TutorQuestionEntriesMixin:
                 extra_context=tutor_context,
                 public_payload=public_payload,
             )
+        if expected_material:
+            _require_question_material_current(self, expected_material)
         payload["screen_classification"] = tutor_context.get("screen_classification") or {}
         return payload
 
@@ -724,11 +776,14 @@ class _TutorQuestionEntriesMixin:
         ],
     )
     async def study_generate_targeted_question(
-        self, selection_context_id: str = "", **_
+        self, selection_context_id: str = "", _material_context: dict[str, Any] | None = None, **_
     ):
         if self._agent is None:
             return Err(SdkError("study tutor agent is not initialized"))
         try:
+            expected_material = (dict(_material_context) if _material_context
+                                 else material_context(self, include_material=False))
+            expected_material = await _resolve_question_material_context(self, expected_material)
             context_id = str(selection_context_id or "").strip()
             if context_id:
                 targeted_context = await asyncio.to_thread(
@@ -748,6 +803,8 @@ class _TutorQuestionEntriesMixin:
                     if pending_context_id
                     else pending_context
                 )
+            if expected_material:
+                _require_question_material_current(self, expected_material)
             if targeted_context.get("selection_reason") == "no_data":
                 return Err(
                     SdkError(
@@ -770,8 +827,13 @@ class _TutorQuestionEntriesMixin:
                 topic=str(targeted_context.get("selected_topic_id") or ""),
                 source="targeted_question",
                 targeted_context=targeted_context,
+                _material_context=expected_material,
             )
+            if expected_material:
+                _require_question_material_current(self, expected_material)
             return Ok(payload)
+        except MaterialContextChanged as exc:
+            return Err(SdkError(str(exc), code="course_context_changed"))
         except SdkError as exc:
             return Err(exc)
         except Exception as exc:
@@ -810,15 +872,26 @@ class _TutorQuestionEntriesMixin:
         text: str = "",
         topic: str = "",
         vision_image_base64: str = "",
+        _material_context: dict[str, Any] | None = None,
         **_,
     ):
         if self._agent is None:
             return Err(SdkError("study tutor agent is not initialized"))
         source_text = str(text or "").strip()
         vision_image_payload = str(vision_image_base64 or "").strip()
+        expected_material = (dict(_material_context) if _material_context
+                             else material_context(self, include_material=not source_text and not vision_image_payload))
+        try:
+            expected_material = await _resolve_question_material_context(self, expected_material)
+        except SdkError as exc:
+            return Err(exc)
+        except Exception as exc:
+            return _entry_exception_error(self, exc, operation="study_generate_question")
         used_ocr_fallback = False
         if not source_text and not vision_image_payload:
             async with self._lock:
+                if expected_material and not material_context_current(self, expected_material):
+                    return Err(SdkError("课程已切换或材料已更新，请重新选择当前材料后出题。", code="course_context_changed"))
                 source_text = self._state.last_ocr_text
             used_ocr_fallback = bool(source_text.strip())
         source_text = source_text.strip()
@@ -847,8 +920,15 @@ class _TutorQuestionEntriesMixin:
                 if used_ocr_fallback
                 else ("vision_image" if image_only_source else "manual"),
                 vision_image_payload=vision_image_payload,
+                _material_context=expected_material,
             )
+            if expected_material:
+                _require_question_material_current(self, expected_material)
             return Ok(payload)
+        except MaterialContextChanged as exc:
+            return Err(SdkError(str(exc), code="course_context_changed"))
+        except SdkError as exc:
+            return Err(exc)
         except Exception as exc:
             return _entry_exception_error(
                 self, exc, operation="study_generate_question"

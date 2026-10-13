@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .study_materials import material_context, material_context_current, MaterialContextChanged
 from .entry_common import (
     asyncio,
     Err,
@@ -101,49 +102,79 @@ class _TutorSummaryEntriesMixin:
             "next_actions",
         ],
     )
-    async def study_summarize_session(self, focus: str = "", **_):
+    async def study_summarize_session(self, focus: str = "", _material_context=None, **_):
         if self._agent is None:
             return Err(SdkError("study tutor agent is not initialized"))
-        async with self._lock:
-            active_mode = self._state.active_mode
-        session_id = await self._ensure_active_study_session()
-        history = await asyncio.to_thread(
-            self._store.list_interactions,
-            100,
-            session_id=session_id,
-        )
-        tutor_context = await self._build_learning_context(
-            LLM_OPERATION_SUMMARIZE_SESSION,
-            input_text="session",
-            extra={
-                "focus": str(focus or "").strip(),
-                "mode": active_mode,
-            },
-            session_id=session_id,
-        )
-        reply = await self._agent.summarize_session(
-            history, mode=active_mode, context=tutor_context
-        )
-        payload = await self._finalize_tutor_call(
-            LLM_OPERATION_SUMMARIZE_SESSION,
-            reply,
-            history_kind=LLM_OPERATION_SUMMARIZE_SESSION,
-            extra_context=tutor_context,
-            metadata={
-                "degraded": reply.degraded,
-                "diagnostic": reply.diagnostic,
-                "payload": reply.payload,
-                "screen_classification": tutor_context.get("screen_classification")
-                or {},
-            },
-        )
-        payload["screen_classification"] = (
-            tutor_context.get("screen_classification") or {}
-        )
-        if reply.degraded:
-            return Ok(payload)
+        # Capture before the first await; a history summary follows its course
+        # and session, not a picture submitted while the request is waiting.
+        observed = material_context(self, include_material=False)
+        expected = dict(_material_context) if isinstance(_material_context, dict) else observed
         try:
-            await self._emit_session_summarized_event(payload)
-        except Exception as exc:
-            self.logger.warning("study session summarized event degraded: {}", exc)
-        return Ok(payload)
+            if (_material_context is not None and not isinstance(_material_context, dict)
+                    or set(expected) != {"course_id", "session_id"}
+                    or any(not isinstance(value, str) for value in expected.values())
+                    or not material_context_current(self, expected)):
+                raise MaterialContextChanged("summary context is no longer current")
+            session_id = await self._ensure_active_study_session()
+            async with self._lock:
+                current = material_context(self, include_material=False)
+                if (current["course_id"] != expected["course_id"]
+                        or expected["session_id"] and current["session_id"] != expected["session_id"]
+                        or current["session_id"] != session_id):
+                    raise MaterialContextChanged("summary session was replaced")
+                expected = current
+                active_mode = self._state.active_mode
+
+            async def check_current():
+                async with self._lock:
+                    if not material_context_current(self, expected):
+                        raise MaterialContextChanged("summary course or session was replaced")
+
+            history = await asyncio.to_thread(self._store.list_interactions, 100, session_id=session_id)
+            await check_current()
+            tutor_context = await self._build_learning_context(
+                LLM_OPERATION_SUMMARIZE_SESSION,
+                input_text="session",
+                extra={"focus": str(focus or "").strip(), "mode": active_mode,
+                       "_material_context": dict(expected)},
+                session_id=session_id,
+            )
+            await check_current()
+            if (tutor_context.get("course_id") != expected["course_id"]
+                    or tutor_context.get("session_id") != session_id):
+                raise MaterialContextChanged("summary history and learning context do not match")
+            tutor_context["history"] = history
+            tutor_context["session_history"] = history
+            tutor_context["vision_enabled"] = False
+            tutor_context["vision_image_base64"] = ""
+            tutor_context.pop("vision_snapshot", None)
+            tutor_context["last_ocr_text"] = ""
+            tutor_context["last_ocr_at"] = ""
+            reply = await self._agent.summarize_session(history, mode=active_mode, context=tutor_context)
+            await check_current()
+            payload = await self._finalize_tutor_call(
+                LLM_OPERATION_SUMMARIZE_SESSION,
+                reply,
+                history_kind=LLM_OPERATION_SUMMARIZE_SESSION,
+                extra_context=tutor_context,
+                metadata={"degraded": reply.degraded, "diagnostic": reply.diagnostic,
+                          "payload": reply.payload,
+                          "screen_classification": tutor_context.get("screen_classification") or {}},
+            )
+            await check_current()
+            payload["screen_classification"] = tutor_context.get("screen_classification") or {}
+            if not reply.degraded:
+                # Preserve provenance for the narration consumer; its queue's
+                # eventual delivery guard is separate from this entry check.
+                narration = {**payload, "_material_context": dict(expected),
+                             "_session_summary_seed": dict(tutor_context.get("session_summary_seed") or {})}
+                try:
+                    await self._emit_session_summarized_event(narration)
+                except MaterialContextChanged:
+                    raise
+                except Exception as exc:
+                    self.logger.warning("study session summarized event degraded: {}", exc)
+                await check_current()
+            return Ok(payload)
+        except MaterialContextChanged:
+            return Err(SdkError("课程或学习会话已切换，请重新总结当前课程。", code="course_context_changed"))
