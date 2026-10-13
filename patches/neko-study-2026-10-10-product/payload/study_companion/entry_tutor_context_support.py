@@ -23,6 +23,7 @@ from .entry_common import (
 from .knowledge_graph_guidance import build_knowledge_guidance_payload
 from .knowledge_graph_guidance import match_topics
 from .models import public_current_question_payload
+from .learning_preferences import load_preferences, validate_preferences
 from .practice_scope import filter_question_params_to_scope
 from ._semantic_routing import (
     StudyInputSemantics,
@@ -650,6 +651,12 @@ class _TutorContextSupportMixin:
         course_learning_state = await asyncio.to_thread(self._course_learning_state, course_id)
         current_question = snapshot.get("current_question") or {}
         public_current_question = public_current_question_payload(current_question)
+        preferences = await asyncio.to_thread(load_preferences, self._store)
+        async with _plugin_lock(self._lock):
+            turn_preferences = getattr(self, "_study_turn_preferences", None)
+            self._study_turn_preferences = None
+        if turn_preferences:
+            preferences.update(validate_preferences(turn_preferences))
         context = _LearningContext(
             {
                 "operation": operation,
@@ -659,6 +666,8 @@ class _TutorContextSupportMixin:
                 "course_learning_state": course_learning_state,
                 "input_text": input_text,
                 "language": self._cfg.language,
+                "learning_preferences": preferences,
+                "learning_preferences_scope": "turn" if turn_preferences else "saved",
                 "mode": snapshot.get("active_mode") or self._cfg.mode,
                 "screen_classification": snapshot.get("last_screen_classification")
                 or {},
@@ -698,6 +707,8 @@ class _TutorContextSupportMixin:
                     (topic_id for topic_id in course_topics
                      if str((self._store.get_topic(topic_id) or {}).get("name") or "") == hint), ""
                 )
+                if scoped_hint:
+                    context["selected_topic_id"] = scoped_hint
                 params = await asyncio.to_thread(
                     self._knowledge_tracker.get_next_question_params,
                     scoped_hint,
@@ -823,6 +834,11 @@ class _TutorContextSupportMixin:
         payload = dict(reply.payload or {})
         summary = str(reply.reply or "").strip()
         async with _plugin_lock(self._lock):
+            # History is already bound to the request session. Do not add its
+            # delayed result to a newly selected course's live progress.
+            request_session_id = str((extra or {}).get("session_id") or "")
+            if request_session_id and request_session_id != str(self._study_session_id):
+                return
             event = {
                 "operation": operation,
                 "kind": operation,
@@ -1067,13 +1083,16 @@ class _TutorContextSupportMixin:
             or ""
         )
         topic = str(
-            question_payload.get("topic")
+            context.get("selected_topic_id")
+            or question_payload.get("selected_topic_id")
+            or question_payload.get("topic_id")
+            or question_payload.get("topic")
             or track_payload.get("topic")
             or eval_payload.get("topic")
             or self._guess_track_topic(track_reply)
         ).strip()
         if topic:
-            question_payload.setdefault("topic", topic)
+            question_payload["topic"] = topic
         course_id = str(context.get("course_id") or self._state.study_course_id or "general").strip()
         # Mastery and FSRS use topic identity; scope it so equal labels in two
         # courses cannot share answer evidence.

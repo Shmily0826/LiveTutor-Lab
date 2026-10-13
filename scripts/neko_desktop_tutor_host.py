@@ -146,6 +146,13 @@ def apply_voice_host_patch() -> str:
         for relative, _ in voice_patch.TARGETS:
             target = host_root / relative
             results.append(f"{host_root.name}/{relative}={voice_patch.apply_to(target)}")
+        import neko_spoken_turn_patch as turn_patch
+        trace_path = host_root / "main_logic/omni_realtime_client/_wire_trace.py"
+        original = trace_path.read_text(encoding="utf-8")
+        traced = turn_patch.patch_wire_trace(original)
+        if traced != original:
+            trace_path.write_text(traced, encoding="utf-8", newline="\n")
+        results.append(f"{host_root.name}/_wire_trace.py=diagnostics ready")
     return ",".join(results)
 
 
@@ -190,7 +197,27 @@ def prepare_tutor_onboarding(runtime_root: Path) -> dict:
             "persona_onboarding": persona["status"]}
 
 
-def prepare_product_plugin(store: Path) -> None:
+def prepare_tutor_conversation_defaults(runtime_root: Path) -> str:
+    """Use the host's real preference slot; preserve explicit saved choices."""
+    path = runtime_root / "config/user_preferences.json"
+    rows = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+    if not isinstance(rows, list):
+        raise RuntimeError("学习偏好文件格式无效，已保留原文件：" + str(path))
+    global_row = next((row for row in rows if isinstance(row, dict)
+                       and row.get("model_path") == "__global_conversation__"), None)
+    if global_row is None:
+        global_row = {"model_path": "__global_conversation__"}
+        rows.append(global_row)
+    changed = "proactiveChatEnabled" not in global_row
+    if changed:
+        # Complicated proactive companionship is deferred by the contract.
+        global_row["proactiveChatEnabled"] = False
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
+    return "proactive chat defaults off" if changed else "kept saved proactive choice"
+
+
+def prepare_product_plugin(store: Path, *, study_vision: bool = False) -> None:
     """Deploy only source/assets into the new isolated store; never copy learning data."""
     source = APP / "plugins/study_companion"
     target = store / "plugin-code/study_companion"
@@ -205,11 +232,15 @@ def prepare_product_plugin(store: Path) -> None:
                                  (PRODUCT / "static", target / "static")):
         if overlay.is_dir():
             for item in overlay.rglob("*"):
-                if item.is_file() and item.suffix != ".cjs":
+                if item.is_file() and item.suffix != ".cjs" and "__pycache__" not in item.parts:
                     output = destination / item.relative_to(overlay)
                     output.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(item, output)
     manifest = (target / "plugin.toml").read_text(encoding="utf-8")
+    if study_vision:
+        # New daily stores have a working image entry; saved learner settings still win.
+        manifest = manifest.replace('llm_vision_enabled = false', 'llm_vision_enabled = true')
+        manifest = manifest.replace('llm_vision_max_image_px = 768', 'llm_vision_max_image_px = 2048')
     manifest = manifest.replace('plugins.study_companion.lab_bootstrap_plane:StudyCompanionPlugin',
                                 'plugins.study_companion:StudyCompanionPlugin')
     manifest = manifest.replace('expose_legacy_static_panel = false', 'expose_legacy_static_panel = true')
@@ -397,6 +428,11 @@ TUTOR_ROLE_GUIDANCE = (
     "148 行; in English write line 148 as one flowing phrase. Refer to a file by its last "
     "segment (location_map.dart), never by a full path - the path belongs on the text "
     "surface, not in the sentence being spoken.\n"
+    "Daily learning: be brief, patient and willing to correct yourself. Use study_preferences "
+    "for explicit ongoing teaching preferences only; temporary requests are not memories. "
+    "After a correction, recheck the submitted image or source evidence before answering. "
+    "For an image submitted in Study, call study_material then study_explain with the learner's "
+    "question and no invented observations in text. Study vision is the reliable image route.\n"
     "About yourself: when the learner asks what you can see, which files are in scope, or "
     "how the authorization works, call study_scope and answer from what it returns - never "
     "from impression, and never claim more reach than one authorized directory plus a window "
@@ -410,6 +446,16 @@ TUTOR_ROLE_GUIDANCE = (
     "\nIf a study tool returns degraded=true or status=unavailable, say its reply as "
     "written and stop. This is a service failure, not evidence that the learner's "
     "example cannot be explained. Do not invent teaching, a quiz, or a grade."
+    "\nFor an architecture diagram, ask study_material whether a current Study picture "
+    "exists, then use study_explain to inspect its actual pixels and arrowheads. Never "
+    "infer direction from layout or an older picture. Native Realtime screen perception "
+    "is not reliable evidence for this version; study_read_window supplies OCR words "
+    "only. Without a Study picture, ask the learner to choose or paste the image in "
+    "Study. Do not invent diagram observations in a tool's text/topic parameter. "
+    "For pointing, call study_point status first and use its current material identity "
+    "and verified locator metadata. The learner selects and scrolls the material; you "
+    "only highlight. Source evidence from study_code is offered as a separate material, "
+    "not automatically selected. Never reuse a previous version's coordinates."
 )
 
 
@@ -461,7 +507,7 @@ def apply_tutor_role_guidance(runtime_root: Path) -> str:
 class Sink(threading.Thread):
     """Allow-listed CONNECT/HTTP relay that records every denial."""
 
-    def __init__(self, max_paid: int | None = None, extra: dict[str, int] | None = None,
+    def __init__(self, max_paid: int | None = None, extra: dict[str, int | None] | None = None,
                  cap_file: Path | None = None, round_id: str | None = None) -> None:
         super().__init__(daemon=True)
         self.decisions: list[dict[str, object]] = []
@@ -477,7 +523,7 @@ class Sink(threading.Thread):
         # launch that was supposed to make none.
         self.budgets: dict[str, float] = {
             ALLOWED_HOST: float("inf") if max_paid is None else float(max_paid)}
-        self.budgets.update({host.lower(): float(limit)
+        self.budgets.update({host.lower(): float("inf") if limit is None else float(limit)
                              for host, limit in (extra or {}).items()})
         self.spent: dict[str, int] = {}
         self.cap_file = cap_file
@@ -746,6 +792,7 @@ def main() -> int:
     parser.add_argument("--store", default="neko-appdata",
                         help="disposable LOCALAPPDATA tree under benchmarks/raw holding the plugin")
     parser.add_argument("--source", action="store_true", help="run pinned source host with verified text-only audio gates")
+    parser.add_argument("--study-vision", action="store_true", help="enable existing Study vision for new store defaults")
     parser.add_argument("--api-budget", type=int, default=30, help="maximum Study model requests in this launch")
     parser.add_argument("--egress-budget", type=int, default=None,
                         help="hard cap on every paid model request this launch, character chat "
@@ -797,8 +844,9 @@ def main() -> int:
         raise SystemExit("store must remain inside benchmarks/raw")
     store = prepare_store(key, store, args.core_provider)
     if args.source:
-        prepare_product_plugin(store)
+        prepare_product_plugin(store, study_vision=args.study_vision)
         runtime_root = store / "N.E.K.O"
+        print(prepare_tutor_conversation_defaults(runtime_root))
         print(json.dumps({"tutor_onboarding": prepare_tutor_onboarding(runtime_root)}, ensure_ascii=False))
         policy = runtime_root / "state/storage_policy.json"
         policy.parent.mkdir(parents=True, exist_ok=True)
@@ -814,9 +862,9 @@ def main() -> int:
     extra_hosts: dict[str, int] = {}
     for entry in args.allow_hosts:
         host, _, limit = entry.rpartition(":")
-        if not host or not limit.isdigit():
+        if not host or not (limit.isdigit() or limit == "unlimited"):
             raise SystemExit(f"--allow-host wants HOST:LIMIT, got {entry!r}")
-        extra_hosts[host.lower()] = int(limit)
+        extra_hosts[host.lower()] = None if limit == "unlimited" else int(limit)
     round_id = args.budget_round or datetime.now(timezone.utc).strftime("round-%Y-%m-%d")
     sink = Sink(args.egress_budget, extra=extra_hosts, cap_file=cap_file, round_id=round_id)
     sink.start()

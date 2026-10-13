@@ -83,6 +83,7 @@ from .study_habit_store import StudyHabitStore
 from .study_ocr_pipeline import StudyOcrPipeline
 from .study_avatar_tools import _StudyAvatarToolsMixin
 from .study_code_tools import _StudyCodeToolsMixin
+from .study_materials import load_material
 from .supervision import SupervisionController
 from .tutor_llm_agent import TutorLLMAgent
 from .tutor_llm_agent import diagnostic_code_for_exception
@@ -800,6 +801,7 @@ class StudyCompanionPlugin(
             self._store.ensure_session, session_id=session_id, mode=selected_mode,
             course_id=selected_course,
         )
+        material = await asyncio.to_thread(load_material, self._store, selected_course)
         async with self._lock:
             pending_question = dict(self._state.current_question)
             if not (resume_pending_question and self._state.study_course_id == selected_course
@@ -817,10 +819,13 @@ class StudyCompanionPlugin(
             self._state.recent_learning_events = []
             self._state.current_question = pending_question
             self._state.last_answer_evaluation = {}
-            self._state.last_ocr_text = ""
+            self._state.last_ocr_text = str(material.get("text") or "")
+            self._state.last_vision_image_base64 = str(material.get("image") or "")
             self._state.last_ocr_at = ""
             self._state.last_session_summary = ""
             self._state.last_session_summary_at = ""
+            if getattr(self, "_ocr_pipeline", None) is not None:
+                self._ocr_pipeline._clear_vision_snapshot()
         await self._persist_state()
         return session_id
 

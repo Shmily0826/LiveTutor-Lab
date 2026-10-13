@@ -68,6 +68,7 @@ def capture(seconds: float, chunk_seconds: float = 0.25, device_name: str = "") 
         peak, rms = peak_and_rms(window)
         curve.append({"at": round(index / (rate * channels), 2), "peak": peak, "rms": rms})
     info = {"loopback_device": device["name"], "rate": rate, "channels": channels,
+            "capture_start_wall": started, "chunk_seconds": chunk_seconds,
             "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(started))}
     return levels, curve, info
 

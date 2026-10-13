@@ -10,6 +10,7 @@ re-implements teaching logic; each handler delegates to an existing entry.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import re
@@ -119,6 +120,10 @@ def _ack_wording(language: str, state: dict[str, Any]) -> str:
 
 
 def _teaching_failure_wording(tool: str, diagnostic: str, language: str) -> str:
+    if diagnostic == "visual_context_missing":
+        if str(language).lower().startswith("zh"):
+            return "我还没有这张图的模块和箭头信息，不能凭空解释。请先提供当前图中可确认的连接关系，再继续教学。"
+        return "I do not have this diagram's modules and arrows yet. I need its current visible connections before I can teach it accurately."
     if str(language).lower().startswith("zh"):
         reason = ("这一轮教学请求额度已用完" if diagnostic == "agent_quota_exceeded"
                   else "教学服务这次没有返回可用结果")
@@ -175,13 +180,15 @@ def _relay_for(reply: str, language: str) -> str:
 # relay note - so study_explain's promise that a language request can travel inside
 # the question was a promise nothing in the code kept.
 _COURSE_LEVEL_REQUEST = re.compile(
-    r"以后|今后|长期|一直|总是|每次|from now on|always|every time|permanently|going forward")
+    r"以后|今后|长期|一直|总是|每次|from now on|always|every time|permanently|going forward", re.IGNORECASE)
 
 _TURN_LANGUAGE = (
     ("zh-CN", re.compile(r"(?:用|换成|换为|改成|改为|使用|请用)\s*(?:中文|汉语|普通话|简体)")),
     ("en-US", re.compile(r"(?:用|换成|换为|改成|改为|使用|请用)\s*(?:英文|英语|美语)")),
     ("zh-CN", re.compile(r"\bin\s+(?:chinese|mandarin)\b", re.IGNORECASE)),
     ("en-US", re.compile(r"\bin\s+(?:english|en-us)\b", re.IGNORECASE)),
+    ("en-US", re.compile(r"\b(?:use|using|speak)\s+english\b|\benglish\s+(?:sentences?|answers?|explanations?)\b|\benglish\s+please\b", re.IGNORECASE)),
+    ("zh-CN", re.compile(r"\b(?:use|using|speak)\s+(?:chinese|mandarin)\b|\b(?:chinese|mandarin)\s+(?:sentences?|answers?|explanations?)\b", re.IGNORECASE)),
 )
 
 
@@ -325,7 +332,14 @@ class _StudyAvatarToolsMixin:
         state = getattr(self, "_state", None)
         by_course = getattr(state, "teaching_language_by_course", None) or {}
         course = str(getattr(state, "study_course_id", "") or "")
-        language = (by_course.get(course) or getattr(state, "teaching_language", "")
+        preferences = {}
+        if getattr(self, "_store", None):
+            from .learning_preferences import load_preferences
+            preferences = load_preferences(self._store)
+            if not hasattr(self, "_study_config_default_language"):
+                self._study_config_default_language = str(getattr(self._cfg, "language", "") or "")
+        language = (by_course.get(course) or preferences.get("language")
+                    or getattr(state, "teaching_language", "")
                     or str(getattr(self._cfg, "language", "") or ""))
         if language and language != str(getattr(self._cfg, "language", "") or ""):
             self._cfg.language = language
@@ -354,10 +368,111 @@ class _StudyAvatarToolsMixin:
             if language and language != str(getattr(self._cfg, "language", "") or ""):
                 self._cfg.language = language
         directive = self.LANGUAGE_DIRECTIVES.get(language, "")
-        constraints = " ".join(part for part in (directive, self.PACING_DIRECTIVE) if part)
+        preferences, preference_text = {}, ""
+        if getattr(self, "_store", None):
+            from .learning_preferences import load_preferences, preference_prompt
+            preferences = load_preferences(self._store)
+            preference_text = preference_prompt(preferences)
+            turn_preferences = getattr(self, "_study_turn_preferences", None)
+            if turn_preferences:
+                preferences.update(turn_preferences)
+                preference_text = preference_prompt(preferences, temporary=True)
+        pacing = self.PACING_DIRECTIVE
+        if preferences.get("proactive_quiz"):
+            pacing = pacing.replace("no self-quiz at the end.", "a short check question is permitted if appropriate.")
+        if preferences.get("length") in {"balanced", "detailed"}:
+            pacing = pacing.replace("Keep the spoken answer brief by default.", "Follow the saved reply length when no length is requested.")
+        constraints = " ".join(part for part in (directive, pacing, preference_text) if part)
         if constraints and body:
             return f"{body}\n\n[Teaching constraints] {constraints}"
         return body or constraints
+
+    @llm_tool(
+        name="study_preferences",
+        description=("Read or change teaching preferences in the existing learning database. "
+                     "Set remember=true only when the learner explicitly asks for an ongoing "
+                     "preference. A request for this answer only must stay temporary and must "
+                     "not change course language. Omit preferences to read current defaults."),
+        parameters={"type": "object", "properties": {
+            "preferences": {"type": "object", "properties": {
+                "language": {"type": "string", "enum": ["zh-CN", "zh-TW", "en-US"]},
+                "length": {"type": "string", "enum": ["brief", "balanced", "detailed"]},
+                "explanation_style": {"type": "string", "enum": ["step_by_step", "example_first", "direct"]},
+                "proactive_quiz": {"type": "boolean"}}, "additionalProperties": False},
+            "remember": {"type": "boolean", "default": False}}},
+        timeout=20.0,
+    )
+    async def study_preferences_tool(self, *, preferences=None, remember=False, **_):
+        from .learning_preferences import load_preferences, update_preferences
+        if preferences is None:
+            return {"ok": True, "preferences": load_preferences(self._store), "persisted": False}
+        try:
+            async with self._lock:
+                result = await asyncio.to_thread(update_preferences, self._store, preferences, remember=remember)
+                if not remember:
+                    self._study_turn_preferences = dict(preferences)
+        except (ValueError, TypeError) as exc:
+            return {"ok": False, "error": str(exc)}
+        return {"ok": True, **result,
+                "relay": "Confirm briefly. Temporary preferences apply to this answer only; pass them to the teaching tool's question."}
+
+    @llm_tool(
+        name="study_material",
+        description=("Check which explicitly submitted picture is currently available to Study. "
+                     "Call before explaining 'the submitted image', or after a picture/course "
+                     "change. This is a source identity check, not an interpretation of pixels. "
+                     "Use study_explain for the reliable configured vision model."),
+        parameters={"type": "object", "properties": {}}, timeout=20.0,
+    )
+    async def study_material_tool(self, **_):
+        image = str(getattr(self._state, "last_vision_image_base64", "") or "")
+        return {"ok": True, "course_id": str(self._state.study_course_id or "general"),
+                "picture_available": bool(image and self._cfg.llm_vision_enabled),
+                "material_id": hashlib.sha256(image.encode()).hexdigest()[:20] if image else "",
+                "vision_enabled": bool(self._cfg.llm_vision_enabled),
+                "next": "Call study_explain with the learner's question and omit text to inspect this picture. "
+                        "If unavailable, ask for a clear PNG/JPEG submission in Study; do not guess."}
+
+    @llm_tool(
+        name="study_point",
+        description=("Point within the controlled learning surface only. The learner selects the "
+                     "material. Use a verified HTML selector or normalized image rectangle from "
+                     "the current material, never desktop coordinates. Omit kind to inspect the "
+                     "current material identity. This only highlights; it never edits content."),
+        parameters={"type": "object", "properties": {
+            "kind": {"type": "string", "enum": ["selector", "rect", "clear", "status"], "default": "status"},
+            "material_id": {"type": "string"}, "selector": {"type": "string"},
+            "x": {"type": "number"}, "y": {"type": "number"},
+            "width": {"type": "number"}, "height": {"type": "number"},
+            "label": {"type": "string"}}}, timeout=10.0,
+    )
+    async def study_point_tool(self, *, kind="status", material_id="", **kwargs):
+        base = os.environ.get("NEKO_LEARNING_SURFACE_URL", "")
+        token = os.environ.get("NEKO_LEARNING_SURFACE_TOKEN", "")
+        if not base or not token:
+            return {"ok": False, "error": "learning_surface_not_open", "next": "Open Start-Daily-Tutor with its learning surface."}
+        # The launcher owns this loopback endpoint and per-process token.
+        if not re.fullmatch(r"http://127\.0\.0\.1:\d+", base):
+            return {"ok": False, "error": "invalid_learning_surface"}
+        try:
+            async with httpx.AsyncClient(timeout=5, trust_env=False) as client:
+                headers = {"X-Learning-Surface-Token": token}
+                if kind == "status":
+                    response = await client.get(base + "/api/state", headers=headers)
+                else:
+                    command = {"kind": kind, "material_id": material_id,
+                               **{key: kwargs[key] for key in ("selector", "x", "y", "width", "height", "label") if key in kwargs}}
+                    response = await client.post(base + "/api/guidance", json=command, headers=headers)
+                payload = response.json()
+                if response.is_success:
+                    active = payload.get("active_material_id")
+                    payload = {"active_material_id": active,
+                               "material": next((item for item in payload.get("materials", []) if item.get("id") == active), None),
+                               "command": payload.get("command"), "revision": payload.get("revision")}
+                return {"ok": response.is_success, **payload,
+                        "proof": "locator metadata only; guidance is queued until the open surface renders it, and is not vision evidence"}
+        except (httpx.HTTPError, ValueError):
+            return {"ok": False, "error": "learning_surface_unavailable", "next": "Reopen the learning surface and inspect its current material; do not reuse old coordinates."}
 
     @llm_tool(
         name="study_scope",
@@ -457,13 +572,24 @@ class _StudyAvatarToolsMixin:
                     "error": f"unsupported teaching language {language!r}",
                     "supported": sorted(set(self.LANGUAGE_ALIASES.values()))}
         scope = str(scope or "course").strip().lower()
+        if scope not in {"clear", "default", "course"}:
+            return {"ok": False, "error": "scope must be course, default or clear"}
         async with self._lock:
             if scope == "clear":
                 self._state.teaching_language = ""
                 course = str(self._state.study_course_id or "")
                 self._state.teaching_language_by_course.pop(course, None)
+                if getattr(self, "_store", None):
+                    preferences = self._store.get_raw("learning_preferences") or {}
+                    if isinstance(preferences, dict):
+                        preferences.pop("language", None)
+                        self._store.set_raw("learning_preferences", preferences)
+                self._cfg.language = getattr(self, "_study_config_default_language", "zh-CN")
             elif scope == "default":
                 self._state.teaching_language = resolved
+                if getattr(self, "_store", None):
+                    from .learning_preferences import update_preferences
+                    update_preferences(self._store, {"language": resolved}, remember=True)
             else:
                 course = str(self._state.study_course_id or "general")
                 self._state.teaching_language_by_course[course] = resolved
@@ -620,7 +746,11 @@ class _StudyAvatarToolsMixin:
             "follow-ups such as 'why?', 'simpler', 'give me a counter-example', or a "
             "language request like 'in English' - that request changes this answer only, "
             "so do not save it with study_language unless the learner wants it to stick. "
-            "This is the main teaching tool."
+            "For a visible diagram, text must contain the module names and directed "
+            "connections you actually observed, including uncertainties, unless a "
+            "picture was explicitly submitted to Study and is available as context. "
+            "This tool has no live Realtime screen feed; OCR words alone do not "
+            "establish arrows. This is the main teaching tool."
         ),
         parameters={
             "type": "object",
@@ -628,13 +758,24 @@ class _StudyAvatarToolsMixin:
                 "question": {"type": "string", "default": "",
                              "description": "What the learner wants explained, in their words."},
                 "text": {"type": "string", "default": "",
-                         "description": "Source code or notes to explain; omit to reuse captured material."},
+                         "description": "Source code or notes; for diagrams include current visible modules and directed edges. Omit only to reuse captured text material."},
             },
         },
         timeout=150.0,
     )
     async def study_explain_tool(self, *, question: str = "", text: str = "", **_):
-        requested = _turn_language_request(question, text)
+        requested = _turn_language_request(question, text) or str((getattr(self, "_study_turn_preferences", None) or {}).get("language") or "")
+        cached_image = str(getattr(getattr(self, "_state", None), "last_vision_image_base64", "") or "").strip()
+        has_image_context = bool(getattr(getattr(self, "_cfg", None), "llm_vision_enabled", False) and cached_image)
+        if (not str(text or "").strip()
+                and not has_image_context
+                and re.search(r"架构图|流程图|关系图|箭头|diagram|arrow", question, re.I)
+                and re.search(r"这|图中|图上|当前|刚|屏幕|this|current|screen", question, re.I)):
+            # OCR material does not establish the current diagram's relations.
+            # Never ask the text model to invent a missing visual source.
+            return json.loads(_teaching(
+                tool="study_explain", degraded=True, diagnostic="visual_context_missing",
+                failure_language=requested or self._study_effective_language()))
         # previous first: the directive below writes the remembered course preference
         # into cfg.language, and that is the value a one-off request has to go back to.
         previous = str(getattr(self._cfg, "language", "") or "")

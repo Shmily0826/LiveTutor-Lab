@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from copy import deepcopy
 from dataclasses import dataclass, field
 from http import HTTPStatus
 import time
@@ -17,6 +18,24 @@ from .qwen_native_client import (
     _OUTPUT_TOKEN_BUDGETS,
     messages_have_image,
 )
+
+
+def _high_detail_study_images(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Study screenshots contain small labels and arrowheads; preserve detail.
+
+    Keep an explicitly chosen low/high level and the caller's messages intact.
+    """
+    result = deepcopy(messages)
+    for message in result:
+        content = message.get("content")
+        if not isinstance(content, list):
+            continue
+        for part in content:
+            image = part.get("image_url") if isinstance(part, dict) else None
+            if (isinstance(image, dict) and part.get("type") == "image_url"
+                    and image.get("detail", "auto") == "auto"):
+                image["detail"] = "high"
+    return result
 
 try:
     import utils.config_manager as _config_manager_module
@@ -529,6 +548,8 @@ class StudyModelGateway:
         client: Any = None
         has_image = messages_have_image(messages)
         try:
+            if has_image:
+                messages = _high_detail_study_images(messages)
             client = await create_chat_llm_async(
                 model=runtime.model,
                 base_url=runtime.base_url,

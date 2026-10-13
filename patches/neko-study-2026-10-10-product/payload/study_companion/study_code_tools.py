@@ -17,6 +17,7 @@ import os
 import re
 import shutil
 import subprocess
+import httpx
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -551,7 +552,9 @@ class _StudyCodeToolsMixin:
                  f" The repository has moved since the learner authorized it "
                  f"({authorized['commit']} -> {head}): these line numbers belong to {head}, "
                  "so mention the revision when you cite a line.")
+        surface = await _publish_code_surface(authorized["name"], head or authorized["commit"], evidence)
         return {"ok": True, "mode": sub, "project": authorized["name"], "commit": authorized["commit"],
+                "learning_surface": surface,
                 "repo_commit": head or authorized["commit"], "evidence": evidence,
                 "filtered": stats, "shown": shown, "index_sync": synced,
                 "note": (f"Filtered source evidence from the authorized project only. Shown: {ranges}. "
@@ -560,6 +563,20 @@ class _StudyCodeToolsMixin:
                          "facts; if you describe a call site, a widget, a button or a behaviour whose "
                          f"lines are not in that list, say you are inferring it, and never phrase it as "
                          f"something already read ('we saw earlier', 'as shown before').{barren}{moved}")}
+
+
+async def _publish_code_surface(project, commit, evidence):
+    base = os.environ.get("NEKO_LEARNING_SURFACE_URL", "")
+    token = os.environ.get("NEKO_LEARNING_SURFACE_TOKEN", "")
+    if not base or not token or not re.fullmatch(r"http://127\.0\.0\.1:\d+", base):
+        return {"available": False}
+    try:
+        async with httpx.AsyncClient(timeout=5, trust_env=False) as client:
+            response = await client.post(base + "/api/code-evidence", json={"project": project, "repo_commit": commit, "evidence": evidence},
+                                         headers={"X-Learning-Surface-Token": token})
+        return {"available": response.is_success, **response.json()}
+    except (httpx.HTTPError, ValueError):
+        return {"available": False, "reason": "learning_surface_unavailable"}
 
 
 async def _run(command: list[str], timeout: float = _TIMEOUT_SECONDS) -> subprocess.CompletedProcess:

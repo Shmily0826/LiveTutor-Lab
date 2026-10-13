@@ -1,31 +1,27 @@
 {
   "source_host_revision": "1d814cf32fba8c02b5727d2890710e4e7b8ece24",
   "base_plugin": "benchmarks/raw/neko-app/resources/bin/plugins/study_companion (preserved existing patched release tree)",
-  "deployment": "benchmarks/raw/neko-teaching-quality-20261013/plugin-code/study_companion",
+  "deployment": "benchmarks/raw/neko-daily-acceptance-20261014/plugin-code/study_companion",
   "data_copied_from_base": false,
   "files": [
     {
       "path": "payload/study_companion/__init__.py",
-      "sha256": "cd8d172f23fd0cc79cf6183eeeacba04fd4920991b11acc31a87a28d31f842f1",
-      "deployed_matches": false,
-      "accepted_local_deployed_sha256": "f2a544c09fa6f30989f85dec88b9eba0e25f2cbdfc484ddb46f8b5aad7a2775c",
-      "accepted_local_deployed_matches": true
+      "sha256": "dbaa7ecbc4ec1a8bbf71fcb05d33501388d2132335a9ef80cb4996e9767946ee",
+      "deployed_matches": true
     },
     {
       "path": "payload/study_companion/entry_ocr_entries.py",
-      "sha256": "12bf26b19ba671f0458996ca48957aa707b625d80ebafc2537a3369a48402217",
-      "deployed_matches": false,
-      "accepted_local_deployed_sha256": "940bd60679a458121a9e15b602a526601dcf44266daa3eafecd72b2b33e545b8",
-      "accepted_local_deployed_matches": true
+      "sha256": "940bd60679a458121a9e15b602a526601dcf44266daa3eafecd72b2b33e545b8",
+      "deployed_matches": true
     },
     {
       "path": "payload/study_companion/entry_tutor_context_support.py",
-      "sha256": "9f0cb295cabef9f64355737fe742b85c0cceb8febde00b14501b09782b0ca266",
+      "sha256": "d89d672ed2ce2fa8fbd77d625f58c0b77a0008531d46eea73e03e9ef1a74197b",
       "deployed_matches": true
     },
     {
       "path": "payload/study_companion/entry_tutor_question_entries.py",
-      "sha256": "622de1d896e61dc859536a3adeb7c35e87429bb04a014a73f25e22544b8ac471",
+      "sha256": "4d0e559545173b657edc57cd5981d41524576513562d282328ad118b81cc591b",
       "deployed_matches": true
     },
     {
@@ -45,7 +41,7 @@
     },
     {
       "path": "payload/study_companion/llm_prompts.py",
-      "sha256": "a43f66e909874d5465e6cf85d3952daa5eef1696d607d4d20691d4fcf0f2ce34",
+      "sha256": "2d622071c365d0e6787748f1ef16a4fff30690fc81f772bb91ff92e95b3a2471",
       "deployed_matches": true
     },
     {
@@ -80,27 +76,23 @@
     },
     {
       "path": "payload/study_companion/study_model_gateway.py",
-      "sha256": "a5252e9029d4584b1fbd43b0f84a99138b0e09c82220a67bfe9b74c8668a1a65",
+      "sha256": "52f94943838355ce19dbb060f1740cce5f791fe2370d03252948792c8e7411a6",
       "deployed_matches": true
     },
     {
       "path": "static/index.html",
-      "sha256": "3da6dd42e866859781d732db4ceffec6c151295d0d67d99e539dcf1d1aebf18f",
+      "sha256": "70a3429f3dfeb120ac44bb64c77b9e593c05346b2295811deaf23decea6e8ef2",
       "deployed_matches": true
     },
     {
       "path": "static/main.js",
-      "sha256": "a5fa8bc95cac7975326ff18f9a44c9bbb71b0284520b66f27ff181f00b384d7a",
-      "deployed_matches": false,
-      "accepted_local_deployed_sha256": "387ce8b3bf42e2f1506ca7a4022012f1e90a7b2e95083dc4348dd0cb590e7b17",
-      "accepted_local_deployed_matches": true
+      "sha256": "6d38a1e61578791929a388435e3a3ab6860f6f748a02da44e1c97212e70f0cff",
+      "deployed_matches": true
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
-      "sha256": "d4d9fac7d8905aa8949dd49bed026050937bcbd0d5715c01ec6cedac40bfd6e8",
-      "deployed_matches": false,
-      "accepted_local_deployed_sha256": "d754bdf2ab2d84440f64e3895f7b44fafccd19f890e58338bfcd4cf676dc6a3f",
-      "accepted_local_deployed_matches": true
+      "sha256": "703f75e124c8ec6261f5914e7d73ae2b720242d630f045bf6718743106af516e",
+      "deployed_matches": true
     },
     {
       "path": "payload/study_companion/study_ocr_pipeline.py",
@@ -109,9 +101,24 @@
     },
     {
       "path": "payload/study_companion/study_code_tools.py",
-      "sha256": "916b4f3f66cc36815209de832a4abb168a7e4a0583ffb31e78442163a2029f46",
+      "sha256": "a0e084314b5882507769dc598f820a6654bd22340f37b7b01c853ae9737f5f9e",
       "deployed_matches": true,
       "reason": "Required existing avatar code-tool mixin; included during publication dependency closure"
+    },
+    {
+      "path": "payload/study_companion/entry_tutor_explain_entries.py",
+      "sha256": "2630e8979ba872ad9a3d1d08213f78875fd15e494d54b4fb41607c75d9afa8d8",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/learning_preferences.py",
+      "sha256": "95a3d31a9f2722a41c662b4ce8a17a02eba9cd24d9339c9c6babf0b0751cb8d2",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/study_materials.py",
+      "sha256": "0f15fa494acdafade4c93a98dfe1d0cf688b2a4b6792c2174fbbce0c7992a26d",
+      "deployed_matches": true
     }
   ],
   "prior_deployment": "benchmarks/raw/neko-product-data/plugin-code/study_companion",
@@ -173,7 +180,6 @@
   "publication_dependency_closure": {
     "required_product_files": 20,
     "prior_goal_audit_manifest_files": 19,
-    "extra_existing_runtime_file": "payload/study_companion/study_code_tools.py",
-    "published_eol": "LF, per repository attributes; accepted original deployment hashes retained where raw CRLF differed"
+    "extra_existing_runtime_file": "payload/study_companion/study_code_tools.py"
   }
 }

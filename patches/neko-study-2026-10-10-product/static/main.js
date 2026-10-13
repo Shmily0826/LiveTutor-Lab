@@ -16,6 +16,7 @@ const ENTRY_TIMEOUT_MS = {
   study_ocr_snapshot: 100000,
   study_set_mode: 15000,
   study_explain_text: 120000,
+  study_submit_image: 120000,
   study_generate_question: 75000,
   study_question_context: 30000,
   study_generate_targeted_question: 60000,
@@ -131,6 +132,7 @@ const nekoCoachActionButtons = Array.from(document.querySelectorAll('[data-neko-
 const firstRunGuide = $id('firstRunGuide');
 const firstRunSteps = $id('firstRunSteps');
 const firstRunSkipBtn = $id('firstRunSkipBtn');
+const firstRunStageBtn = $id('firstRunStageBtn');
 const advancedToggleBtn = $id('advancedToggleBtn');
 const advancedSettings = $id('advancedSettings');
 const settingsTabs = Array.from(document.querySelectorAll('[data-settings-tab]'));
@@ -183,6 +185,9 @@ let uiActionInFlight = false;
 let hasInitializedCourseInput = false;
 let studyInputImageValue = '';
 let answerInputImageValue = '';
+let studyMaterialRevision = 0;
+let statusRefreshRevision = 0;
+let studyServiceReady = false;
 let pastePendingCount = 0;
 let llmVisionMaxImagePx = DEFAULT_VISION_MAX_IMAGE_PX;
 let currentQuestion = null;
@@ -415,10 +420,15 @@ function renderFeedback(data = {}) {
 }
 
 function formatPluginError(error) {
+  if (isStudyConnectionError(error)) return '学习服务连接失败。图片已保留；请点击刷新，恢复连接后再讲解。';
   if(error instanceof Error&&error.message==='plugin_call_timeout')return t('ui.error.plugin_call_timeout','Plugin call timed out');
   if(error instanceof Error&&error.message==='run_id_missing')return t('ui.error.run_id_missing','Run id missing');
   if(error instanceof Error&&error.message==='plugin_call_failed')return t('ui.error.plugin_call_failed','Plugin call failed');
   return error instanceof Error ? error.message : String(error);
+}
+
+function isStudyConnectionError(error) {
+  return /Failed to fetch|NetworkError|fetch failed|HTTP 50[234]|HTTP 429/i.test(String(error?.message || error));
 }
 
 function formatTutorDiagnostic(diagnostic) {
@@ -445,14 +455,22 @@ function setPasteError(target, message) {
   target.hidden = !message;
 }
 
-function setImagePreview(kind, dataUrl) {
+function setImagePreview(kind, dataUrl, controller = null) {
+  if (pasteControllers[kind] && pasteControllers[kind] !== controller) pasteControllers[kind].abort();
   const isAnswer = kind === 'answer';
   const preview = isAnswer ? answerInputImagePreview : studyInputImagePreview;
   const image = isAnswer ? answerInputImage : studyInputImage;
   if (isAnswer) {
     answerInputImageValue = dataUrl || '';
   } else {
+    if (studyInputImageValue !== (dataUrl || '')) {
+      studyMaterialRevision += 1;
+      previousExplanation = null;
+      if (usePreviousExplanation) { usePreviousExplanation.checked = false; usePreviousExplanation.disabled = true; }
+    }
     studyInputImageValue = dataUrl || '';
+    const imageStatus = $id('studyImageStatus');
+    if (imageStatus) imageStatus.textContent = dataUrl ? '图片已选好。点击讲解，将替换当前课程的旧图片。' : '可选择或粘贴图片；点击讲解后，角色可接着讲。';
     if (dataUrl) {
       ocrN = ocrT = '';
       ocrSelectedWindow.textContent = '';
@@ -469,6 +487,18 @@ function setImagePreview(kind, dataUrl) {
   if (preview) {
     preview.hidden = !dataUrl;
   }
+}
+
+function beginImageSelection(kind) {
+  pasteControllers[kind]?.abort();
+  const controller = new AbortController();
+  pasteControllers[kind] = controller;
+  if (kind === 'study') studyMaterialRevision += 1;
+  return controller;
+}
+
+function studyContextIsCurrent(revision, course) {
+  return revision === studyMaterialRevision && course === String(lastStatusPayload?.study_course_id || lastStatusPayload?.state?.study_course_id || '').trim();
 }
 
 function normalizeVisionMaxImagePx(value) {
@@ -597,9 +627,7 @@ function createImagePasteHandler(options) {
       return;
     }
     event.preventDefault();
-    pasteControllers[kind]?.abort();
-    const controller = new AbortController();
-    pasteControllers[kind] = controller;
+    const controller = beginImageSelection(kind);
     setPasteError(errorTarget, '');
     setPastePending(true);
     try {
@@ -622,7 +650,7 @@ function createImagePasteHandler(options) {
             setPasteError(errorTarget, t('ui.error.image_paste_failed', 'Image paste failed. Please try a smaller JPEG or PNG image.'));
             continue;
           }
-          setImagePreview(kind, image);
+          setImagePreview(kind, image, controller);
           setPasteError(errorTarget, '');
         } else if (item.type === 'text/plain') {
           item.getAsString((pastedText) => {
@@ -752,11 +780,7 @@ function renderFirstRunGuide() {
   const profileNeedsSetup = learningProfileNeedsSetup();
   const shouldShow = profileNeedsSetup && !firstRunDismissed && !advancedSettingsOpen;
   firstRunGuide.hidden = !shouldShow;
-  if (shouldShow) {
-    openLearningProfileModal();
-  } else {
-    closeLearningProfileModal();
-  }
+  if (!shouldShow) closeLearningProfileModal();
   if (!shouldShow) {
     return;
   }
@@ -1305,8 +1329,21 @@ async function chooseDeckForFirstCard() {
 }
 
 function setStatusLine(data) {
-  lastStatusPayload = data || {};
+  const previousCourse = String(lastStatusPayload?.study_course_id || lastStatusPayload?.state?.study_course_id || '').trim();
   const course = String(data.study_course_id || data.state?.study_course_id || '').trim();
+  if (previousCourse && course && previousCourse !== course) {
+    studyMaterialRevision += 1;
+    setImagePreview('study', '');
+    setImagePreview('answer', '');
+    setPasteError(studyInputPasteError, '');
+    setPasteError(answerInputPasteError, '');
+    studyInput.value = '';
+    previousExplanation = null;
+    if (usePreviousExplanation) { usePreviousExplanation.checked = false; usePreviousExplanation.disabled = true; }
+    const imageStatus = $id('studyImageStatus');
+    if (imageStatus) imageStatus.textContent = '课程已切换。旧图片预览已清除；请为当前课程选择材料。';
+  }
+  lastStatusPayload = data || {};
   if (selectedStudyCourse) selectedStudyCourse.textContent = `当前课程：${course || '未选择'}`;
   if (!hasInitializedCourseInput && course && studyCourseId
       && studyCourseId.value === 'flutter-provider' && document.activeElement !== studyCourseId) {
@@ -1861,7 +1898,9 @@ async function exportRunResult(runId, deadline = Date.now() + RUN_TIMEOUT_MS, si
       const item = items.find((candidate) => candidate.type === 'json' && candidate.json);
       const pluginResponse = item ? (item.json || {}) : {};
       if (pluginResponse.success === false || pluginResponse.error) {
-        throw new Error(pluginResponse.error?.message || pluginResponse.message || t('ui.error.plugin_call_failed', 'Plugin call failed'));
+        const error = new Error(pluginResponse.error?.message || pluginResponse.message || t('ui.error.plugin_call_failed', 'Plugin call failed'));
+        error.code = pluginResponse.error?.code || '';
+        throw error;
       }
       if (!item) {
         throw new Error(t('ui.error.plugin_call_failed', 'Plugin call failed'));
@@ -1909,8 +1948,18 @@ async function callPlugin(entryId, args = {}, signal) {
 }
 
 async function refreshStatus(_options = {}) {
+  const requestRevision = ++statusRefreshRevision;
   setStatus(t('ui.status.refreshing', 'Refreshing...'));
-  const data = await callPlugin('study_status');
+  let data;
+  try {
+    data = await callPlugin('study_status');
+  } catch (error) {
+    if (requestRevision !== statusRefreshRevision) return;
+    studyServiceReady = false;
+    throw error;
+  }
+  if (requestRevision !== statusRefreshRevision) return;
+  studyServiceReady = true;
   applyRuntimeConfig(data);
   setStatusLine(data);
 }
@@ -1946,6 +1995,13 @@ function clearOcrAttribution() {
 }
 
 async function runOcr() {
+  const windowOptions = $id('windowCaptureOptions');
+  if (windowOptions && !windowOptions.open) {
+    windowOptions.open = true;
+    ocrWindowTitle.focus();
+    setStatus('先核对要学习的窗口标题和内容标记，再点击读取。');
+    return;
+  }
   clearOcrAttribution();
   const title = ocrWindowTitle.value.trim();
   const markers = [...new Set(ocrExpectedMarkers.value.split(/\r?\n/).map((value) => value.trim()).filter(Boolean))];
@@ -2009,6 +2065,19 @@ function buildFollowupText(text, previous) {
 }
 
 async function explainText(options = {}) {
+  if (!studyServiceReady) throw new Error('教学服务尚未就绪。请点击刷新，连接恢复后再讲解图片。');
+  if (pastePendingCount) throw new Error('图片正在读取，请稍候再讲解。');
+  if (studyInputImageValue) {
+    const revision = studyMaterialRevision;
+    const course = String(lastStatusPayload?.study_course_id || lastStatusPayload?.state?.study_course_id || '').trim();
+    try {
+      await refreshStatus({ updateReply: false });
+    } catch (error) {
+      if (!studyContextIsCurrent(revision, course)) return;
+      throw error;
+    }
+    if (!studyContextIsCurrent(revision, course)) return;
+  }
   const text = studyInput.value.trim();
   if (!text && !studyInputImageValue) {
     throw new Error(t('ui.error.missing_study_input', 'Please enter text or paste an image first.'));
@@ -2025,22 +2094,38 @@ async function explainText(options = {}) {
   setReply(n ? `${n}\n\n${pending}` : pending);
   scrollReplyIntoView();
   const args = { text: requestText };
-  if (studyInputImageValue) {
-    args.vision_image_base64 = studyInputImageValue;
+  const materialRevision = studyMaterialRevision;
+  const course = String(lastStatusPayload?.study_course_id || lastStatusPayload?.state?.study_course_id || '').trim();
+  const imageSubmitted = Boolean(studyInputImageValue);
+  if (imageSubmitted) {
+    args.image_base64 = studyInputImageValue;
+    args.expected_course_id = course;
+    if (!args.text) args.text = '简短解释这张图片，一次一个概念。看不清的文字或箭头请明确说明，不要猜测。不要主动出题。';
   }
   let data;
   try {
-    data = await callPlugin('study_explain_text', args);
+    data = await callPlugin(imageSubmitted ? 'study_submit_image' : 'study_explain_text', args);
   } catch (error) {
+    if (!studyContextIsCurrent(materialRevision, course)) return;
+    if (error.code === 'course_context_changed' || String(error.message || '').includes('课程已切换，请重新选择当前课程的图片后提交。')) {
+      await refreshStatus({ updateReply: false });
+      return;
+    }
+    if (isStudyConnectionError(error)) studyServiceReady = false;
     if (n) error.n = n;
     throw error;
   }
+  if (!studyContextIsCurrent(materialRevision, course)) return;
   setStatus(data.degraded
     ? t('ui.status.reply_ready_fallback', 'Reply ready (fallback)')
     : t('ui.status.reply_ready', 'Reply ready'));
   if (!data.degraded && data.reply) {
     previousExplanation = {input: text, reply: data.reply};
     if (usePreviousExplanation) usePreviousExplanation.disabled = false;
+    if (imageSubmitted) {
+      const imageStatus = $id('studyImageStatus');
+      if (imageStatus) imageStatus.textContent = '图片已交给当前课程。可以在角色窗口说：“讲解刚提交的图片”，或继续追问。';
+    }
   }
   setReply([
     n,
@@ -2387,6 +2472,38 @@ async function bootstrap() {
       setPasteError(studyInputPasteError, '');
     });
   }
+  const imageFile = $id('studyImageFile');
+  const imageChoose = $id('studyImageChoose');
+  if (imageChoose && imageFile) {
+    imageChoose.addEventListener('click', () => imageFile.click());
+    imageFile.addEventListener('change', async () => {
+      const file = imageFile.files?.[0];
+      if (!file) return;
+      imageChoose.disabled = true;
+      let controller;
+      try {
+        if (!['image/png', 'image/jpeg'].includes(file.type)) throw new Error('请选择 PNG 或 JPEG 图片。');
+        if (file.size > 20 * 1024 * 1024) throw new Error('图片超过 20 MB，请先缩小图片再提交。');
+        controller = beginImageSelection('study');
+        setPastePending(true);
+        const image = await compressImageForStudy(file, controller.signal);
+        if (controller.signal.aborted) return;
+        if (!image) throw new Error('图片未能读取，请重新选择清晰的 PNG 或 JPEG。');
+        setImagePreview('study', image, controller);
+        setPasteError(studyInputPasteError, '');
+        $id('studyImageStatus').textContent = `${file.name} 已选好。点击讲解，将替换当前课程的旧图片。`;
+      } catch (error) {
+        if (!controller?.signal.aborted) setPasteError(studyInputPasteError, error.message || '图片未能读取，请重新选择。');
+      } finally {
+        if (controller) {
+          if (pasteControllers.study === controller) pasteControllers.study = null;
+          setPastePending(false);
+        }
+        imageChoose.disabled = false;
+        imageFile.value = '';
+      }
+    });
+  }
   if (answerInputImageRemove) {
     answerInputImageRemove.addEventListener('click', () => {
       setImagePreview('answer', '');
@@ -2413,6 +2530,7 @@ async function bootstrap() {
       renderFirstRunGuide(lastStatusPayload);
     });
   }
+  firstRunStageBtn?.addEventListener('click', openLearningProfileModal);
   if (advancedToggleBtn) {
     advancedToggleBtn.addEventListener('click', () => {
       setAdvancedSettingsOpen(!advancedSettingsOpen);

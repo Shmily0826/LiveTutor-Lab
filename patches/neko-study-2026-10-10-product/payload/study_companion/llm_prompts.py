@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from typing import Any
+from .learning_preferences import preference_prompt
 
 from .prompt_templates import (
     STUDY_ANSWER_EVALUATE_EXAMPLE,
@@ -48,6 +49,8 @@ _PROMPT_CONTEXT_ALLOWED_FIELDS = frozenset(
         "course_learning_state",
         "input_text",
         "language",
+        "learning_preferences",
+        "learning_preferences_scope",
         "mode",
         "source",
         "source_text",
@@ -392,7 +395,7 @@ def _build_structured_messages(
     if mode:
         prompt = STUDY_STRUCTURED_MODE_PREFIX_TEMPLATE.format(mode=normalize_mode(mode), prompt=prompt)
     return [
-        {"role": "system", "content": system_prompt},
+        {"role": "system", "content": system_prompt + preference_prompt(context.get("learning_preferences"), temporary=context.get("learning_preferences_scope") == "turn")},
         {"role": "user", "content": prompt},
     ]
 
@@ -438,7 +441,7 @@ def build_concept_explain_messages(
             "content": STUDY_CONCEPT_EXPLAIN_SYSTEM_WITH_MODE_TEMPLATE.format(
                 system_prompt=STUDY_CONCEPT_RESPONSE_MODE_SYSTEM_PROMPT,
                 mode_guidance=_mode_guidance(selected_mode),
-            ) + (
+            ) + preference_prompt(context.get("learning_preferences"), temporary=context.get("learning_preferences_scope") == "turn") + (
                 "\nWhen a learner challenges an earlier claim, re-evaluate it from the "
                 "supplied evidence. If it was wrong, say plainly what was wrong and "
                 "replace it; do not invent a justification to defend it. Treat OCR as "
@@ -583,7 +586,7 @@ def _summarize_context(context: dict[str, Any]) -> dict[str, Any]:
     model reported the session as "limited".
     """
     compact = {key: context[key] for key in
-               ("operation", "input_text", "language", "mode", "course_id", "focus", "session_summary_seed")
+               ("operation", "input_text", "language", "learning_preferences", "learning_preferences_scope", "mode", "course_id", "focus", "session_summary_seed")
                if key in context}
     session_rows = _summary_interaction_rows(context.get("session_history"))
     history_rows = _summary_interaction_rows(context.get("history"))

@@ -580,6 +580,13 @@ class _TutorQuestionEntriesMixin:
                 public_payload["question_topic_label"] = model_topic_label
         else:
             private_payload = _question_private_payload(dict(reply.payload or {}), {"source": source})
+            selected_topic = str(tutor_context.get("selected_topic_id") or "").strip()
+            if selected_topic:
+                # Repeating a learner-selected concept must update its existing card.
+                model_label = str(private_payload.get("topic") or "").strip()
+                private_payload.update({"selected_topic_id": selected_topic, "topic": selected_topic})
+                if model_label:
+                    private_payload["question_topic_label"] = model_label
             reply = TutorReply(
                 operation=reply.operation,
                 input_text=reply.input_text,

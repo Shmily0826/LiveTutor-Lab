@@ -6,6 +6,7 @@
     <!-- Fallback only for local/Electron loads; meta CSP cannot express dynamic localhost ports or frame-ancestors. -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; base-uri 'self'; object-src 'none'" />
     <title>Study Companion</title>
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="./katex.min.css?v=study-hotfix-20260615v" />
     <link rel="stylesheet" href="./style.css?v=study-knowledge-window-size-20260813" />
   </head>
@@ -83,6 +84,8 @@
             <button id="startCourseSessionBtn" class="button button-secondary" type="button">开始 / 重新开始 Session</button>
             <span id="selectedStudyCourse" aria-live="polite">当前课程：未选择</span>
           </div>
+          <details id="windowCaptureOptions">
+          <summary>读取指定学习窗口（可选）</summary>
           <label class="setting-field" for="ocrWindowTitle">
             <span>授权学习窗口的完整标题（必须精确匹配）</span>
             <input id="ocrWindowTitle" type="text" required autocomplete="off" value="LiveTutor Flutter Provider Lesson" placeholder="授权窗口的完整标题" />
@@ -94,8 +97,9 @@ notifyListeners
 context.watch
 context.read</textarea>
           </label>
-          <p>以上预填内容对应启动时打开的 Flutter 演示窗口，课程 ID 和窗口信息都可以修改。点击「读取指定窗口」后有 5 秒切换到授权窗口。读取只填入原始文字；检查后再点击「Explain」发送给 Tutor。</p>
+          <p>填写要学习的课程 ID、窗口标题和内容标记。点击「读取指定窗口」后有 5 秒切换到该窗口；读取的文字可先检查，再点击「Explain」讲解。学习图片可直接在下方选择或粘贴。</p>
           <p id="ocrSelectedWindow" aria-live="polite" hidden></p>
+          </details>
         </section>
 
         <nav class="feature-dock" data-i18n-aria-label="ui.feature.nav_label" aria-label="Study companion features">
@@ -165,7 +169,10 @@ context.read</textarea>
                 <span class="diagnosis-label" data-i18n="ui.onboarding.label">First Run</span>
                 <h2 id="firstRunTitle" data-i18n="ui.onboarding.title">Set up your study flow</h2>
               </div>
-              <button id="firstRunSkipBtn" class="button button-secondary" type="button" data-i18n="ui.button.skip">Skip</button>
+              <div class="action-row">
+                <button id="firstRunStageBtn" class="button button-secondary" type="button">设置学习阶段</button>
+                <button id="firstRunSkipBtn" class="button button-secondary" type="button" data-i18n="ui.button.skip">Skip</button>
+              </div>
             </div>
             <div id="firstRunSteps" class="first-run-steps"></div>
           </section>
@@ -337,6 +344,11 @@ context.read</textarea>
                 <button id="studyInputImageRemove" class="study-panel__image-remove" type="button" data-i18n-aria-label="ui.label.remove_pasted_image">x</button>
               </div>
               <div id="studyInputPasteError" class="study-panel__paste-error" role="alert" hidden></div>
+              <div class="actions-row">
+                <button id="studyImageChoose" class="button" type="button">选择学习图片</button>
+                <input id="studyImageFile" type="file" accept="image/png,image/jpeg" aria-label="选择 PNG 或 JPEG 学习图片" hidden />
+                <span id="studyImageStatus" role="status" aria-live="polite">可选择或粘贴图片；点击讲解后，角色可接着讲。</span>
+              </div>
               <div class="action-row">
                 <button id="explainBtn" class="button button-primary" type="button" data-i18n="ui.button.explain">Explain</button>
                 <button id="generateFromMaterialBtn" class="button button-secondary" type="button">根据输入内容出题</button>
@@ -637,6 +649,6 @@ context.read</textarea>
     <script src="./outcome-formatters.js?v=study-hotfix-20260812"></script>
     <script src="./model-runtime.js?v=study-provider-gateway-20260813"></script>
     <script src="./request-utils.js?v=study-request-abort-20260819"></script>
-    <script src="./main.js?v=lab-product-20261010-material-v2"></script>
+    <script src="./main.js?v=daily-companion-20261014"></script>
   </body>
 </html>

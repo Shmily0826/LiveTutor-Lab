@@ -400,6 +400,7 @@ def authorize_code_project(root: Path, store: Path) -> dict:
 
 
 def main() -> int:
+    global BROWSER_PROFILE, BROWSER_OWNER_FILE
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--minutes", type=int, default=240, help="session limit in minutes (default: 4 hours)")
     parser.add_argument("--store", default=PRODUCT_STORE,
@@ -407,6 +408,8 @@ def main() -> int:
     parser.add_argument("--api-budget", type=int, default=30, help="maximum model requests for this launch")
     parser.add_argument("--study-ui", action="store_true",
                         help="also open the Study web panel in a dedicated Chrome window")
+    parser.add_argument("--learning-surface", action="store_true",
+                        help="open controlled read-only diagrams with role highlighting")
     parser.add_argument("--egress-budget", type=int, default=200,
                         help="hard cap on every paid model request, character chat included; "
                              "0 opens the character with no paid call allowed at all")
@@ -421,8 +424,8 @@ def main() -> int:
                              "app rewrites the mainland endpoint lanlan.tech to lanlan.app once its "
                              "own GeoIP lookup calls this machine overseas (core_config.py:795-821); "
                              "allowing only the configured name strands the run on a 403")
-    parser.add_argument("--voice-connects", type=int, default=20,
-                        help="CONNECT cap for each voice host this round (connections, not turns)")
+    parser.add_argument("--voice-connects", default="20",
+                        help="CONNECT cap or 'unlimited' (connections, not turns); existing round ledger wins")
     parser.add_argument("--budget-round", default=None,
                         help="spending round label; restarts in the same round keep the balance")
     parser.add_argument("--chat-surface", choices=("full", "compact"), default=None,
@@ -441,11 +444,16 @@ def main() -> int:
                              "never open a dialog (a driver that cannot answer one hangs); with no "
                              "--code-root at all, a console gets the picker.")
     args = parser.parse_args()
+    if not (args.voice_connects.isdigit() or args.voice_connects == "unlimited"):
+        parser.error("voice-connects must be a nonnegative number or unlimited")
     if args.minutes <= 0 or args.api_budget < 0 or args.egress_budget < 0:
         parser.error("minutes must be positive; api-budget and egress-budget may be 0")
     store = (ROOT / "benchmarks/raw" / args.store).resolve()
     if not store.is_relative_to(ROOT / "benchmarks/raw"):
         parser.error("store must remain inside benchmarks/raw")
+    if args.learning_surface:
+        BROWSER_PROFILE = store / "browser/profile"
+        BROWSER_OWNER_FILE = BROWSER_PROFILE.parent / "browser-owner.json"
     UI_URL = f"http://127.0.0.1:{host.PLUGIN_PORT}{UI_PATH}"
     voice_hosts = [h.strip().lower() for h in args.voice_host.split(",") if h.strip()]
     chat_surface = args.chat_surface or ("compact" if args.voice else "full")
@@ -480,9 +488,8 @@ def main() -> int:
     else:
         print("注意：角色开着就会自己消耗额度——实测一次 3.7 分钟、全程没人说话的宿主，"
               "仍走掉 13 次付费调用。")
-    print("语音：免费 Realtime 已放开（只有原生 realtime 的三个事件例外，外部 TTS 仍被拒）；"
-          "主动捕获仍关闭；学习记录保存在本项目 neko-product-data。" if args.voice else
-          "语音、麦克风与主动捕获已关闭；学习记录保存在本项目 neko-product-data。")
+    print(("语音：原生 Realtime 已放开；主动捕获仍关闭。" if args.voice else
+           "语音、麦克风与主动捕获已关闭。") + f"学习记录与配置：{store}")
     if args.voice:
         print(f"放行域名：{', '.join(voice_hosts)}（各 {args.voice_connects} 条 CONNECT）。"
               "两个都在名单里是因为应用会先做一次 GeoIP 自查（utils/config_manager/core_config.py:330 "
@@ -568,9 +575,28 @@ def main() -> int:
         voice_extra += sum([["--allow-host", f"{h}:{args.voice_connects}"] for h in voice_hosts], [])
     if args.budget_round:
         voice_extra += ["--budget-round", args.budget_round]
+    if args.learning_surface:
+        voice_extra += ["--study-vision"]
+    surface = None
+    launch_env = os.environ.copy()
+    launch_env["PYTHONIOENCODING"] = "utf-8"
+    if args.learning_surface:
+        from neko_learning_surface import LearningSurface, DEFAULT_MATERIALS
+        materials = [path for path in DEFAULT_MATERIALS if path.is_file()]
+        surface = LearningSurface(materials, port=0)
+        threading.Thread(target=surface.serve_forever, daemon=True).start()
+        surface_url = f"http://127.0.0.1:{surface.server_port}"
+        launch_env.update(NEKO_LEARNING_SURFACE_URL=surface_url,
+                          NEKO_LEARNING_SURFACE_TOKEN=surface.token)
+        print(f"只读学习材料与指示：{surface_url}")
+        if browser_args:
+            browser_args = [arg for arg in browser_args if not arg.startswith("--app=")] + ["--new-window", UI_URL, surface_url]
+    store.mkdir(parents=True, exist_ok=True)
+    launcher_log = store / "launcher.log"
+    launcher_output = launcher_log.open("ab")
     launcher = subprocess.Popen(
         host_command(args.minutes, args.api_budget, args.egress_budget, voice_extra, args.store),
-        cwd=str(ROOT), stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+        cwd=str(ROOT), env=launch_env, stdout=launcher_output, stderr=subprocess.STDOUT)
     browser = None
     browser_record = []
     lesson = None
@@ -578,11 +604,12 @@ def main() -> int:
     try:
         ready, reason = plugin_server_ready(240, launcher)
         if not ready:
-            print(f"Study UI 没有就绪：{reason}（详见 benchmarks/raw/neko-desktop-host.log）")
+            print(f"Study UI 没有就绪：{reason}（启动错误：{launcher_log}；运行日志：benchmarks/raw/neko-desktop-host.log）")
             return 1
         print(f"Study UI 已就绪：{UI_URL}")
-        lesson = subprocess.Popen(lesson_command(), cwd=str(ROOT),
-                                  stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+        if not args.learning_surface:
+            lesson = subprocess.Popen(lesson_command(), cwd=str(ROOT),
+                                      stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
         try:
             shell = avatar.launch(store, 150,
                                   chat_surface=chat_surface, cdp_port=args.cdp_port or None,
@@ -597,7 +624,12 @@ def main() -> int:
             browser = subprocess.Popen(browser_args, cwd=str(ROOT))
             remember_browser_tree(browser, browser_record)
         print("\n直接在角色的聊天窗口里说话，例如：")
-        print("  读取「Live Tutor Flutter Provider Lesson」里的代码，用中文讲讲 read 和 watch 的区别。")
+        if args.learning_surface:
+            print("  先在 Study 选择图片，再说：讲讲我交给 Study 的这张图，用两句话。")
+            print("  查询授权项目里的 fetchWeather，讲讲天气请求怎样发出。")
+            print("  在学习材料窗口选当前源码证据，再说：指向刚刚解释的代码行。")
+        else:
+            print("  读取「Live Tutor Flutter Provider Lesson」里的代码，用中文讲讲 read 和 watch 的区别。")
         print("  我没听懂，换个简单点的例子。 / 给我一个反例。 / 给我一题。")
         print("  Explain that in English. / 以后这门课主要用英文教学。")
         print("角色会自己调用读屏、讲解、出题、评分与总结；学习记录保存在项目学习数据库。")
@@ -620,7 +652,11 @@ def main() -> int:
     except KeyboardInterrupt:
         pass
     finally:
-        avatar.shutdown(shell)
+        if surface is not None:
+            surface.shutdown()
+            surface.server_close()
+        if shell is not None:
+            avatar.shutdown(shell)
         if launcher.poll() is None:
             subprocess.run([str(host.SOURCE_PYTHON), str(HOST_SCRIPT), "--stop"], cwd=str(ROOT),
                            capture_output=True, text=True)
@@ -638,6 +674,7 @@ def main() -> int:
                       f"在那之前角色可能仍在收音。")
         if lesson is not None and lesson.poll() is None:
             lesson.terminate()
+        launcher_output.close()
         audit = sorted((ROOT / "benchmarks/raw/evidence").glob("neko-desktop-host-*.json"))
         summary = {}
         if audit:
