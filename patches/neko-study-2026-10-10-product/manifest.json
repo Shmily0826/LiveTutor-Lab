@@ -41,7 +41,7 @@
     },
     {
       "path": "payload/study_companion/llm_prompts.py",
-      "sha256": "17ee9efa904c21a4abbff1bc76011c445d869967b9037e5ce6461718620c7a57",
+      "sha256": "c60e4ed71a044a1c84526075d8b0de47df73be7abe4b1519ff89984d2074a97f",
       "deployed_matches": true
     },
     {
@@ -51,7 +51,7 @@
     },
     {
       "path": "payload/study_companion/prompt_templates.py",
-      "sha256": "0c71a2eca5f6a63bd4d5f03856e3bd8c43155dcc034d95404d1c4757501595a5",
+      "sha256": "9905fd448ef78a3826bcefce6f3fa1d94af33234d379070603ffbe92c31ca721",
       "deployed_matches": true
     },
     {
@@ -266,5 +266,27 @@
     "quiz": "real current-picture question committed but scope-retired before Native relay, 0 PCM/0 loud bins",
     "summary": "18 Native PCM/37 loud bins but no study_summary tool, wrong return-flow gloss; not grounded-tool acceptance",
     "scope": "fixed WAV, no room mic/volume change, one CONNECT, complete245s capture; human pending; post-review probe/guidance only source"
+  },
+  "daily_phase8_summary_roles_update": {
+    "proof": "SOURCE_OFFLINE + quality19 prior-history backend summary only; latest anchor/focus changes not model/Native/device/human verified",
+    "tests": "5 actual summary projection/fresh SQLite tests; affected summary material14 and existing course-memory summary1 passed; combined template/projection syntax valid",
+    "scope": "omit generation material input and empty generated-question rows, distinguish tutor/request/learner answer, preserve bounded original next_action; no DB/history rewrite; filtered-empty current session does not revive older history",
+    "prompt": "explicit contradiction vs omitted detail, grounded spatial/call relation, summary default two spoken sentences includes next action, interaction-kind attribution",
+    "report": "docs/evidence/daily-companion-summary-interaction-roles-2026-10-14.md",
+    "deployment": "26 canonical source files and fixed daily plugin-code bytes match; host remains phase7; phase8 release report records publication"
+  },
+  "daily_phase8_summary_continuity_update": {
+    "proof": "SOURCE_OFFLINE + quality19 limited backend continuity PASS; quality18 real failure retained; latest grade-anchor is offline only",
+    "tests": "7 actual projection/fresh SQLite/two course/reopen/current-context tests plus existing course summary1; original quality18 snapshot last8 projected with grade10/next_action",
+    "scope": "existing course-filtered previous_course_history bounded8 as independent prior source; no new Store system or history rewrite, not added to current-session progress; unknown operation filtered",
+    "report": "docs/evidence/daily-companion-summary-continuity-2026-10-14.md",
+    "real_backend": "quality19 one actual model/SDK/SQLite summary: two sentences, explicit上一轮/更早一轮, existing wrong answer/REZ->NUD->WEX and next action; old rows unchanged; not Native/device/human or later grade-anchor proof"
+  },
+  "daily_phase8_summary_grade_anchor_update": {
+    "proof": "SOURCE_OFFLINE; deployed bytes verified, no new model/Native/device/human proof",
+    "scope": "existing course-filtered recent_answers <=3 prior graded answers, no new SQL/DB; prior/current roles separate; explicit question focus omits unrelated lessons",
+    "tests": "10 actual projection/SQLite/reopen/course/dedup/privacy/long-history checks + original summary1",
+    "report": "docs/evidence/daily-companion-summary-grade-anchor-2026-10-14.md",
+    "prior_real_backend": "quality19 verified prior8 projection before this anchor; do not extend to the new anchor"
   }
 }

@@ -46,6 +46,7 @@ _PROMPT_CONTEXT_ALLOWED_FIELDS = frozenset(
         "operation",
         "course_id",
         "previous_course_history",
+        "previous_answer_records",
         "course_learning_state",
         "input_text",
         "language",
@@ -546,6 +547,8 @@ def build_knowledge_track_messages(
 
 
 _SUMMARY_HISTORY_LIMIT = 40
+_SUMMARY_PREVIOUS_COURSE_LIMIT = 8
+_SUMMARY_PREVIOUS_ANSWER_LIMIT = 3
 _SUMMARY_HISTORY_INPUT_CHARS = 200
 _SUMMARY_HISTORY_OUTPUT_CHARS = 320
 
@@ -566,18 +569,29 @@ def _summary_interaction_rows(rows: Any) -> list[dict[str, Any]]:
         )
         if not input_text and not output_text:
             continue
+        if item.get("kind") == LLM_OPERATION_QUESTION_GENERATE and not output_text:
+            continue
         record = {
                 "id": item.get("id"),
                 "kind": str(item.get("kind") or ""),
-                "input": input_text,
                 "output": output_text,
+                "output_role": "tutor",
             }
+        # Quiz input is source material or a generation request, not evidence
+        # that the learner explained it. Keep the actual tutor question instead.
+        if item.get("kind") != LLM_OPERATION_QUESTION_GENERATE:
+            record["input"] = input_text
+            record["input_role"] = (
+                "learner_answer"
+                if item.get("kind") == LLM_OPERATION_ANSWER_EVALUATE
+                else "request_or_material"
+            )
         metadata = item.get("metadata") or {}
         result = (metadata.get("payload") or {}) if isinstance(metadata, dict) else {}
         if isinstance(result, dict) and item.get("kind") == LLM_OPERATION_ANSWER_EVALUATE:
             record["evaluation"] = {
                 key: _compact_prompt_value(result[key], list_limit=3, string_limit=160)
-                for key in ("verdict", "score", "error_type", "feedback", "missing_points", "misconceptions")
+                for key in ("verdict", "score", "error_type", "feedback", "missing_points", "misconceptions", "next_action")
                 if key in result
             }
             record["question"] = _bounded_text(metadata.get("question"), 240)
@@ -585,8 +599,77 @@ def _summary_interaction_rows(rows: Any) -> list[dict[str, Any]]:
     return compact
 
 
+def _summary_previous_answers(context: dict[str, Any]) -> list[dict[str, Any]]:
+    """Project already course-filtered QA, keeping persistent IDs local only."""
+    course_id = context.get("course_id")
+    session_id = context.get("session_id")
+    learning_state = context.get("course_learning_state")
+    if (
+        not isinstance(course_id, str) or not course_id.strip()
+        or not isinstance(session_id, str) or not session_id.strip()
+        or session_id in {"default", "unknown"}
+        or not isinstance(learning_state, dict)
+        or learning_state.get("course_id") != course_id
+        or not isinstance(learning_state.get("recent_answers"), list)
+    ):
+        return []
+    answers: list[dict[str, Any]] = []
+    seen_records: set[int] = set()
+    seen_attempts: set[tuple[str, str]] = set()
+    # Store returns ascending QA IDs; the caller supplies its latest eight.
+    for row in reversed(learning_state["recent_answers"][-8:]):
+        if not isinstance(row, dict):
+            continue
+        record_id = row.get("id")
+        previous_session = row.get("session_id")
+        question = row.get("question")
+        evaluation = row.get("eval_result")
+        if (
+            not isinstance(record_id, int) or isinstance(record_id, bool) or record_id <= 0
+            or not isinstance(previous_session, str) or not previous_session.strip()
+            or previous_session in {session_id, "default", "unknown"}
+            or not isinstance(question, dict)
+            or (question.get("course_family") and question.get("course_family") != course_id)
+            or not isinstance(question.get("question"), str) or not question["question"].strip()
+            or not isinstance(row.get("user_answer"), str)
+            or not isinstance(evaluation, dict)
+            or not isinstance(evaluation.get("verdict"), str)
+            or evaluation.get("verdict") not in {"correct", "partial", "wrong", "dont_know"}
+            or not isinstance(evaluation.get("score"), (int, float))
+            or isinstance(evaluation.get("score"), bool)
+            or not 0 <= evaluation["score"] <= 100
+            or any(key in evaluation and not isinstance(evaluation[key], str)
+                   for key in ("feedback", "next_action"))
+        ):
+            continue
+        question_id = question.get("question_id")
+        attempt_id = question.get("attempt_id")
+        if any(value is not None and not isinstance(value, str) for value in (question_id, attempt_id)):
+            continue
+        attempt_key = (question_id, attempt_id) if question_id and attempt_id else None
+        if record_id in seen_records or (attempt_key is not None and attempt_key in seen_attempts):
+            continue
+        seen_records.add(record_id)
+        if attempt_key is not None:
+            seen_attempts.add(attempt_key)
+        answers.append({
+            "source_scope": "previous_session_same_course",
+            "question": _bounded_text(question["question"], 240),
+            "user_answer": _bounded_text(row["user_answer"], _SUMMARY_HISTORY_INPUT_CHARS),
+            "input_role": "learner_answer",
+            "evaluation_role": "tutor",
+            "evaluation": {
+                key: _compact_prompt_value(evaluation[key], list_limit=3, string_limit=160)
+                for key in ("verdict", "score", "feedback", "next_action") if key in evaluation
+            },
+        })
+        if len(answers) == _SUMMARY_PREVIOUS_ANSWER_LIMIT:
+            break
+    return list(reversed(answers))
+
+
 def _summarize_context(context: dict[str, Any]) -> dict[str, Any]:
-    """Project the summary context onto this session's interactions.
+    """Separate current interactions from bounded prior same-course evidence.
 
     The raw ``history`` window spans earlier sessions, so it is replaced by the
     (much smaller) ``session_history`` derived by the caller. Without that
@@ -596,13 +679,30 @@ def _summarize_context(context: dict[str, Any]) -> dict[str, Any]:
     compact = {key: context[key] for key in
                ("operation", "input_text", "language", "learning_preferences", "learning_preferences_scope", "mode", "course_id", "focus", "session_summary_seed")
                if key in context}
-    session_rows = _summary_interaction_rows(context.get("session_history"))
+    raw_session_rows = context.get("session_history")
+    session_rows = _summary_interaction_rows(raw_session_rows)
     history_rows = _summary_interaction_rows(context.get("history"))
-    if session_rows:
+    # Filtering material-only attempts must not revive another session's rows.
+    if session_rows or (isinstance(raw_session_rows, list) and raw_session_rows):
         compact["session_history"] = session_rows
     elif history_rows:
         # No session boundary available (fresh state): fall back to the window.
         compact["history"] = history_rows
+    # The caller already filters these rows by course and excludes this session.
+    # Keep them separate so a restart can resume without claiming new progress.
+    raw_previous_rows = context.get("previous_course_history")
+    if isinstance(raw_previous_rows, list):
+        previous_rows = _summary_interaction_rows([
+            row for row in raw_previous_rows[:_SUMMARY_PREVIOUS_COURSE_LIMIT]
+            if isinstance(row, dict) and row.get("kind") in SUPPORTED_LLM_OPERATIONS
+        ])
+        if previous_rows:
+            for row in previous_rows:
+                row["source_scope"] = "previous_session_same_course"
+            compact["previous_course_history"] = previous_rows
+    previous_answers = _summary_previous_answers(context)
+    if previous_answers:
+        compact["previous_answer_records"] = previous_answers
     return compact
 
 
