@@ -59,8 +59,34 @@ def stop_owned_host(process):
         pid_file.unlink()
 
 
+def material_retirement_observed(replacement, snapshot):
+    """A replaced first answer is deliberately retired, not a completed reply.
+
+    This lets the next *fresh* fixed user input follow a confirmed cancellation
+    instead of waiting 55s for text/turn-end from the intentionally retired
+    answer. Never accept SDK submission alone or a different token's stop.
+    """
+    if not replacement or not replacement.get('submission_completed_wall'):
+        return False
+    old = replacement.get('old_native_token')
+    if not old or not (replacement.get('before') or {}).get('playback', {}).get('active'):
+        return False
+    events = (snapshot.get('trace') or {}).get('events', [])
+    cancel = any(event.get('type') == 'game_route_speech_cancel' and event.get('correlation_id') == old for event in events)
+    stopped = any(event.get('type') == 'speech_playback_state' and event.get('reason') == 'native_connection_cancel'
+                  and event.get('correlationId') == old and event.get('active') is False for event in events)
+    return bool(cancel and stopped and not (snapshot.get('playback') or {}).get('active'))
+
+
 async def main(args):
     if args.output.exists(): raise RuntimeError("do not overwrite or repeat a voice attempt")
+    if args.replace_picture_on_playback:
+        if not args.verify_picture_state or not args.followup_wav:
+            raise ValueError("replacement scene requires existing isolated picture state and fixed follow-up")
+        allowed_pictures = {(ROOT / ('benchmarks/raw/evidence/diagram-input-' + direction + '.png')).resolve()
+                            for direction in ('forward', 'reverse')}
+        if args.replace_picture_on_playback.resolve() not in allowed_pictures or not args.replace_picture_on_playback.is_file():
+            raise ValueError("replacement scene reuses only the existing direction comparison pictures")
     if args.followup_wav and (not args.wav or args.manual_turn_probe or args.point_code):
         raise ValueError("same-session follow-up requires fixed WAV picture mode, no manual/point probe")
     if args.followup_wav and not (args.prepare_picture or args.verify_picture_state):
@@ -106,7 +132,7 @@ async def main(args):
         "--allow-host", "www.lanlan.app:unlimited", "--allow-host", "www.lanlan.tech:0",
         "--budget-round", "bargein-autocheck-20261012"] + (["--study-vision"] if args.prepare_picture or args.verify_picture_state else []), cwd=ROOT, env=env,
         stdout=startup_handle, stderr=subprocess.STDOUT)
-    shell, meter, observer, observer_task = None, None, None, None
+    shell, meter, observer, observer_task, replacement_task = None, None, None, None, None
     log_path = ROOT / "benchmarks/raw/neko-desktop-host.log"
     log_start = log_path.stat().st_size if log_path.exists() else 0
     def save():
@@ -234,11 +260,55 @@ async def main(args):
                             ended.set()
                         await asyncio.sleep(0.2)
                 observer_task = asyncio.create_task(observe_native())
+                async def replace_picture_when_playing():
+                    deadline = time.monotonic() + 100
+                    while time.monotonic() < deadline:
+                        if failed.is_set(): raise RuntimeError("session failed before material replacement; no retries")
+                        snapshot = report.get('native_final') or {}
+                        trace = snapshot.get('trace') or {}
+                        playback = snapshot.get('playback') or {}
+                        recent = trace.get('events') or []
+                        audible = playback.get('audible') is True or any(event.get('type') == 'native_speech_playback_state'
+                            and event.get('audible') is True and event.get('wall', 0) >= report.get('input_wall', float('inf')) for event in recent)
+                        chunks = [event for event in recent if event.get('type') == 'audio_chunk'
+                                  and str(event.get('correlation_id') or '').startswith('native_connection_')]
+                        if trace.get('binaryFrames', 0) > 0 and playback.get('active') and audible and chunks:
+                            old_token = chunks[-1]['correlation_id']
+                            report['material_replacement'] = {'requested_wall': time.time(), 'old_native_token': old_token,
+                                'before': {'native_pcm_frames': trace['binaryFrames'], 'playback': playback},
+                                'image_sha256': hashlib.sha256(args.replace_picture_on_playback.read_bytes()).hexdigest(),
+                                'old_native_reply': ''.join(event.get('text', '') for event in recent if event.get('type') == 'gemini_response')}
+                            save()
+                            from neko_native_avatar_toolchain import call
+                            status = report['study_before_voice'].get('data') or {}
+                            current_course = status.get('study_course_id') or status.get('course_id')
+                            if not current_course:
+                                raise RuntimeError('current course receipt missing; do not guess target course')
+                            result = await asyncio.to_thread(client.call, 'study_submit_image', {
+                                'image_base64': base64.b64encode(args.replace_picture_on_playback.read_bytes()).decode(),
+                                'text': '这张图是新的当前材料，简短说明主要箭头关系，不出题。',
+                                'expected_course_id': current_course})
+                            report['material_replacement'].update(submission_result=result, submission_completed_wall=time.time())
+                            if result.get('error') or result.get('data', {}).get('degraded'):
+                                raise RuntimeError('replacement submission refused or degraded; preserve evidence and stop')
+                            report['material_replacement']['material_after_submission'] = await asyncio.to_thread(call, 'study_material', {})
+                            # Represents the learner selecting the same already-existing
+                            # picture in the controlled surface; no role pointer fabricated.
+                            digest = report['material_replacement']['image_sha256']
+                            selected = next((item['id'] for item in surface.materials.values() if item.get('sha256') == digest), None)
+                            if selected: surface.select(selected)
+                            report['material_replacement']['selected_surface_material'] = selected
+                            save()
+                            return
+                        await asyncio.sleep(.1)
+                    raise RuntimeError('no confirmed audible old-material playback within bounded replacement window')
+                if args.replace_picture_on_playback:
+                    replacement_task = asyncio.create_task(replace_picture_when_playing())
                 meter = subprocess.Popen([str(host.SOURCE_PYTHON), "-X", "utf8", str(ROOT / "scripts/neko_loopback_meter.py"),
                     "--seconds", "195" if args.followup_wav else "75", "--out", str(args.output.with_suffix(".loopback.wav"))],
                     cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
                 report["turns"] = []
-                for input_wav in ([args.wav, args.followup_wav] if args.followup_wav else [args.wav]):
+                for turn_index, input_wav in enumerate([args.wav, args.followup_wav] if args.followup_wav else [args.wav]):
                     if failed.is_set(): break
                     frames_before = (report.get("native_final") or {}).get("trace", {}).get("binaryFrames", 0)
                     report["input_submitted_at"] = round(time.monotonic() - origin, 3)
@@ -281,6 +351,12 @@ async def main(args):
                         if failed.is_set(): break
                         # Observe delayed fragments too; a first turn end may be premature.
                         playback = (report.get("native_final") or {}).get("playback") or {}
+                        if (turn_index == 0 and args.replace_picture_on_playback
+                                and replacement_task is not None and replacement_task.done()
+                                and material_retirement_observed(report.get('material_replacement'),report.get('native_final') or {})):
+                            replacement_task.result()
+                            report['first_turn_ending'] = 'material_retired_not_complete_answer'
+                            break
                         min_observation = 55 if args.prepare_picture or args.verify_picture_state else 35
                         if ended.is_set() and time.time() - report["input_wall"] > min_observation and time.monotonic() - native_changed > 6 and not playback.get("active"):
                             break
@@ -296,6 +372,8 @@ async def main(args):
                                    "input_audio_start_wall", "input_end_at", "input_end_wall", "fixed_speech_end_wall",
                                    "first_socket_audio_at", "reply", "native_reply", "turn_timeout")
                     turn = {key: report[key] for key in turn_fields if key in report}
+                    if turn_index == 0 and report.get('first_turn_ending'):
+                        turn['ending'] = report['first_turn_ending']
                     turn["observation_end_wall"] = time.time()
                     turn["native_pcm_frames"] = (report.get("native_final") or {}).get("trace", {}).get("binaryFrames", 0) - frames_before
                     turn_events = [event for event in (report.get("native_final") or {}).get("trace", {}).get("events", [])
@@ -304,6 +382,9 @@ async def main(args):
                     turn["playback_first_scheduled_wall"] = next((event["wall"] for event in turn_events
                         if event.get("type") == "native_speech_playback_state" and event.get("active")), None)
                     report["turns"].append(turn)
+                    if turn_index == 0 and replacement_task is not None:
+                        await replacement_task
+                        report['material_replacement']['first_turn_trace'] = (report.get('native_final') or {}).get('trace', {}).get('events', [])
                     save()
                     if failed.is_set() or report.get("turn_timeout"): break
                 if args.followup_wav:
@@ -331,6 +412,8 @@ async def main(args):
     except Exception as exc:
         report["failure"] = type(exc).__name__ + ": " + str(exc)
     finally:
+        if replacement_task is not None and not replacement_task.done():
+            replacement_task.cancel(); await asyncio.gather(replacement_task, return_exceptions=True)
         if observer_task is not None:
             observer_task.cancel(); await asyncio.gather(observer_task, return_exceptions=True)
         if observer is not None:
@@ -355,7 +438,7 @@ async def main(args):
                 fresh_log = handle.read().decode("utf-8", errors="replace")
             # These bounded diagnostic lines contain event timestamps, not credentials.
             report["timing_log"] = [line for line in fresh_log.splitlines() if any(mark in line for mark in (
-                "voice user_transcript", "TRIGGER entry='__llm_tool__study_", "首个 audio.delta", "/api/llm-tools/callback/study_companion/", "native-timing", "study voice admission", "study voice identical"))]
+                "voice user_transcript", "TRIGGER entry='__llm_tool__study_", "首个 audio.delta", "/api/llm-tools/callback/study_companion/", "native-timing", "study voice admission", "study voice identical", "study-material-audio"))]
             wire_records = []
             for line in fresh_log.splitlines():
                 if "[wire-trace] " in line:
@@ -406,6 +489,23 @@ async def main(args):
                 'same_current_picture': bool(before_m.get('material_id')) and before_m.get('material_id') == after_m.get('material_id'),
                 'session_normal': not report.get('failure') and not report.get('turn_timeout'),
             }
+            if args.replace_picture_on_playback:
+                replacement = report.get('material_replacement') or {}
+                trace_events = (replacement.get('first_turn_trace') or []) + (report.get('native_final') or {}).get('trace', {}).get('events', [])
+                old_token = replacement.get('old_native_token')
+                cancels = [event for event in trace_events if event.get('type') == 'game_route_speech_cancel' and event.get('correlation_id') == old_token]
+                stops = [event for event in trace_events if event.get('type') == 'speech_playback_state' and event.get('reason') == 'native_connection_cancel'
+                         and event.get('correlationId') == old_token and event.get('active') is False]
+                followup_frames = [event for event in trace_events if event.get('type') == 'audio_frame'
+                                   and len(turns) == 2 and event.get('wall', 0) >= turns[1]['input_wall']]
+                checks.pop('same_current_picture')
+                checks['two_observed_input_turns'] = checks.pop('two_completed_turns')
+                checks.update({'current_picture_replaced':bool(before_m.get('material_id')) and bool(after_m.get('material_id')) and before_m['material_id'] != after_m['material_id'],
+                    'old_token_cancel_received':bool(old_token) and bool(cancels),
+                    'native_queue_stop_receipt':bool(stops),
+                    'followup_uses_new_native_token':bool(followup_frames) and all(str(event.get('correlation_id') or '').startswith('native_connection_') and event['correlation_id'] != old_token for event in followup_frames)})
+                replacement['cancel_received_wall'] = min((event['wall'] for event in cancels), default=None)
+                replacement['native_stop_receipt_wall'] = min((event['wall'] for event in stops), default=None)
             report['continuity_acceptance'] = {'checks': checks,
                 'result': 'CANDIDATE_CHECKS_PASS_REQUIRES_SEMANTIC_REVIEW' if all(checks.values()) else 'FAIL_OR_PARTIAL',
                 'scope': 'same bounded audio session, per-turn provider timing and native PCM; language/facts and per-turn loopback need review; human pending'}
@@ -450,6 +550,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--wav", type=Path, help="fixed PCM WAV; never opens a room microphone")
     parser.add_argument("--followup-wav", type=Path, help="one fixed WAV follow-up in the same bounded audio session; isolated picture mode only")
+    parser.add_argument("--replace-picture-on-playback", type=Path, help="once old native playback is audible, submit the existing forward diagram; no retries")
     parser.add_argument("--manual-turn-probe", action="store_true", help="one opt-in explicit-end support scene; no production VAD change")
     parser.add_argument("--point-code", action="store_true", help="prepare authorized source selected by learner; require actual role to point")
     parser.add_argument("--speech-gate", action="store_true", help="one opt-in Study execution-admission scene; never changes onset/cancel")

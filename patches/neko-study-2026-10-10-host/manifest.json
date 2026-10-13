@@ -183,7 +183,7 @@
     {
       "path": "main_logic/omni_realtime_client/_tools.py",
       "base_sha256": "51afd6f606a4c011b1bb1a88f35da2d443a458f335c0cbc177601c5a648b3514",
-      "patched_sha256": "f43e4253c9225b57d7cc2f0fadc9e5e22e40a3cdc7490c921998982d13077dfc",
+      "patched_sha256": "8b8ebca6158afdc416ecbd3cd7ba70b4d034950ec78138faabf326b25abb1e17",
       "resealed_utc": "2026-10-13T18:23:15.001215+00:00",
       "resealed_reason": "Opt-in all-Study admission, current received-ASR/quiet/ready plus at most 200ms neighboring-ASR promotion; older prefix args cannot acquire final scope. Daily default off.",
       "verified_by": {
@@ -195,6 +195,45 @@
         "enabled": "only with opt-in Study speech gate on exact free route and a ready completed ASR scope",
         "proof": "7 actual owner/batch checks plus 14 gate, 6 ordering and 5 lifecycle/replay passed. Voice9 and continuity10 have one call per input and no joined trace; physical sharing branch unverified, not inferred from fewer requests.",
         "scope": "identical simultaneous study_explain arguments only; own call ids/response batches retained; no completed answer cache, quiz/grade/preferences sharing, provider/scope adoption or response alias"
+      },
+      "material_audio_update": {
+        "proof": "SOURCE/OFFLINE and fixed-input replacement14 cross-process/native-token/loopback/fresh reverse-picture reply passed; human, long-quiet recovery, other teaching output provenance pending",
+        "offline": "28 host/event/owner/delivery tests including current role independent of native capture and host-private stripping without capture; 11 producer SQLite/push tests; 14 UI checks; 4 host fresh-LF replay/deployed/idempotence/AST matched, unknown edits refused; real Core registry/remote dispatcher plus SDK local-model-stub probe passed; current-picture native13 preserves literal image identifiers/negative-picture requests",
+        "scope": "trusted targeted blind material control, original tool batch owner, per-boot sequence, exact native token retire and one bounded reconnect without PCM replay; input arriving after irreversible same-token cancel requires explicit voice restart; narration and quiz/grade output provenance not newly covered",
+        "sealed_utc": "2026-10-13T19:53:01.326409+00:00"
+      }
+    },
+    {
+      "path": "main_logic/core/tts_lifecycle.py",
+      "base_sha256": "ee50d7401e9b5dbea4921f466ff02d9d03fb6f24e83e6f0b6e4cce62d87437ca",
+      "patched_sha256": "a042de3e348ebbb83435ac7f54823db1a806292b2824e1c6f8c320408d89cb38",
+      "material_audio_update": {
+        "proof": "SOURCE/OFFLINE and fixed-input replacement14 cross-process/native-token/loopback/fresh reverse-picture reply passed; human, long-quiet recovery, other teaching output provenance pending",
+        "offline": "28 host/event/owner/delivery tests including current role independent of native capture and host-private stripping without capture; 11 producer SQLite/push tests; 14 UI checks; 4 host fresh-LF replay/deployed/idempotence/AST matched, unknown edits refused; real Core registry/remote dispatcher plus SDK local-model-stub probe passed; current-picture native13 preserves literal image identifiers/negative-picture requests",
+        "scope": "trusted targeted blind material control, original tool batch owner, per-boot sequence, exact native token retire and one bounded reconnect without PCM replay; input arriving after irreversible same-token cancel requires explicit voice restart; narration and quiz/grade output provenance not newly covered",
+        "sealed_utc": "2026-10-13T19:53:01.286658+00:00"
+      }
+    },
+    {
+      "path": "main_logic/core/tool_calling.py",
+      "base_sha256": "f33ce8396ba6a1dbc8d39cd8db34e312fea2a7e1ec6cf62395b040ee275b5faa",
+      "patched_sha256": "5b923be9aaacc40c7de70f84b45ebea0ebcdc4a0f70cf8a629135b252e04843c",
+      "material_audio_update": {
+        "proof": "SOURCE/OFFLINE and fixed-input replacement14 cross-process/native-token/loopback/fresh reverse-picture reply passed; human, long-quiet recovery, other teaching output provenance pending",
+        "offline": "28 host/event/owner/delivery tests including current role independent of native capture and host-private stripping without capture; 11 producer SQLite/push tests; 14 UI checks; 4 host fresh-LF replay/deployed/idempotence/AST matched, unknown edits refused; real Core registry/remote dispatcher plus SDK local-model-stub probe passed; current-picture native13 preserves literal image identifiers/negative-picture requests",
+        "scope": "trusted targeted blind material control, original tool batch owner, per-boot sequence, exact native token retire and one bounded reconnect without PCM replay; input arriving after irreversible same-token cancel requires explicit voice restart; narration and quiz/grade output provenance not newly covered",
+        "sealed_utc": "2026-10-13T19:53:01.364642+00:00"
+      }
+    },
+    {
+      "path": "app/main_server/character_runtime.py",
+      "base_sha256": "a79ed22ff160ff960acf826d44fb04a3e56161dffa6db624d6492231b9f3ac2b",
+      "patched_sha256": "7026af009dd12a545f81028ad3186ea4c80b5dacc43949358714957e19e7a6c1",
+      "material_audio_update": {
+        "proof": "SOURCE/OFFLINE and fixed-input replacement14 cross-process/native-token/loopback/fresh reverse-picture reply passed; human, long-quiet recovery, other teaching output provenance pending",
+        "offline": "28 host/event/owner/delivery tests including current role independent of native capture and host-private stripping without capture; 11 producer SQLite/push tests; 14 UI checks; 4 host fresh-LF replay/deployed/idempotence/AST matched, unknown edits refused; real Core registry/remote dispatcher plus SDK local-model-stub probe passed; current-picture native13 preserves literal image identifiers/negative-picture requests",
+        "scope": "trusted targeted blind material control, original tool batch owner, per-boot sequence, exact native token retire and one bounded reconnect without PCM replay; input arriving after irreversible same-token cancel requires explicit voice restart; narration and quiz/grade output provenance not newly covered",
+        "sealed_utc": "2026-10-13T19:53:01.404046+00:00"
       }
     }
   ],

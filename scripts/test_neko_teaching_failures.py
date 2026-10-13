@@ -47,7 +47,9 @@ class TeachingFailureTest(unittest.TestCase):
     def test_submitted_picture_survives_first_session_and_replaces_old_material(self):
         ns = definitions(PAYLOAD / "entry_tutor_explain_entries.py", set(),
                          {"_normalize_submitted_image_payload": lambda raw: "validated:"+raw,
-                          "_plugin_lock": lambda lock: lock,"material_context":materials.material_context}, method="study_submit_image")
+                          "_plugin_lock": lambda lock: lock,"material_context":materials.material_context,
+                          "material_changes":materials.material_changes,
+                          "submit_material_changes":materials.submit_material_changes}, method="study_submit_image")
         async def scenario():
             state = SimpleNamespace(last_vision_image_base64="old picture", last_ocr_text="old OCR", study_course_id="image-course")
             seen = []

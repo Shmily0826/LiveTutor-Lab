@@ -6,7 +6,7 @@
   "files": [
     {
       "path": "payload/study_companion/__init__.py",
-      "sha256": "dbaa7ecbc4ec1a8bbf71fcb05d33501388d2132335a9ef80cb4996e9767946ee",
+      "sha256": "c23839606a9e8f142594702a490808e357adf456639fba95120191eab880042a",
       "deployed_matches": true
     },
     {
@@ -81,17 +81,17 @@
     },
     {
       "path": "static/index.html",
-      "sha256": "70a3429f3dfeb120ac44bb64c77b9e593c05346b2295811deaf23decea6e8ef2",
+      "sha256": "b9b83114fb7bc7feafca691f2763a57eff076251b3c4c5a61d9e3d1a1192b92e",
       "deployed_matches": true
     },
     {
       "path": "static/main.js",
-      "sha256": "6d38a1e61578791929a388435e3a3ab6860f6f748a02da44e1c97212e70f0cff",
+      "sha256": "ac0660050b259c953c94beac5f72c3b44038deba4c9098947e55c6ba49495d85",
       "deployed_matches": true
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
-      "sha256": "d60de82bb557d9a9e203daafaacb7a9f1c965886499913ecac569fb93fc05e06",
+      "sha256": "e920c9a29fd6b41ab906d4a94b25f524ae0efee4d206033e2aec66918efb8999",
       "deployed_matches": true
     },
     {
@@ -107,7 +107,7 @@
     },
     {
       "path": "payload/study_companion/entry_tutor_explain_entries.py",
-      "sha256": "a206a71cb4b25ed1f3cb47045b6eb030dca31f55f7e9e2fb300ad19efe357aa8",
+      "sha256": "24741948bfea6c181a35bcb83562aa0a9111e6540ae4bc894ad12ff2c0519417",
       "deployed_matches": true
     },
     {
@@ -117,7 +117,7 @@
     },
     {
       "path": "payload/study_companion/study_materials.py",
-      "sha256": "193daf2d8fd3ed6745a0335b693ae5299211903b4a4b7f1407c2b6e6b510464d",
+      "sha256": "8daf86aa6c6c76e306f189b422d9aaefebf7184cc92856d5efe2ab95649f82e0",
       "deployed_matches": true
     }
   ],
@@ -197,5 +197,10 @@
     "proof": "SOURCE_OFFLINE + continuity10 normal wrapper/entry/actual-model/native-device path. Material replacement races and queued-audio cancellation still offline/pending, not inferred from the normal scene.",
     "tests": "9 actual native wrapper/explain entry/finalizer/existing SQLite tests; prior affected language4/course4/failure5/course-memory6 passed",
     "scope": "observed course/session/content identity retained through queued explanations and short SQL append, only absent session initialization may adopt session; committed original identity history preserved; no queued-native-audio cancellation claimed"
+  },
+  "daily_material_control_update": {
+    "proof": "SOURCE/OFFLINE plus fixed-input replacement14 actual old-token cancel/native queue stop/loopback silence/fresh reverse reply passed; human, long-quiet recovery, other output provenance pending",
+    "tests": "11 producer SQLite/push tests; 28 host owner/event/delivery/swap tests including current role independent of capture/private stripping without capture; 14 UI checks; affected course6/image4/failure5/nativeguard13/language4 passed; native13 includes current-picture ignores stale model text, missing picture honest, replacement guard and literal identifiers/negative-picture requests; 4 host replay/deployed/idempotence/AST match; real Core/registry/remote→SDK local stub passed",
+    "scope": "accepted image/course/session changes notify only bound targets via blind control, per-instance boot/sequence, current success explain binds; no PCM replay, no infinite reconnect, same old token input after irreversible cancel requires explicit voice restart; communication narration and quiz/grade provenance remain separate"
   }
 }

@@ -1,53 +1,34 @@
-# LiveTutor / N.E.K.O 日常学习伙伴长期执行计划
+# 日常学习伙伴长期执行计划
 
-本 Goal 已创建并 active；不因单项完成或单线路阻塞而结束。用户要求 GPT-6.1 Sol / High；当前工具上下文未暴露本窗口模型配置，未自行切换。
+现有 Goal active，thread `01a13531-0341-7611-afc2-5c472a7ccf50`，不重建、不因小阶段或局部阻塞结束。完整执行依据是 `D:\CODE\project\LiveTutor-Lab\docs\daily-companion-contract-2026-10-14.md`；本计划不是原文替代品。内置 Goal API 仅支持状态，objective字段未改；完整contract已在同一Goal执行上下文和接续记录绑定。用户要求GPT-6.1 Sol/High，窗口设置未被工具暴露，未擅自换模型。
 
-执行契约（原始完整任务说明）：[daily-companion-contract-2026-10-14.md](daily-companion-contract-2026-10-14.md)。本计划和状态不是契约替代品。
+每次上下文压缩或自动续跑，先完整读取contract、plan、status、blockers，再继续；后续明确指令优先，同步记录。沿用bargein-autocheck-20261012不重置、夜间不采房间麦克风、局部阻塞继续其他任务、完成依据实际证据。真人麦克风/集中体验等明确“准备好了”。
 
-现有 Goal 绑定：thread `01a13531-0341-7611-afc2-5c472a7ccf50`，status `active`；该 Goal 的执行依据就是上述 contract。内置 Goal 更新工具仅支持状态，未改 objective、未重建 Goal。已在同一 Goal 的执行上下文与接续记录明确引用完整路径；Bridge Goal 工具 schema 无法接受 get，未进行任何写入或预算变更。
+## 阶段与顺序
 
-每次上下文压缩后或自动续跑开始时，必须先完整读取 contract、plan、status、blockers，再继续工作。后续用户明确指令优先；同步更新对应记录，保留原 contract 原文与变更轨迹。关键约束：沿用账本不重置、夜间不采房间麦克风、局部阻塞继续其他任务、完成依据实际证据。不得重建现有 Goal 来替代接续。
-
-## 接续与边界
-
-已完整读取 2026-10-14 图像 checkpoint、2026-10-13 教学 accepted、2026-10-11 源码教学、2026-10-10 产品记忆报告。已验收真人普通打断、基础教学、真实模型教学/评分/续课、CodeGraph 和 Study 图像闭环作为继承证据，仅改动相关链路或发现回归时重验。Native Realtime 直接看图可靠性未过，不作为当前图像入口。
-
-保留当前 master 脏树、未发布图像修复、.workbuddy 与原用户历史。Sky Scout 只读。夜间只用固定输入、输出回环及已设音量，不采房间麦克风，不提高音量。只有主 Agent 可改共享账本、安排在线音频。最终真人验收等待用户明确“准备好了”。
-
-## 工作阶段
-
-| 阶段 | 输出 | 验证与依赖 |
+| 项目 | 已承接 / 交付 | 下一步与证据要求 |
 | --- | --- | --- |
-| A 入口与材料 | 固定日常 store、持久课程与配置、就绪/错误提示、图片入口、Study 图像接角色 | 冷/重复启动、换图/换课，真实模型及输出回环分层 |
-| B 语音教学 | 语言记忆/临时切换、长句停顿、术语口语、分段延迟、纠正后重查 | 固定语音与时间线，普通打断仅必要回归 |
-| C 学习记忆 | 现有 SQLite 明确偏好、历史取用、稳定 topic、续题/返课 | 临时 SQLite/重启、真实模型定向验证 |
-| D 真源码 | 复用授权/CodeGraph、版本/引用/流程/影响 | 既有证据继承；受影响范围定向验证 |
-| E 指示 | 先受控 HTML/图片指点，高亮/箭头随布局变化 | 核许可证与源码，global web-inspector 截图/布局检查 |
-| F 交付 | 连续学习、替换、重启/断网恢复、说明与 codex/ 分支发布 | 审查密钥/学习数据排除，10–20 分钟集中真人体验 |
+| A 日常入口与材料 | 固定store、持久课程/配置、选择/粘贴图片、UI竞态guard、Study vision→角色；最新current-picture强制用当前图 | 新图事实与旧音频退役分别核；交付UI真实状态提醒 |
+| B 语音与教学 | 普通真人打断/基础教学继承；一次英文主体→中文连续设备过，长停顿gate仍默认off | 长静默恢复、自然停顿/术语/纯英文/纠正重查，基于已测工具和proxy延迟优化 |
+| C 既有学习记忆 | 现有SQLite明确四偏好、临时不升级、稳定topic、题目/错答/重启/返课/历史取用 | 保留现有保护，补受材料替换影响的输出provenance，不另建记忆/清历史 |
+| D 源码教学 | 复用授权CodeGraph structure/file/调用/impact与version guard，Sky Scout只读 | 已测值写反≠缺key错误与超两句，guidance修正尚未模型确认；仅必要补证 |
+| E 屏幕指示 | 受控HTML/图片/过滤源码；role→DOM→设备point一场过，resize/scroll/zoom/version guard过 | 任意桌面仍未实现，保留fallback支持范围，不自动操作学习材料 |
+| F 集成与交付 | 实际SDK/DB本地503失败恢复过，固定语音/回环连续路线、四阶段codex发布、使用/集中体验文档 | 阶段五审查发布；材料替换/静默/换课/重启连续验证；10–20分钟真人待验 |
 
-## 接续文件
+## 当前阶段五
 
-- `docs/daily-companion-status-2026-10-14.md`：当前阶段、证据、额度、进程、下一步。
-- `docs/daily-companion-blockers-2026-10-14.md`：局部失败、尝试、恢复条件；单项不阻塞整个 Goal。
-- `docs/evidence/daily-companion-memory-2026-10-14.md`：记忆 Agent 独立阶段证据。
-- `docs/evidence/daily-companion-guidance-2026-10-14.md`：指示 Agent 独立阶段证据。
+生产通知11、UI14、host27、current-picture Native guard12和受影响language4/course6/image4/failure5过。真实Core registry/remote→SDK/producer本地模型桩过（fake output owner，非Native/设备）。actual replacement11/12失败记录保留；12旧text摘要绕开vision已证实，首轮args未知，不把空submission反推空target。新schema/当前图意图guard已修。
 
-## 文件分工
+replacement13 exact旧token cancel、native queue stop、实际回环静音过；新connection无input20秒后关闭，未followup，整体partial。量具现在确认accepted change+exact cancel/stop后将首轮标material_retired再fresh input，普通场55秒观察不变。replacement14执行快照见status；不为耗额度反复跑已过场。
 
-主 Agent：launcher、host、native shell、study_avatar_tools、__init__、新集成/预算/音频验证及 manifests。记忆 Agent：context/question/summary entries、llm_prompts、prompt_templates、新 learning_preferences 与对应测试。指示 Agent：仅新 neko_learning_surface 前缀文件与对应报告。共享文件由主 Agent 整合，最多两名子 Agent。
+最新14已terminal537/53/0，旧token停止/回环静音、新Native token22PCM/正确reverse两句中文本场通过，真人/长quiet/其他输出provenance仍待。最终source审查3P2修复，host28/Native13/retirement3，source/两部署重放与23产品匹配；负例只offline，不借14扩张。现在allowlist审查阶段五发布后转独立剩余工作。
 
-每实质阶段同步交付、证据层、剩余、预算、进程、下一步。完成判据是实际可用交付与证据；人工未验收保留待验收。
+下一步先核同exec结果/清理、更新实际计数/证据，再必要阶段五allowlist审查commit/push到同codex分支。随后推进quiz/answer/summary与排队narration provenance、长quiet恢复、细字纠正；任一失败转其他项，不把explain取消过当整个Goal完成。
 
-阶段二已完成A图片UI/课程竞态、C偏好接续、E受控HTML/图片/过滤源码指示，真实图像后端与设备路线分层补证；B长句代理MANUAL支持实验未通过，保持局部任务。使用与集中验收见 `docs/daily-companion-use-2026-10-14.md`。下一步独立worktree codex/阶段发布后，继续B/D/F未验收部分。两个子Agent当前已完成，无共享文件并发修改。
+## 分工、发布与接续
 
-后续阶段：第一阶段已发布3c2bc065；晚ASR本地scope竞态增量离线/部分设备补证，真实role源码指示→DOM→音频通过但仍两片提前动作；本地503实际SDK/DB失败恢复通过。原英文刺激三句及MANUAL后续tools更新混杂已修正历史推断。此阶段增量发布后，主线优先B：受控Study付费工具及point准入必须同时考虑最后speech静默、最后ASR接收时刻和host callback ready，保留普通onset/cancel与连接/scope隔离；方案/证明边界见spoken-turn-analysis，不以单一请求计数代替完整约束正确。任意桌面指示/密集图/新能力真人仍待验；只读Sky Scout与原历史继续保留。
+最多两个既有Agent，只有主Agent安排online/audio/改ledger。当前两Agent只读报告已冻结，生产无并发写入。主Agent拥有host/generator、音频探针、整合manifest、生产增量；未来分工先明确文件边界。
 
-当前接续：465da5b第二阶段已发布，B opt-in all-Study准入仍默认off。实际point adjacent6通过单固定指令；图片gated7暴露旧prefix升格和重复paid工具，最新限制200ms邻接ASR接续、14/6/5离线过后进行neighbor8单场。不把candidate检查/英文形状当完整语义或真人通过。D真实文字结构/file窗口/纠正续问补证，保留值写反与缺key混淆、超出两句的模型失败；最新persona短答/事实规则源码修正待实际确认。先核本场结果与清理、更新证据和范围；在同managed worktree提交必要B/D增量，再继续B延迟/术语与F多轮日常整合。旧status全文存evidence/status-history，压缩仍先读取当前四文件，不大范围扫描。
+保留root master脏树/.workbuddy/历史；独立managed worktree从已发布5369c90接续，只复制必要allowlist，排除密钥、学习数据、录音、无关改动。无main merge/force push。Sky Scout源码/图只读，不重做材料。不更改系统音量，只有固定输入+输出loopback。
 
-neighbor8补证仍PARTIAL（旧prefix拒绝、中文实际播放，但重复三次/英文失败），432/45/0、场景已终止；新一次language schema/检测/临时解释锁4项离线过。阶段三发布后继续最终ASR重复工具及result/audio owner离线复现、必要英文设备补证与F连续日常操作，不重复已验旧教学/图片题/503。集中真人未做保持pending。接续规则和完整contract不变。
-
-阶段三d6405af9c92e629a96e355c75c48699eeff26271已push同codex分支，25必要文件，parent465da5b。已确认远端与clean managed worktree、原HEAD/index/contract保留，未合并/强推。上述下一工作仍未完成，Goal active；每次压缩/自动续跑仍先完整读取四文件。
-
-最新接续：voice9完成，账本440/46/0。新增同scope/ASR/args的inflight explain合并7项真实工具离线过，14/6/5旧受影响准入/生命周期检查过；voice9只有一个call，不能把请求减少归因于合并。新Native材料快照和短SQL身份守卫9项通过，非空session在ensure窗口替换已追加拒绝，首次空session初始化允许；受影响language4/course4/failure5/memory6此前通过。当前生产增量未发布，材料更换后的已排native音频取消仍是单独工作。下一步更新23文件部署指纹，进行有界同会话英文→中文追问，不重复paid图片准备；之后审查并阶段发布，再继续其余A–F。当前无线上会话，恢复前核实际进程/账本。
-
-continuity10结束458/47/0，一CONNECT两轮英文主体→中文恢复，各一explain、25/27PCM、75/71回环响声、prefs/图不变、无提前audio。细字『未命中』被误读成『命中』，严格纯英文也未满足，整体PARTIAL而非全语义验收。正常新版材料guard模型路径有证据，竞态替换后播放取消没有。精确合并无joined不称设备branch验收。场景已终止，下一步阶段发布后继续材料音频取消最小接口与实际细字纠正重查；不为首native trace截断或找joined重跑场景。恢复时以最新status/真实账本为准。
+历史完整plan原文存 `docs/evidence/daily-companion-plan-history-through-replacement13-2026-10-14.md`，旧计数/进程/推断不作为当前状态。最新事实在status，具体局部恢复条件在blockers，full contract始终不变。

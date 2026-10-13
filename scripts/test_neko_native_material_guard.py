@@ -101,6 +101,52 @@ class NativeMaterialGuard(language_tests.ExplanationLanguage):
         self.assertFalse(context['vision_enabled']);self.assertEqual(context['vision_image_base64'],'')
         self.assertIn('13 return temperature;',context['source_text'])
 
+    async def test_current_picture_request_ignores_native_old_summary_and_binds_actual_image(self):
+        for question in ('请核对Study里刚换的图片，说明图上箭头', 'Verify this current diagram and its arrows'):
+            with self.subTest(question=question):
+                h=await self.prepare()
+                h._build_learning_context=language_tests.ProductHarness._build_learning_context.__get__(h)
+                output=await h.study_explain_tool(question=question,text='OLD WEX -> NUD -> REZ',_ctx={'lanlan_name':'CurrentRole'})
+                self.assertFalse(output.get('degraded'),output)
+                context=h._agent.concept_explain.call_args.kwargs['context']
+                self.assertTrue(context['vision_enabled']);self.assertEqual(context['vision_image_base64'],'image-A')
+                self.assertNotIn('OLD WEX',context['source_text'])
+                self.assertEqual(output['_study_material_binding']['context'],materials.material_context(h))
+                before=materials.material_context(h);h._state.last_vision_image_base64='image-B'
+                changes=materials.material_changes(h,before,'image')
+                self.assertEqual([item['target_lanlan'] for item in changes],['CurrentRole'])
+
+    async def test_current_picture_without_image_never_accepts_native_summary_as_evidence(self):
+        h=await self.prepare();h._state.last_vision_image_base64=''
+        output=await h.study_explain_tool(question='Explain this current picture',text='WEX -> NUD -> REZ')
+        self.assertTrue(output['degraded']);self.assertEqual(output['diagnostic'],'visual_context_missing')
+        h._agent.concept_explain.assert_not_awaited()
+
+    async def test_literal_image_identifiers_and_rejected_picture_keep_requested_code(self):
+        for question in ('解释这段代码里的 imageUrl 是什么意思',
+                         'Explain this imagePath variable in the supplied code',
+                         '不要看当前图片，只解释下面这段代码',
+                         "Do not use the current image; explain this source line"):
+            with self.subTest(question=question):
+                h=await self.prepare()
+                h._build_learning_context=language_tests.ProductHarness._build_learning_context.__get__(h)
+                output=await h.study_explain_tool(question=question,text='final imageUrl = request.uri;')
+                self.assertFalse(output.get('degraded'),output)
+                context=h._agent.concept_explain.call_args.kwargs['context']
+                self.assertEqual(context['vision_image_base64'],'')
+                self.assertIn('final imageUrl = request.uri;',context['source_text'])
+                self.assertNotIn('material_identity',output['_study_material_binding']['context'])
+
+    async def test_current_picture_with_old_text_still_rejects_material_replaced_during_model(self):
+        h=await self.prepare()
+        async def replace(source,**kwargs):
+            h._state.last_vision_image_base64='image-B'
+            return models.TutorReply(operation='concept_explain',input_text=source,reply='stale')
+        h._agent.concept_explain=AsyncMock(side_effect=replace)
+        output=await h.study_explain_tool(question='解释当前图片',text='old arrows')
+        self.assertEqual(output['code'],'course_context_changed')
+        self.assertEqual(self.store.list_interactions(10,session_id=h._study_session_id),[])
+
     async def test_ensure_allows_absent_session_initialization_but_rejects_existing_session_replacement(self):
         for initially_absent in (False, True):
             with self.subTest(initially_absent=initially_absent):

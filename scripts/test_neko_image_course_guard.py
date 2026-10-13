@@ -56,7 +56,9 @@ class ImageCourseGuard(unittest.IsolatedAsyncioTestCase):
         namespace = {'asyncio': asyncio, '_normalize_submitted_image_payload': lambda s: s,
                      '_plugin_lock': lambda lock: lock, 'Err': lambda e: {'error': str(e)},
                      'SdkError': lambda message, **kwargs: ValueError(message), 'save_material': lambda *args: saves.append(args),
-                     'material_context':materials.material_context}
+                     'material_context':materials.material_context,
+                     'material_changes':materials.material_changes,
+                     'submit_material_changes':materials.submit_material_changes}
         exec(compile(ast.Module(body=[method], type_ignores=[]), str(SOURCE), 'exec'), namespace)
         state = SimpleNamespace(study_course_id='before', last_vision_image_base64='current-image', last_ocr_text='current')
         async def ensure(): state.study_course_id = 'after'

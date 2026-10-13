@@ -64,3 +64,61 @@
 ## 当前交接边界
 
 本报告是接口/方案审查，未实现取消、未新增测试通过、未新增设备或模型验收。主线continuity10英文→中文已取得部分证据，但Sky既有HTML虚线“天气未命中”被读作“天气命中”是密集小字失败；它与本取消审查独立，未为此读/改图或源码材料。只新增本文件，冻结交付，原数据、共享源码、账本和运行进程均未动。
+
+主线在最后审查后补单一destructive-commit分支：cancel已发送导致旧physical token永久退役时，如果同连接仅新user epoch到达，不能静默保留fatal或清flag冒称可继续。现在在精确旧physical owner仍相同的条件下关闭并明确『材料已更新，语音未能恢复，请重新开始语音。』，无自动connect；如果真实新connection已接管仍拒绝晚cleanup。第22项离线负例验证这一待显式重启状态，未冒称无缝接续或设备通过。原P2的静默黑洞源码/离线路径已解除，本条是主线新增证据，不冒充子Agent重新跑测试或设备验收。
+
+## 新宿主patch与离线量具：限定增量审查
+
+随后主线新增 `scripts/neko_material_audio_patch.py` / `scripts/test_neko_material_audio.py`。本轮仅阅读这两个文件并追加本报告，不修改源码/测试或学习记忆Agent的产品文件，不运行测试、宿主、音频、在线模型或账本。主线提供的初始13项结果是**patched实际方法 + owned fake provider/socket离线通过**；本审查不是独立重跑，未部署/真实模型/设备结果不能由此认领。
+
+### 已实现且审查未发现主路径错误的部分
+
+| 重点 | 实现与测试证据层 |
+| --- | --- |
+| actual batch owner / unannounced turnpair | `_capture_study_material_tool_owner`优先取 `_tool_batch_entry_by_task[current_task()].owner`，验证call ID及abandoned；不重采原实际batch的turnpair。已有针对“重采会返回错误pair”的离线测试，保留同一owner对象 |
+| 可信binding | 仅study_explain、registry来源plugin:study_companion、当前Native free无server-VAD/session/lease有效；成功reply中的binding严格核v/boot/seq及小型context，is_error/degraded/ok=false不绑定。identity不给provider继续消费，避免模型改写provenance |
+| control先于result | control先存每boot最新seq；迟到tool结果绑定后重新应用更新seq的control。boot最多4份、旧seq不能覆盖新seq，A→B通知漏掉而后B→C也能退役A；新C binding不会被迟到B取消 |
+| 材料匹配范围 | explicit text binding可只有course/session，同课仅换图片不会误取消；换course/session仍取消。完整图片context含material hash。事件需可信plugin来源/指定target/blind/空visibility，拒绝后直接return不落入普通LLM处理 |
+| 当前scope/connection/socket/activation | `_apply`在启动swap前按actual owner核这些字段，并拒绝barge-in pending/已有material replacing。针对不同scope/connection/socket/activation/session及barge的负例存在 |
+| 当前binding工具被scope退休取消 | swap是独立create_task，先登记完成回调，再note_user_turn_started，外层await shield；绑定调用者被cancel不会把swap一起cancel。已有owned fake provider延迟connect的负例证明设计意图 |
+| frame与有界恢复 | swap锁后再取原frame锁，保证cancel不拆audio header/blob对；旧token准确发送，source.close、listener drain、单次connect、listener restart。正常源码只有一个connect位置，没有for/retry或PCM replay。超时路径至多补一次cancel并关闭自己的失败连接 |
+| connect异常后的清理 | connect的finally更新owned_connection，使自身connect已推进generation后抛错时仍清理这一连接；测试明确closes=2/connects=1，停止重试、swap锁释放后再disconnected。不能由这个fake provider结果推出真实proxy支持/扬声器已经停 |
+
+普通onset、VAD门槛、PCM处理和barge-in回放函数没有被新patch改写；新增控制调用原note_user_turn_started退役工具，不伪造说话帧。
+
+### 本审查发现与主线修复中的窗口
+
+**P2 同连接新输入接管后，旧swap仍执行。** 最初current()只核session/socket/activation/route，不核新用户turn。等待swap/frame锁期间同连接新输入推进scope，旧材料任务仍能cancel/close。直接固定tool scope不可行，因为正常source.close与connect也主动退役scope。主线已添加独立 `_study_material_user_epoch`：仅原note_user_turn_started追加同步计数，_apply自己retire后取epoch，swap current逐await核对；新增等待frame锁时新input及late listener restart两个负例，还有实际note方法不因普通provider scope退休而加epoch的检查。**源码核对已解决此身份缺口**，本审查没有执行新增测试；主线通过数量另录。
+
+**P2 同连接新owner可能继承材料任务设置的fatal。** _apply在等锁前设置 `_interrupted = _fatal_error_occurred = True`。若新input推进epoch使swap.current为false，任务返回且failed_ours=false，finally只清material-replacing，不撤销自己安装的两旗。原新增等待frame负例只核没有send/close/connect，没有核fatal残留；fake Provider的note方法不清fatal，源码上可见此残留，真实PCM也有fatal拒绝路径。已即时通知主线：采用材料专属输出抑制latch，或精确记录自有gate的安装/撤销而不撤销真正provider fatal、barge-in或新owner gate；补“新owner继续可用、无材料fatal残留”检查。**当前阅读版本尚待修复**，不能据离线数量标全通过。
+
+**P2 listener await之后需再次核物理connection。** 最初drain listener返回后只核current()，它不含connection比较；同source/socket/activation下物理connection已被其他任务替换时，旧material任务可能再次connect覆盖它。final listener返回后也要核current及owned_connection，再设置session_closed_by_server=false/success。已通知主线两个位置独立加connection围栏，不可盲目采当前connection当自己的。当前阅读版本已加**final listener返回后**connection核对，**drain→connect之前**仍待补。
+
+以上是限定源码层发现，不是实际用户事故；审查未安排新的在线尝试。发现已实时反馈，不因本项局部缺口结束长期Goal。
+
+### 尚未由这组离线测试证明的部分
+
+- product事件实际生成→plugin bridge→target manager、成功SDK结果的binding字段与真实batch lifecycle还需主线整合；这组测试替代了registry/transport/provider/socket，不能冒称跨进程通过。
+- browser永久退役旧connection token、晚decode停止、设备回环旧声停止、新连接实际恢复均没有本轮实际证据。
+- boot/seq可防陈旧通知，但不提供控制消息送达ack；主线产品sender失败/异步换课需仍明确状态，不把submitted当音频停止。
+- material cancel会重建physical connection；不回放PCM意味着更换期间的语音输入不能默认为已完整保留，需界面就绪与真实输入/播放分别核验。仅一次connect不等于免费或语音稳定性已通过。
+- 目前binding仅study_explain，Study quiz/answer、独立communication queued narration与controlled surface源码选择不在自动覆盖范围；不能把这一实现扩称所有学习音频都按材料取消。
+
+## 最终限定复核：等待阶段与晚完成围栏
+
+主线后续修订上述generator及离线测试，本审查仅重新读取这两个文件的相关位置。下列新结论覆盖上节同位置的“尚待修复”，不抹去发现过程。
+
+- **等待锁时残留fatal/interrupted已解决（源码/离线）**：_apply不再设置provider fatal/interrupted，改为专属output_hold={connection,user_epoch}；Core._tts_output_is_current仅暂停对应旧Native输出，输入不因材料等待被fatal阻断，TTS不受该hold限制。finally只清仍是自己安装的hold对象。新增等待frame时新input负例断言fatal/interrupted=false及hold释放；实际tts_lifecycle方法fixture检查旧输出暂停、新input或TTS可继续。主线报告19项离线通过，本审查未重跑。
+- **listener到connect及final完成身份已解决（源码/离线）**：drain await后核current和原connection，再connect；只接受exact original+1，不把更高generation盲目收作自己的连接，失败清理的owned_connection被限制在自有范围。final listener await后核current/owned connection再设置恢复成功。两项物理connection接管负例存在。
+- **cancel send await后误关闭新连接已解决（源码/离线）**：frame锁内发送旧token后，释放锁、source.close之前再核current/原connection；主线新增send期间替换connection负例，旧任务不close/connect新physical owner。
+- **失败状态await后误断开新连接已解决（源码/离线）**：释放swap锁后发送失败status，返回后再次核current/owned connection才disconnected_by_server；主线新增status发送期间新connection接管负例。主线报告最终21项离线通过，本审查未独立运行。
+
+normalize只接受已知draft helper的精确SHA，未知改动拒绝，当前helper不二次重写；这是源码核对。双runtime精确更新、4新host目标fresh LF replay/AST/deployed byte/idempotence通过是主线提供的部署检查，不是本审查启动或验证当前服务。产品Agent11项通过属于独立产品侧证据，本轮未阅读/修改其4个独占文件。
+
+### 已提交取消后的同物理连接新input：需明确恢复边界
+
+最后发现并即时反馈另一种不同于上述“等待阶段”的条件：若frame锁内已设置fatal/interrupted、已发送永久退役旧token的cancel，而send await期间**只发生user epoch推进、物理连接未替换**，新增current检查会退出；failed_ours因epoch变化为false，不close、不重建、不发失败status，材料hold虽释放，当前旧连接仍可能fatal且token已永久retired。已有21项中的send负例覆盖physical connection确实替换，没有覆盖仅新input推进。
+
+此为源码层条件性风险，未在线触发、未声称真实用户已遇到。已建议主线补一个send callback仅note_user_turn_started的定向离线场景，确认结果是明确可恢复状态：在仍精确拥有旧physical connection时有界退役/提示重新就绪，或取消开始后不把旧连接内到达的输入视为成功接管；不能只清fatal，因为renderer token已永久退役。新的真实physical owner始终不得被旧任务关闭。
+
+本轮限定复核到此冻结，不追加在线、音频、host或测试运行，也不扩大审查。已修位置可标源码/离线通过；跨进程真实模型、已排Native音频DOM停止、实际设备旧声停止与新材料恢复仍PENDING，不能因21项或部署哈希通过升级。上述最后恢复边界由主线决策/后续证据接续。

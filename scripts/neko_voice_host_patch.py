@@ -755,6 +755,11 @@ from neko_study_singleflight_patch import upgrade_targets as _study_singleflight
 TARGETS, _STUDY_SINGLEFLIGHT_REPLAY = _study_singleflight_targets(TARGETS)
 _OWNER_TRACE_REPLAY += _STUDY_SINGLEFLIGHT_REPLAY
 
+from neko_material_audio_patch import upgrade_targets as _material_audio_targets
+from neko_material_audio_patch import normalize_material_audio
+TARGETS, _MATERIAL_AUDIO_REPLAY = _material_audio_targets(TARGETS)
+_OWNER_TRACE_REPLAY += _MATERIAL_AUDIO_REPLAY
+
 
 def hunks_for(path: Path):
     """The replacement list that belongs to this file."""
@@ -788,6 +793,8 @@ def apply_to(path: Path) -> str:
     text = path.read_text(encoding="utf-8")
     if path.as_posix().endswith("static/app/app-audio-playback.js"):
         text = normalize_playback_feedback(text)
+    if path.as_posix().endswith("main_logic/core/tool_calling.py"):
+        text = normalize_material_audio(text)
     for relative, old, new in _OWNER_TRACE_REPLAY:
         if path.as_posix().endswith(relative) and new not in text and text.count(old) == 1:
             text = text.replace(old, new)

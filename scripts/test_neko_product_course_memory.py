@@ -60,6 +60,9 @@ names = {"_start_study_session_locked", "_end_study_session_locked", "_restart_s
 methods = ast.Module(body=[node for node in plugin_class.body if isinstance(node, ast.AsyncFunctionDef) and node.name in names], type_ignores=[])
 namespace = {"asyncio": asyncio, "uuid": uuid, "time": time,
              "load_material": importlib.import_module("product_study.study_materials").load_material}
+materials = importlib.import_module("product_study.study_materials")
+namespace.update({name: getattr(materials, name) for name in
+                  ("material_context", "material_changes", "submit_material_changes")})
 exec(compile(ast.fix_missing_locations(methods), str(SOURCE / "__init__.py"), "exec"), namespace)
 summary_tree = ast.parse((SOURCE / "entry_tutor_summary_entries.py").read_text(encoding="utf-8"))
 summary_class = next(node for node in summary_tree.body if isinstance(node, ast.ClassDef))

@@ -28,12 +28,13 @@ const install = () => {
  if (!socket || sockets.has(socket)) return;
  sockets.add(socket);
  socket.addEventListener('message', e => {
-  if (typeof e.data !== 'string') { const bytes=e.data.size||e.data.byteLength||0; trace.binaryFrames++;trace.binaryBytes+=bytes;put({direction:'receive',type:'audio_frame',bytes});return; }
+  if (typeof e.data !== 'string') { const bytes=e.data.size||e.data.byteLength||0; trace.binaryFrames++;trace.binaryBytes+=bytes;put({direction:'receive',type:'audio_frame',bytes,correlation_id:trace.lastNativeCorrelation});return; }
   try { const p=JSON.parse(e.data);const event={direction:'receive',type:p.type,speech_id:p.speech_id,turn_id:p.turn_id,correlation_id:p.correlation_id};
    if(incomingText.has(p.type))event.text=String(p.text||p.data||'').slice(0,12000);
    if(p.type==='system')event.data=String(p.data||'').slice(0,200);
    if(p.type==='session_failed'||p.type==='session_ended_by_server')event.reason=String(p.reason||p.message||'').slice(0,300);
-   if(p.type==='audio_chunk')event.correlation_id=p.sdk_speech_correlation_id;
+   if(p.type==='audio_chunk'){event.correlation_id=p.sdk_speech_correlation_id;trace.lastNativeCorrelation=p.sdk_speech_correlation_id;}
+   if(p.type==='game_route_speech_cancel')event.correlation_id=p.sdk_speech_correlation_id;
    put(event);
   } catch {}
  });

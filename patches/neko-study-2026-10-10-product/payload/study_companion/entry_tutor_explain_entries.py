@@ -13,7 +13,8 @@ from ._solution_structure import (
 from .tutor_llm_agent_concept_explain import repair_solution_structure
 from .entry_tutor_context_support import _TutorFinalizeProgress
 from .llm_prompts import build_concept_recent_context
-from .study_materials import save_material, material_context, material_context_current, MaterialContextChanged
+from .study_materials import (save_material, material_context, material_context_current, MaterialContextChanged,
+                              material_changes, submit_material_changes)
 from .entry_common import (
     Any,
     Err,
@@ -147,22 +148,30 @@ class _TutorExplainEntriesMixin:
         async with _plugin_lock(self._lock):
             if expected_course_id and str(self._state.study_course_id) != expected_course_id:
                 return Err(SdkError("课程已切换，请重新选择当前课程的图片后提交。", code="course_context_changed"))
-            self._state.last_vision_image_base64 = image_payload
-            self._state.last_ocr_text = normalized_text
-            expected_material = material_context(self)
+            before_material = material_context(self)
             if getattr(self, "_store", None) is not None:
                 await asyncio.to_thread(save_material, self._store, self._state.study_course_id,
                                         image_payload, normalized_text)
+            self._state.last_vision_image_base64 = image_payload
+            self._state.last_ocr_text = normalized_text
+            expected_material = material_context(self)
+            material_notifications = material_changes(self, before_material, "image_submitted")
+        submission = await submit_material_changes(self, material_notifications)
         source_text = normalized_text or _image_only_explain_prompt(
             self._cfg.language
         )
         kwargs.pop("_material_context", None)
-        return await self.study_explain_text(
+        result = await self.study_explain_text(
             text=source_text,
             vision_image_base64=image_payload,
             _material_context=expected_material,
             **kwargs,
         )
+        if isinstance(result, dict):
+            result["material_control_submission"] = submission
+        elif hasattr(result, "is_ok") and result.is_ok() and isinstance(result.value, dict):
+            result.value["material_control_submission"] = submission
+        return result
 
     @ui.action()
     @plugin_entry(

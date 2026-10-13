@@ -1,48 +1,49 @@
 # 日常学习伙伴当前状态
 
-现有 Goal active，thread `01a13531-0341-7611-afc2-5c472a7ccf50`，未重建或标完成。完整执行契约：`D:\CODE\project\LiveTutor-Lab\docs\daily-companion-contract-2026-10-14.md`。每次上下文压缩/自动续跑必须先完整读取 contract、plan、status、blockers。后续用户明确指令优先并更新对应记录；沿用账本不重置、夜间不采房间麦克风、局部阻塞推进其他项、完成以实际证据为准。
+现有Goal active，thread `01a13531-0341-7611-afc2-5c472a7ccf50`，未重建/暂停/完成。完整执行契约 `D:\CODE\project\LiveTutor-Lab\docs\daily-companion-contract-2026-10-14.md`。压缩/自动续跑先完整读contract、plan、status、blockers；后续明确指令优先。账本不重置、夜间不采房间麦克风、局部阻塞继续其他任务、实际证据决定完成。GPT-6.1 Sol/High设置未由工具验证，未切换。
 
-## 已发布与工作树
+## 发布与工作树
 
-远端 `codex/daily-learning-companion` 最新已核 SHAd6405af9c92e629a96e355c75c48699eeff26271，唯一parent465da5b，阶段三25个明确allowlist文件已commit/push。独立 managed worktree `C:\Users\Shmily\.codex\worktrees\daily-companion\LiveTutor-Lab` clean；未合并/强推，远端master/教学分支未动。主项目master HEAD2c541755344eb8bcf35e310f871c513ea809e1a5/index保持原状，.workbuddy及无关改动保留。contract与已发布副本SHA一致，此发布确认在push后本地更新。
+已发布阶段四 `codex/daily-learning-companion` SHA5369c904453fd6fcbbba2a0748281f012d5c76c7，parentd6405af9c92e629a96e355c75c48699eeff26271。managed worktree `C:\Users\Shmily\.codex\worktrees\daily-companion\LiveTutor-Lab` clean5369（最近核），主root masterHEAD2c541755344eb8bcf35e310f871c513ea809e1a5/index空，.workbuddy/无关改动保留。无main merge/force。完整contractSHA256 FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33，发布副本一致；原文169行，不替换摘要。阶段五代码/报告未发布。
 
-## 分层证据和剩余
+## 分层成果与剩余
 
-- A：固定store/持久配置、选择/粘贴图片、就绪/错误/引导、换图/换课异步guard已交付；真实图像教学/课程返回/重启与角色设备路线有证据。最新连续体验仍待集中真人。
-- B：普通真人打断/基础教学继承已验。新quiet+received-ASR+ready/all-Study准入仅opt-in，日常默认关闭。adjacent6单point完整输入后一次动作/无提前音频/简短确认/DOM/设备过，但prefix无tool。gated7五片ASR、旧prefix升格、四次解释、不完整英文/0PCM；neighbor8限制200ms邻接接续后旧prefix拒绝、无提前音频、中文28PCM/72响声，仍三次解释/英文失败。14真实方法、ordering6、lifecycle/replay5过，PCM/onset未改。最新显式一次explain.language、counted/否定表达、重叠解释临时cfg锁，4真实wrapper/现有SQLite守卫、5失败guard/shape过；该语言增量仅离线，不能称英文设备过。主要延迟在ASR后重复工具/模型与proxy续答，下一步先离线处理这个实际原因。
-- C：现有SQLite语言/篇幅/讲解/主动题、临时偏好不持久、topic一致性、续题/纠正/重启/返课证据继承，不另建记忆系统。gated7/neighbor8实际长期zh-CN/brief/no-proactive未变、原图/课一致、checkpoint空、history只有explain；仅支持这两场未造题/未保存临时语言，不能替代完整英文教学结果或所有control语义。
-- D：角色无源码预取的真实结构→行→影响追问已补证。file mode复用既有CodeGraph node小行窗口，原范围/过滤不变；4窗口guard、1结构路由、1当前revision历史检查通过。实际角色纠正map行顺序，重新读取客户端16/17、服务端8/9、helper并说明漏键→NaN→400；short-followup4仍把值写反与缺key混淆且各3句，整体PARTIAL。最新角色guidance加现有key的错误值不等于undefined、恰好两句、历史答案可错；这次增量未新模型确认。
-- E：受控HTML/图片/已过滤源码指示；版本变更清旧pointer、滚动/resize/zoom几何已验。source ACK现在只返回指示请求元数据，不送无关代码，zh/en一次语言可选；10 callback/HTTP guard与adjacent6简短确认通过。任意桌面定位未实现，按contract采用受控表面继续。
-- F：真实SDK/DB本地503失败不造题/不记分/原attempt保留，恢复同题一次评分再讲通过，8stub请求、共享账本不变；不冒称真实网络断电或真人。启动方式、支持范围与10–20分钟体验步骤已写 `docs/daily-companion-use-2026-10-14.md`，真人等明确“准备好了”。
+- A：固定daily store/config/课程、图片选择/粘贴、就绪/错误/引导、异步换课/材料guard；真实Study vision/课程返回/重启继承。最新current-picture question覆盖模型旧text摘要，使用当前图+identity；无图诚实degraded，literal source不混saved图。Native guard12过，生产11/语言4/记忆6/image4/failure5过，最新23产品部署匹配。
+- B：真人普通打断/基础教学继承。新quiet+received-ASR+ready gate仅opt-in，默认off；adjacent6单point完整输入后role/DOM/设备过，不代表长停顿普遍通过。neighbor8/voice9/continuity10部分改善：voice9一explain/两句英文主体含原中文标签、23PCM/68响声；continuity10一个CONNECT两轮各一explain，英文主体→中文、25/27PCM、75/71回环响声、prefs不变。严格纯英文/所有persistent control/真人新能力未过。精确在途合并7离线过，无online joined证据，不称物理branch通过。
+- B语义/计时：continuity10误把『天气未命中』说成『天气命中』，整体partial；工具send后proxy首音约7.59/4.22秒、末speech→末ASR1.485/2.114秒、ASR后工具上界4.99/2.99秒。首native trace截断第一轮首次时间未知，未为缺时间重跑。下一量具已按每轮保存。
+- C：既有SQLite四明确偏好/临时不升级/topic一致/续题错答纠正重启返课证据继承。不另建系统、不删历史。真实SDK/DB本地503失败不造题/不计分/原attempt保留，恢复同题一次score→explain过8stub请求，非断电/真人。
+- D：角色真实structure→filelines→纠正/impact重新查已授权代码，4window/1structure/1current revision守卫过；short-followup4仍把值写反等同undefined且各3句，guidance修正仅source。Sky Scout只读，CodeGraph已接入不重建，不送整仓库。
+- E：受控HTML/图片/过滤源码point，resize/scroll/zoom/version过，实际role→DOM→设备adjacent6通过简短确认；任意桌面定位未实现，按contract fallback，首版学习者操作。
+- F：四阶段已发布，启动/范围/10–20分钟集中体验步骤 `docs/daily-companion-use-2026-10-14.md`；所有新增真人待明确“准备好了”。
 
-## 当前进程和下一步
+## 阶段五实际失败、修正与证据
 
-gated7/neighbor8均已结束，exec34320/88166已返回terminal。本场用单条复合中文固定指令0.900秒句内停顿和原Sky图；neighbor8复用前场隔离课/图、不再次paid准备。room mic=false、假静音native设备、WASAPI输出回环、音量未改。当前无本任务online语音/host/native/surface/meter，原录音/截图/失败JSON仅在raw、不发布。进程与端口发布前再核，不能将旧快照误当活动任务。
+生产4文件material boot/seq/context/精确target盲通知、host4文件binding/actual batch owner/旧native token退役+一次有界connect、UIunknown/submitted提示。host27/producer11/UI14离线；fresh LF重放与两runtime字节、AST、二次幂等、未知draft拒绝过，manifest sealed source-offline、23产品部署匹配。普通onset/PCM未伪造、无旧input replay/response alias。
 
-文字short-followup4已经结束，coreApi仅恢复原free字段，学习历史/偏好保留，无活动文字宿主。两个既有子Agent仅各自报告审查，不在线、改账本或共享生产文件。
+replacement11 Sky→forward：新API/角色forward正确，但submission空/0cancel/旧token，479/48/0。replacement12 forward→reverse：新API reverse正确，两个native_reply仍旧forward；scope3 actual text=WEX→NUD→REZ关闭vision/图binding已确认，first-call args未采。空submission不是空target/capture失败证明。最新schema冲突/current-picture intent修正，3新Native guard过；literal source仍受course/session约束。
 
-本轮B/D结果与边界详见study-speech-gate和code-coverage报告。接着整理必要文件闭包、隔离审查/commit/push阶段成果，之后B优先同一最终ASR的重复paid tool及其多个response结果/音频owner离线复现，保留普通打断，不加未知response alias；再有依据进行一次必要的完整临时英文设备补证。F继续日常连续材料/换课/重启操作接续，真人集中体验等“准备好了”。局部问题不结束Goal，不以小阶段/清晨标完成。
+SDK audit真register/prepare/context/callback/serialization没有丢非空_ctx/binding；v2 facade无recipient fallback已证实。material-sdk1/ core-sdk2均2local-model-stub请求/shared ledger unchanged，后者patched actual core→real registry/remote→SDK/producer的binding/owner/剥离/原args四checks过；fake output owner，不能称Native/device。两个local host finally已清理。真实Core角色路由现在独立Native捕获、拒绝stale/foreign且不改原args，结构日志只记bool/长度、不录payload。
 
-阶段三已发布，Goal再次核对active。下一续跑先读四文件，再从neighbor8具体重复调用/response owner复现继续；不重跑A/C/E已过批次，不因d6405af阶段成果结束Goal。最新manifest23/23部署到固定daily store，双runtime_tools/transport startup fingerprint匹配。最后进程核对：已知gated7/neighbor8 native PID不在、48911/48916无listener，无本任务online会话。
+replacement13 reverse→forward已terminalexec39101；actual精确旧token cancel/native queue inactive、submitted YUI、1→2一次重建。完整195秒WASAPI有2响声bins，cancel后500ms宽容起3秒静音，device旧声音停止过（raw13-review）。新connection2在无input约20秒unexpected close，session_ended_by_server，未第二轮，整体partial；首答被retire没有完整文本。探针原55秒等待已故意取消answer不适合此场；新量具只在accepted change+exact旧cancel/stop+无当前播放后将首轮标material_retired，fresh追问，3local checks过，普通场观察不变。长quiet恢复独立未修，短间隔不能替代。
 
-历史完整阶段记录保存在 `docs/evidence/daily-companion-status-history-through-gated5-2026-10-14.md`，含原失败、已尝试、旧进程快照与推断更正；旧计数/进程不是当前值。当前源码/模型/设备/真人各层不得互相替代。
+## 当前额度、进程与下一步
 
-最新实际账本：DeepSeek440/2000，Lanlan.app46/无累计上限，Lanlan.tech0/0；round bargein-autocheck-20261012，不重置。请求不是账单金额，不以剩余额度安排测试。
+最新terminal账本537/2000 DeepSeek、53/null app、0/0 tech，round bargein-autocheck-20261012不重置。请求不是账单，不为剩预算测试。13/14 native59264/40944不在，48911/48916无listener（14结束后核）。
 
-## d640之后未发布增量（覆盖旧下一步与进程快照）
+replacement14已terminal exec87197，raw独立picture-replacement14.json/final-review.json。复用existing forward→reverse/b71固定首问+追问，无paid预置；首轮9PCM被retire（非完整答复），fresh追问新Native token22PCM，actual中文两句REZ→NUD→WEX符合reverse。exact cancel/inactive、完整195秒WASAPI51响声bins及cancel后500ms宽容起3秒静音、finalized/followup actual turn end/inactive/normal checks全过。device本场路线与事实过，human PENDING，13长quiet失败不被覆盖。native40944清理/端口free，无活动online。room mic=false/volume unchanged/raw只本地。
 
-B：`neko_study_singleflight_patch.py`只在opt-in free lanlan_app/no serverVAD、已完成ASR/current owner、同connection/scope/ASR接收时刻/完全相同args、同provider session的在途study_explain合并。结果保留各自call ID/原response batch，不加未知alias、不缓存已完成结果、不合并评分/偏好/不同参数。7实际工具/owner检查通过，14准入/6ordering/5lifecycle与重放过；PCM/onset未改。
+最新审查3项P2已修：current-picture误判imageUrl/imagePath/中英拒绝图片literal source（Native13）；可信Study结果在captureNone/failed/string也剥离private binding（host28）；完整WAV reviewer拒绝未finalized/无真实末轮terminal/非Native token。新增负例only offline，14当前图正例及cancel算法未改。四host鲜源重放/两部署字节/AST/idempotence和startup fingerprint匹配，23产品最新部署匹配，producer11/UI14/相关language4/course6/image4/failure5、探针3过。没有为了负例重复paid。
 
-voice9固定16.978秒单指令含0.900秒停顿、复用既有隔离图/课，已结束（exec6759 terminal、owned finally清理）。5片ASR后只有一个study_explain和真实SDK执行；角色说两句英文主体，保留03/04等图中中文标签，23native PCM、68回环响声、无提前provider音频、课程/图/长期zh-CN/brief/no-proactive不变。严格全英文形状检查因中文标签失败，整体PARTIAL；无identical-joined trace，不能称合并分支实际设备验证。新单次语言结果已有模型/设备证据，纯英文、下一轮默认中文与真人听感仍需区分。raw证据`daily-companion-20261014-picture-singleflight9.json`，不发布录音/用户数据。
+两Agent只读capture/SDK/remaining-provenance报告已冻结，无生产并发；quiz/answer/summary无Native binding，现有grade去重/attempt/session保护保留，summary当前课快照/旧session错配及narration queue post-change guards待最小修复。先完成本场核证/清理，再阶段五allowlist审查发布，继续长quiet/细字/其他A–F。原Goalactive，未因清晨或取消部分通过结束。
 
-A：Native wrapper首次await前记录课/会话/图+OCR指纹，ensure后核对并捕获材料；语言锁排队不能重绑定新材料。首次空会话允许初始化，非空会话替换拒绝。UI提交共用身份，entry在build/model/finalize前后检查；finalizer仅短SQL提交占既有state lock，不跨网络，保留已提交原identity历史、不更新新live seed/错误/叙述。9真实wrapper→entry/finalizer→现有SQLite检查过；explicit source text关闭不相关saved图。受影响language4/course4/failure5/memory6此前通过。新版材料guard尚无模型/设备换图验证；材料事件未取消已经安排的native音频，不能冒称全链已解决。
+## 证据导航与历史
 
-生产材料guard增量尚未部署刷新manifest，inflight工具双runtime指纹已封存；阶段三published hash不变。两个Agent报告已冻结，无在线/共享生产并发修改。当前没有本任务online会话，启动新场前再核具体PID/端口。下一步刷新23源/部署指纹，增加有界同会话英文→中文追问，审查后同codex分支阶段发布。现有Goal刚核active，完整contract继续绑定，未重建/改预算；压缩/自动续跑先读四文件。
+- `docs/evidence/daily-companion-material-audio-implementation-2026-10-14.md`
+- `docs/evidence/daily-companion-material-control-2026-10-14.md`
+- `docs/evidence/daily-companion-material-control-ui-2026-10-14.md`
+- `docs/evidence/daily-companion-material-control-sdk-audit-2026-10-14.md`
+- `docs/evidence/daily-companion-material-capture-review-2026-10-14.md`
+- `docs/evidence/daily-companion-remaining-provenance-review-2026-10-14.md`
+- `docs/evidence/daily-companion-material-replacement-device-2026-10-14.md`
 
-当前更新：23产品源/固定daily部署指纹已刷新匹配、source audio gate匹配。same-session continuity10已经启动，exec41824，native owned PID34592（这是启动快照，续跑先核，不按旧PID清理），同隔离课/图、原英文复合WAV+新增9.866秒中文追问WAV4d3c9f2e...。每轮有75秒结果上限、整体host360秒、meter195秒；无重连/paid图片准备、fake silent native input/room mic=false/音量未改。结果尚在观察，启动前440/46/0，结束后再记实际值。screen_guidance Agent仅只读审查材料事件→现有audio owner/cancel路线，单独新报告文件；不动进程/账本/生产。
-
-continuity10已结束，exec41824 terminal、owned finally已执行。账本458/2000 DS、47 app、0 tech，同round无重置。一个CONNECT/同课同图，两轮各一study_explain/真实SDK执行，ASR分别5/3片、native PCM25/27、从实际保存WAV按0.25秒重算响声75/71（总146）。第一轮英文主体两句含中文原标签，第二轮恢复中文，两轮无提前provider audio，长期zh-CN/brief/step_by_step/no-proactive不变、未出题。材料guard新版已走正常模型/设备解释路径，但没有在线竞态换图测试，不能称替换取消通过；无singleflight joined，仍未设备触发合并branch。
-
-整体PARTIAL：第二轮错误把Sky原HTML5217/5219『天气未命中 / 百科 HTTPS』说成『天气命中 / 百科 HTTPS』，主节点/数据源列表相符，细字关键否定误读；第一轮笼统称HTTPS不等于实际代码协议已核（图是HTTP(S) GET）。不能以所有自动continuity checks green称细字/语义通过。第一轮最终native trace500封顶截掉首PCM时间，未知；计数仍25。后续量具按每轮保存首PCM/scheduled，未为时序缺失重跑付费。回环JSON仅60初始bins，原WAV保留，重算完整曲线；第二轮分桶首响比provider早约54ms属0.25秒桶边界，非提前播放。
-
-末非静音→末ASR/首tool-result-send/首provider/首loopback分别第一轮1.485/6.472/14.062/14.759秒，第二轮2.114/5.101/9.321/9.267秒。工具send是完成上界，ASR后backend约4.99/2.99秒、发送后proxy首音约7.59/4.22秒。不因这些测量更改普通onset/cancel。当前scene无活动online，下一步核清理，审查发布本阶段必要代码/记录，再推进细字纠正后重查和材料事件→已有音频取消。没有新真人通过，集中体验仍待『准备好了』。
+原完整status存 `docs/evidence/daily-companion-status-history-through-replacement13-2026-10-14.md`，更早history-through-gated5原文件也保留。历史旧计数/进程/推断以本页新事实为准，source/model/device/human不得混用。raw录音/截图/学习数据只本地，不发布。

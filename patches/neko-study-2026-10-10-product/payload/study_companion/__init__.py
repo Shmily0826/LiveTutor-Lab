@@ -83,7 +83,7 @@ from .study_habit_store import StudyHabitStore
 from .study_ocr_pipeline import StudyOcrPipeline
 from .study_avatar_tools import _StudyAvatarToolsMixin
 from .study_code_tools import _StudyCodeToolsMixin
-from .study_materials import load_material
+from .study_materials import load_material, material_context, material_changes, submit_material_changes
 from .supervision import SupervisionController
 from .tutor_llm_agent import TutorLLMAgent
 from .tutor_llm_agent import diagnostic_code_for_exception
@@ -230,6 +230,10 @@ class StudyCompanionPlugin(
         self.file_logger = self.enable_file_logging(log_level="INFO")
         self.logger = self.file_logger
         self._lock = asyncio.Lock()
+        self._study_material_boot_id = uuid.uuid4().hex
+        self._study_material_change_seq = 0
+        self._study_material_output_targets = {}
+        self._study_material_control_submission = []
         self._communication_settings_lock = asyncio.Lock()
         self._targeted_context_lock = threading.Lock()
         self._install_in_progress = False
@@ -803,6 +807,7 @@ class StudyCompanionPlugin(
         )
         material = await asyncio.to_thread(load_material, self._store, selected_course)
         async with self._lock:
+            before_material = material_context(self)
             pending_question = dict(self._state.current_question)
             if not (resume_pending_question and self._state.study_course_id == selected_course
                     and pending_question.get("question_id") and pending_question.get("attempt_id")
@@ -826,6 +831,8 @@ class StudyCompanionPlugin(
             self._state.last_session_summary_at = ""
             if getattr(self, "_ocr_pipeline", None) is not None:
                 self._ocr_pipeline._clear_vision_snapshot()
+            material_notifications = material_changes(self, before_material, "session_started")
+        await submit_material_changes(self, material_notifications)
         await self._persist_state()
         return session_id
 
@@ -842,9 +849,12 @@ class StudyCompanionPlugin(
                 summary=self._state.last_session_summary,
             )
         async with self._lock:
+            before_material = material_context(self)
             self._study_session_id = ""
             self._study_session_last_activity = 0.0
             self._state.study_session_id = ""
+            material_notifications = material_changes(self, before_material, "session_ended")
+        await submit_material_changes(self, material_notifications)
         await self._persist_state()
         return session_id
 

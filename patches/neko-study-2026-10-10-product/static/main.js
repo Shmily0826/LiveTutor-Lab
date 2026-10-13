@@ -17,6 +17,7 @@ const ENTRY_TIMEOUT_MS = {
   study_set_mode: 15000,
   study_explain_text: 120000,
   study_submit_image: 120000,
+  __llm_tool__study_material: 15000,
   study_generate_question: 75000,
   study_question_context: 30000,
   study_generate_targeted_question: 60000,
@@ -74,6 +75,7 @@ const studyInputImagePreview = $id('studyInputImagePreview');
 const studyInputImage = $id('studyInputImage');
 const studyInputImageRemove = $id('studyInputImageRemove');
 const studyInputPasteError = $id('studyInputPasteError');
+const studyMaterialControlNotice = $id('studyMaterialControlNotice');
 const answerInputImagePreview = $id('answerInputImagePreview');
 const answerInputImage = $id('answerInputImage');
 const answerInputImageRemove = $id('answerInputImageRemove');
@@ -455,6 +457,49 @@ function setPasteError(target, message) {
   target.hidden = !message;
 }
 
+function studyMaterialControlPayload(value) {
+  for (let depth = 0; depth < 5; depth += 1) {
+    if (typeof value === 'string') {
+      try { value = JSON.parse(value); } catch (_) { return null; }
+    }
+    if (!value || typeof value !== 'object' || value.success === false
+        || value.ok === false || value.is_error === true || value.error) return null;
+    if (Object.prototype.hasOwnProperty.call(value, 'material_control_submission')) return value;
+    value = value.data ?? value.value ?? value.output ?? value.result;
+  }
+  return null;
+}
+
+function renderMaterialControlSubmission(value) {
+  const payload = studyMaterialControlPayload(value);
+  if (!payload) return; // Legacy/Err does not confirm a previous pending cancellation.
+  const records = payload.material_control_submission;
+  const empty = Array.isArray(records) && records.length === 0;
+  const submitted = Array.isArray(records) && records.length > 0
+    && records.every(record => record && record.status === 'submitted');
+  setPasteError(studyMaterialControlNotice, empty ? '' : submitted
+    ? '旧语音取消通知已提交，尚未确认旧语音停止。'
+    : '材料已更新，但尚未确认旧语音停止；必要时重新开始语音。');
+}
+
+function studySessionId(data = lastStatusPayload) {
+  return String(data?.study_session_id || data?.session_id || data?.state?.study_session_id || '').trim();
+}
+
+async function refreshMaterialControl(requestRevision) {
+  const revision = studyMaterialRevision;
+  const course = String(lastStatusPayload?.study_course_id || lastStatusPayload?.state?.study_course_id || '').trim();
+  const session = studySessionId();
+  let value;
+  try { value = await callPlugin('__llm_tool__study_material', {}); }
+  catch (_) { return; } // Metadata read failure must not discard material or rerun the model.
+  if (requestRevision !== statusRefreshRevision || !studyContextIsCurrent(revision, course)
+      || session !== studySessionId()) return;
+  const payload = studyMaterialControlPayload(value);
+  if (payload?.course_id && String(payload.course_id) !== course) return;
+  renderMaterialControlSubmission(value);
+}
+
 function setImagePreview(kind, dataUrl, controller = null) {
   if (pasteControllers[kind] && pasteControllers[kind] !== controller) pasteControllers[kind].abort();
   const isAnswer = kind === 'answer';
@@ -465,6 +510,7 @@ function setImagePreview(kind, dataUrl, controller = null) {
   } else {
     if (studyInputImageValue !== (dataUrl || '')) {
       studyMaterialRevision += 1;
+      setPasteError(studyMaterialControlNotice, '');
       previousExplanation = null;
       if (usePreviousExplanation) { usePreviousExplanation.checked = false; usePreviousExplanation.disabled = true; }
     }
@@ -493,7 +539,10 @@ function beginImageSelection(kind) {
   pasteControllers[kind]?.abort();
   const controller = new AbortController();
   pasteControllers[kind] = controller;
-  if (kind === 'study') studyMaterialRevision += 1;
+  if (kind === 'study') {
+    studyMaterialRevision += 1;
+    setPasteError(studyMaterialControlNotice, '');
+  }
   return controller;
 }
 
@@ -1331,6 +1380,11 @@ async function chooseDeckForFirstCard() {
 function setStatusLine(data) {
   const previousCourse = String(lastStatusPayload?.study_course_id || lastStatusPayload?.state?.study_course_id || '').trim();
   const course = String(data.study_course_id || data.state?.study_course_id || '').trim();
+  const previousSession = studySessionId();
+  if ((previousCourse && course && previousCourse !== course)
+      || (previousSession && studySessionId(data) !== previousSession)) {
+    setPasteError(studyMaterialControlNotice, '');
+  }
   if (previousCourse && course && previousCourse !== course) {
     studyMaterialRevision += 1;
     setImagePreview('study', '');
@@ -1962,6 +2016,7 @@ async function refreshStatus(_options = {}) {
   studyServiceReady = true;
   applyRuntimeConfig(data);
   setStatusLine(data);
+  await refreshMaterialControl(requestRevision);
 }
 
 async function loadQuestionContext(options = {}) {
@@ -2096,6 +2151,7 @@ async function explainText(options = {}) {
   const args = { text: requestText };
   const materialRevision = studyMaterialRevision;
   const course = String(lastStatusPayload?.study_course_id || lastStatusPayload?.state?.study_course_id || '').trim();
+  const submissionSession = studySessionId();
   const imageSubmitted = Boolean(studyInputImageValue);
   if (imageSubmitted) {
     args.image_base64 = studyInputImageValue;
@@ -2106,7 +2162,7 @@ async function explainText(options = {}) {
   try {
     data = await callPlugin(imageSubmitted ? 'study_submit_image' : 'study_explain_text', args);
   } catch (error) {
-    if (!studyContextIsCurrent(materialRevision, course)) return;
+    if (!studyContextIsCurrent(materialRevision, course) || submissionSession !== studySessionId()) return;
     if (error.code === 'course_context_changed' || String(error.message || '').includes('课程已切换，请重新选择当前课程的图片后提交。')) {
       await refreshStatus({ updateReply: false });
       return;
@@ -2115,7 +2171,8 @@ async function explainText(options = {}) {
     if (n) error.n = n;
     throw error;
   }
-  if (!studyContextIsCurrent(materialRevision, course)) return;
+  if (!studyContextIsCurrent(materialRevision, course) || submissionSession !== studySessionId()) return;
+  if (imageSubmitted) renderMaterialControlSubmission(data);
   setStatus(data.degraded
     ? t('ui.status.reply_ready_fallback', 'Reply ready (fallback)')
     : t('ui.status.reply_ready', 'Reply ready'));

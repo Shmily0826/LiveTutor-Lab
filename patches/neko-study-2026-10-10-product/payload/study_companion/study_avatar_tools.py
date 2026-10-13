@@ -430,6 +430,7 @@ class _StudyAvatarToolsMixin:
     async def study_material_tool(self, **_):
         image = str(getattr(self._state, "last_vision_image_base64", "") or "")
         return {"ok": True, "course_id": str(self._state.study_course_id or "general"),
+                "material_control_submission": list(getattr(self, "_study_material_control_submission", [])),
                 "picture_available": bool(image and self._cfg.llm_vision_enabled),
                 "material_id": hashlib.sha256(image.encode()).hexdigest()[:20] if image else "",
                 "vision_enabled": bool(self._cfg.llm_vision_enabled),
@@ -701,6 +702,7 @@ class _StudyAvatarToolsMixin:
         active_course = str(self._state.study_course_id or "")
         state["course_id"] = active_course
         state["session_id"] = str(self._state.study_session_id or "")
+        state["material_control_submission"] = list(getattr(self, "_study_material_control_submission", []))
         if active_course:
             learning = await asyncio.to_thread(self._course_learning_state, active_course)
             state["recent_answer_records"] = learning["recent_answers"]
@@ -794,9 +796,10 @@ class _StudyAvatarToolsMixin:
             "language request like 'in English' - that request changes this answer only, "
             "and the optional language argument makes that one-answer choice explicit. "
             "so do not save it with study_language unless the learner wants it to stick. "
-            "For a visible diagram, text must contain the module names and directed "
-            "connections you actually observed, including uncertainties, unless a "
-            "picture was explicitly submitted to Study and is available as context. "
+            "When the learner asks about the current Study picture, omit text: the "
+            "tool must inspect the latest submitted image, not a remembered summary "
+            "or your guessed module names and arrows. Put literal learner-supplied "
+            "code/notes in text only when those are the requested source. "
             "This tool has no live Realtime screen feed; OCR words alone do not "
             "establish arrows. This is the main teaching tool."
         ),
@@ -806,7 +809,7 @@ class _StudyAvatarToolsMixin:
                 "question": {"type": "string", "default": "",
                              "description": "What the learner wants explained, in their words."},
                 "text": {"type": "string", "default": "",
-                         "description": "Source code or notes; for diagrams include current visible modules and directed edges. Omit only to reuse captured text material."},
+                         "description": "Literal source code or notes requested by the learner. Omit for the current Study picture/diagram or captured window. Never fill with an earlier picture summary or guessed arrows."},
                 "language": {"type":"string", "enum":["zh-CN","en-US"],
                              "description":"Explicit reply language for this explanation only. Set it for a one-time language switch; does not save or pin a course preference."},
             },
@@ -817,12 +820,26 @@ class _StudyAvatarToolsMixin:
         if not isinstance(language, str) or language not in {"", "zh-CN", "en-US"}:
             return {"ok":False,"error":"unsupported_one_turn_language"}
         requested = language or _turn_language_request(question, text) or str((getattr(self, "_study_turn_preferences", None) or {}).get("language") or "")
+        current_picture = bool(
+            re.search(r"架构图|流程图|关系图|图片|截图|图中|图上|这张图|这个图|箭头|\b(?:diagram|picture|image|screenshot|arrows?)\b", question, re.I)
+            and re.search(r"这|图中|图上|当前|刚|屏幕|this|current|screen|latest|submitted|shown", question, re.I))
+        literal_source_request = bool(str(text or "").strip() and re.search(
+            r"代码|源码|函数|变量|标识符|\b(?:source\s+(?:code|line)|code|function|variable|identifier)\b", question, re.I))
+        explicit_picture_reference = bool(re.search(
+            r"(?:当前|刚换|刚交|最新|这张|这个)[^。!?？\n]{0,20}(?:图片|截图|图|箭头)|图中|图上|\b(?:current|latest|submitted)\s+(?:study\s+)?(?:diagram|picture|image|screenshot)\b", question, re.I))
+        rejected_picture = bool(re.search(
+            r"(?:不要|别|不用)(?:再)?(?:查看|看|使用|用)?\s*(?:当前|这张|这个|任何|旧)?(?:图片|截图|图)|\b(?:do not|don't)\s+(?:look at|use|inspect|read)\s+(?:the\s+)?(?:(?:current|this|old|any)\s+)?(?:image|picture|diagram|screenshot)\b", question, re.I))
+        if literal_source_request and (rejected_picture or not explicit_picture_reference):
+            current_picture = False
+        if current_picture:
+            # A native model can pass an OLD picture summary as `text` even
+            # while asking to verify the latest image. The learner's current
+            # picture request must keep vision and image identity binding.
+            # Literal code/notes questions remain independent of saved images.
+            text = ""
         cached_image = str(getattr(getattr(self, "_state", None), "last_vision_image_base64", "") or "").strip()
         has_image_context = bool(getattr(getattr(self, "_cfg", None), "llm_vision_enabled", False) and cached_image)
-        if (not str(text or "").strip()
-                and not has_image_context
-                and re.search(r"架构图|流程图|关系图|箭头|diagram|arrow", question, re.I)
-                and re.search(r"这|图中|图上|当前|刚|屏幕|this|current|screen", question, re.I)):
+        if current_picture and not has_image_context:
             # OCR material does not establish the current diagram's relations.
             # Never ask the text model to invent a missing visual source.
             return json.loads(_teaching(
@@ -830,7 +847,8 @@ class _StudyAvatarToolsMixin:
                 failure_language=requested or self._study_effective_language()))
         # A proxy may issue overlapping explanations. Serialize their temporary
         # cfg overrides so one cannot restore another's temporary language.
-        from .study_materials import material_context
+        from .study_materials import material_context, material_output_target
+        output_target = material_output_target(self, _)
         observed = material_context(self, include_material=not str(text or "").strip())
         await self._ensure_active_study_session()
         async with self._lock:
@@ -849,10 +867,11 @@ class _StudyAvatarToolsMixin:
             lock = self._study_explanation_language_lock = asyncio.Lock()
         async with lock:
             return await self._study_explain_for_turn(question=question, text=text, requested=requested,
-                                                     context=context, image=image, captured_text=captured_text)
+                                                     context=context, image=image, captured_text=captured_text,
+                                                     output_target=output_target)
 
     async def _study_explain_for_turn(self, *, question: str, text: str, requested: str,
-                                    context: dict, image: str, captured_text: str):
+                                    context: dict, image: str, captured_text: str, output_target: str = ""):
         # previous first: the directive below writes the remembered course preference
         # into cfg.language, and that is the value a one-off request has to go back to.
         previous = str(getattr(self._cfg, "language", "") or "")
@@ -872,7 +891,7 @@ class _StudyAvatarToolsMixin:
             reply = _first_text(payload, "reply", "summary", "answer", "explanation")
             if not reply:
                 return payload
-            return json.loads(_teaching(
+            result = json.loads(_teaching(
                 tool="study_explain",
                 reply=reply,
                 mode=payload.get("active_mode") or payload.get("mode") or "",
@@ -881,6 +900,13 @@ class _StudyAvatarToolsMixin:
                 failure_language=requested or self._study_effective_language(),
                 relay=_relay_for(reply, requested or self._study_effective_language()),
             ))
+            if payload.get("ok", True) and not payload.get("degraded"):
+                from .study_materials import bind_material_output, material_context_current
+                async with self._lock:
+                    if not material_context_current(self, context):
+                        return {"ok": False, "error": "course_context_changed", "reply": "材料已更新，请使用当前材料重新提问。"}
+                    result["_study_material_binding"] = bind_material_output(self, context, output_target)
+            return result
         finally:
             if requested:
                 self._cfg.language = previous
