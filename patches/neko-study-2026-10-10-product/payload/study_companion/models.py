@@ -529,6 +529,11 @@ class StudyState:
     practice_scope_revision: int = 0
     study_session_id: str = ""
     study_course_id: str = "general"
+    # StudyConfig.language is deliberately not persisted (store.save_config pops it),
+    # so a learner's spoken "teach me in English from now on" needs a home that does
+    # survive a restart. State already round-trips through save_state/load_state.
+    teaching_language: str = ""
+    teaching_language_by_course: dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)

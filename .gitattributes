@@ -2,3 +2,7 @@
 # extracted plugin sources byte-for-byte on any platform.
 patches/** text eol=lf
 *.patch text eol=lf
+
+# Keep replayable script fingerprints stable across platforms.
+scripts/*.py text eol=lf
+scripts/*.js text eol=lf

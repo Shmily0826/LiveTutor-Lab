@@ -185,6 +185,14 @@ def _generic_error_details(exc: BaseException) -> tuple[int, str, str]:
 
 
 def _diagnostic_for_generic_error(exc: BaseException, *, has_image: bool) -> str:
+    # CONNECT refusals are wrapped as APIConnectionError; retain our local cap reason.
+    cause, seen = exc, set()
+    while cause is not None and id(cause) not in seen:
+        seen.add(id(cause))
+        if (cause.__class__.__name__.lower() == "proxyerror"
+                and "403 NEKO_EGRESS_BUDGET_EXHAUSTED" in str(cause)):
+            return "agent_quota_exceeded"
+        cause = cause.__cause__ or cause.__context__
     status_code, provider_code, _ = _generic_error_details(exc)
     name = exc.__class__.__name__.lower()
     combined = f"{provider_code} {exc}".lower()
@@ -229,7 +237,7 @@ def _diagnostic_for_generic_error(exc: BaseException, *, has_image: bool) -> str
     }:
         return "model_not_supported"
     if status_code >= HTTPStatus.INTERNAL_SERVER_ERROR or any(
-        marker in name for marker in ("connection", "internalserver")
+        marker in name for marker in ("connection", "connecterror", "internalserver")
     ):
         return "provider_unavailable"
     if status_code == HTTPStatus.NOT_FOUND:
@@ -372,7 +380,9 @@ class StudyModelGateway:
                   input_tokens=result.input_tokens, output_tokens=result.output_tokens)
             return result
         except BaseException as error:
-            audit("failed", error_type=type(error).__name__)
+            audit("failed", error_type=type(error).__name__,
+                  diagnostic=getattr(error, "diagnostic", ""),
+                  status_code=getattr(error, "status_code", 0))
             raise
 
     async def reserve_optional_agent_call(

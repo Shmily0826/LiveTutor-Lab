@@ -1,0 +1,10 @@
+{
+  "original_local_artifact_sha256": {
+    "teaching-quality-20261013-final-human-events.json": "aebddb6d7ef7b970f908f8c179ec7ed24a9dfe6d1cd7c21fc8ebe5ede11a73c2",
+    "teaching-quality-20261013-final-spoken-contract-callbacks.json": "f3d40b0520249b5a813d6e270ee0c9d700d0bccee7a845b06a48797c4002185c",
+    "teaching-quality-20261013-goal-final-state.json": "af4a373c2b15d2d637eba3b8c8d47d160e0a6df5d62bc2b8bf97b4c4e6a5da3f",
+    "teaching-quality-20261013-results.json": "b457caa1c781d27f1eab0eb86e464157fab88f5571560eb2fe87be862bc353b9",
+    "teaching-quality-20261013-window-live-audit.json": "7f8c8cc978669f9b97de044fe112932b6958fd39d7538ba953f5dcf24a7c1587"
+  },
+  "evidence_layers": "Provider generation, native playback, loopback, and human confirmation are separate. No room audio or credentials published."
+}

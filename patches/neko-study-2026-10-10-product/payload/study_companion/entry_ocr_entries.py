@@ -53,6 +53,21 @@ def _foreground_hwnd() -> int:
         return 0
 
 
+def _title_key(text: str) -> str:
+    """Title as the capture gate compares it: spaces removed, casing kept.
+
+    The learner still has to name the whole title bar - a partial name matches nothing.
+    Only whitespace is forgiven, because the speech route writes `LiveTutor` as
+    `Live Tutor`, and a verbatim `!=` turned that into a refusal to read the learner's
+    own window. Marker matching already normalises the same way (`_markers_matched`).
+    """
+    return "".join(str(text or "").split())
+
+
+def _title_matches(actual: str, wanted: str) -> bool:
+    return _title_key(actual) == _title_key(wanted) and bool(_title_key(wanted))
+
+
 def _window_title(hwnd: int) -> str:
     import sys
 
@@ -71,7 +86,12 @@ def _window_title(hwnd: int) -> str:
 
 
 def _hwnd_for_title(title: str) -> int:
-    """Handle of a visible, non-minimised window with exactly this title, else 0."""
+    """Handle of a visible, non-minimised window with this whole title, else 0.
+
+    `FindWindowW` is tried first because it is exact and cheap. When it misses, the
+    window list is scanned with whitespace removed, which is the difference between
+    "the learner named a window that is not there" and an ASR-inserted space.
+    """
     import sys
 
     wanted = str(title or "").strip()
@@ -82,9 +102,23 @@ def _hwnd_for_title(title: str) -> int:
 
         user32 = ctypes.windll.user32
         hwnd = int(user32.FindWindowW(None, wanted) or 0)
-        if not hwnd or not user32.IsWindowVisible(hwnd) or user32.IsIconic(hwnd):
-            return 0
-        return hwnd
+        if hwnd and user32.IsWindowVisible(hwnd) and not user32.IsIconic(hwnd):
+            return hwnd
+        key = _title_key(wanted)
+        match = ctypes.c_void_p(0)
+        enum_proc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+
+        def visit(candidate, _param):
+            handle = int(candidate or 0)
+            if not handle or not user32.IsWindowVisible(handle) or user32.IsIconic(handle):
+                return True
+            if _title_key(_window_title(handle)) == key:
+                match.value = handle
+                return False
+            return True
+
+        user32.EnumWindows(enum_proc(visit), 0)
+        return int(match.value or 0)
     except Exception:
         return 0
 
@@ -92,10 +126,12 @@ def _hwnd_for_title(title: str) -> int:
 def _named_window_target(title: str) -> tuple[dict[str, object] | None, str, int]:
     """Resolve an explicit capture target as (target, refusal_reason, hwnd).
 
-    There is no fallback path here on purpose. Cropping the screen rectangle of a
-    window that is not frontmost would capture whatever is painted on top of it,
-    so a target that is not the current foreground window is refused rather than
-    captured, and an obscured window is never substituted by the whole desktop.
+    There is no fallback path here on purpose: an unnamed or partially named
+    window is refused, and the plugin's own UI is never a target. Being frontmost
+    is not required, because the pixels are taken from this hwnd's own device
+    context (PrintWindow) rather than from a screen rectangle - a screen crop of a
+    covered window would capture whatever is painted on top of it, which is exactly
+    what the learner did not ask for.
     """
     wanted = str(title or "").strip()
     if not wanted:
@@ -103,10 +139,8 @@ def _named_window_target(title: str) -> tuple[dict[str, object] | None, str, int
     hwnd = _hwnd_for_title(wanted)
     if not hwnd:
         return None, "target_window_not_found", 0
-    if _window_title(hwnd) != wanted:
+    if not _title_matches(_window_title(hwnd), wanted):
         return None, "target_window_title_mismatch", hwnd
-    if _foreground_hwnd() != hwnd:
-        return None, "target_window_not_foreground", hwnd
     target = _window_target_for_hwnd(hwnd)
     if target is None:
         return None, "target_window_geometry_unusable", hwnd
@@ -201,9 +235,36 @@ def _window_target_for_hwnd(hwnd: int) -> dict[str, object] | None:
         return None
 
 
+def _is_uniform_frame(image: object) -> bool:
+    """True when a window answered PrintWindow with nothing but one flat colour."""
+    try:
+        extrema = image.getextrema()
+    except Exception:
+        return True
+    return all(int(pair[0]) == int(pair[1]) for pair in extrema)
+
+
+def _window_answers_messages(hwnd: int, timeout_ms: int = 700) -> bool:
+    """False when the thread owning this window is too busy to answer a message.
+
+    PrintWindow blocks inside the *owner's* message loop, so an occupied window would
+    otherwise hold a plugin worker until the host gives up on the whole call.
+    """
+    try:
+        import ctypes
+
+        result = ctypes.c_void_p(0)
+        # WM_NULL with SMTO_ABORTIFHUNG: returns 0 if the owner stops replying in time.
+        sent = int(ctypes.windll.user32.SendMessageTimeoutW(
+            int(hwnd), 0x0000, 0, 0, 0x0002, int(timeout_ms), ctypes.byref(result)))
+    except Exception:
+        return True
+    return bool(sent)
+
+
 def _capture_named_window_image(title: str):
     from PIL import ImageGrab
-    from .study_capture_backends import _run_with_thread_dpi_awareness
+    from .study_capture_backends import PrintWindowCaptureBackend, _run_with_thread_dpi_awareness
 
     def capture():
         target, refusal, hwnd = _named_window_target(title)
@@ -213,10 +274,26 @@ def _capture_named_window_image(title: str):
         verified, refusal, verified_hwnd = _named_window_target(title)
         if refusal or verified_hwnd != hwnd or verified != target:
             raise RuntimeError(refusal or "target_window_changed_before_capture")
-        frame = ImageGrab.grab(bbox=box)
-        if _foreground_hwnd() != hwnd or _window_title(hwnd) != title:
+        if not _window_answers_messages(hwnd):
+            raise RuntimeError("target_window_not_responding")
+        try:
+            # This backend already ships in the plugin. Asking the named hwnd to render its
+            # own surface is what lets the learner keep typing in the chat window instead of
+            # re-fronting the code window for every single read.
+            frame = PrintWindowCaptureBackend._capture_full_window(hwnd, box)
+            route = "printwindow_hwnd"
+        except Exception:
+            frame, route = None, ""
+        if frame is None or _is_uniform_frame(frame):
+            # A few GPU-composited windows refuse WM_PRINT. The screen rectangle is only an
+            # honest stand-in while this hwnd really is the frontmost thing painted, so a
+            # covered window that renders nothing stays a refusal instead of an overlay.
+            if _foreground_hwnd() != hwnd or not _title_matches(_window_title(hwnd), title):
+                raise RuntimeError("target_window_not_renderable")
+            frame, route = ImageGrab.grab(bbox=box), "pil_bbox_crop"
+        if not _title_matches(_window_title(hwnd), title):
             raise RuntimeError("target_window_changed_during_capture")
-        return frame, target, hwnd
+        return frame, target, hwnd, route
 
     # Measure and grab in one physical-pixel coordinate space, then restore the thread.
     return _run_with_thread_dpi_awareness(capture)
@@ -299,7 +376,11 @@ class _OcrEntriesMixin:
         if not title or not target_markers:
             return Err(SdkError("TARGET_WINDOW_REFUSED: window_title and expected_markers are required", code="TARGET_WINDOW_REFUSED"))
         try:
-            frame, target, target_hwnd = await asyncio.to_thread(_capture_named_window_image, title)
+            frame, target, _hwnd, capture_route = await asyncio.wait_for(
+                # Each stage gets its own deadline: the host abandons this entry at 90s, and a
+                # stage that never returns would otherwise take the whole plugin session with it.
+                asyncio.to_thread(_capture_named_window_image, title), timeout=20.0
+            )
             from .study_capture_backends import _crop_image_to_profile
             from .study_ocr_pipeline import StudyCaptureProfile
 
@@ -310,7 +391,11 @@ class _OcrEntriesMixin:
                 bottom_inset_ratio=self._cfg.ocr_bottom_inset_ratio,
             )
             target_frame = _crop_image_to_profile(frame, profile)
-            snapshot = await asyncio.to_thread(self._ocr_pipeline.snapshot_from_image, target_frame)
+            snapshot = await asyncio.wait_for(
+                asyncio.to_thread(self._ocr_pipeline.snapshot_from_image, target_frame), timeout=45.0
+            )
+        except asyncio.TimeoutError:
+            return Err(SdkError("TARGET_WINDOW_REFUSED: target_window_capture: capture_or_ocr_stalled", code="TARGET_WINDOW_REFUSED"))
         except Exception as exc:
             return Err(SdkError(f"TARGET_WINDOW_REFUSED: target_window_capture: {exc}", code="TARGET_WINDOW_REFUSED"))
         if str(getattr(snapshot, "status", "")) not in {"ok", "empty"}:
@@ -318,16 +403,10 @@ class _OcrEntriesMixin:
         capture_mode_used = "target_window"
         target_markers_matched = 0
         if capture_mode == "target_window":
-            # A window can be covered between the identity check and the grab, so the
-            # foreground owner is read again and the captured text itself has to prove
-            # which window was really OCR-ed before anything leaves this process.
-            if await asyncio.to_thread(_foreground_hwnd) != target_hwnd:
-                return Err(
-                    SdkError(
-                        "TARGET_WINDOW_REFUSED: target_window_capture: target_lost_foreground",
-                        code="TARGET_WINDOW_REFUSED",
-                    )
-                )
+            # The pixels came from this hwnd's own device context, so being covered by
+            # another app cannot put that app's content in the payload. The captured text
+            # still has to prove which window was really OCR-ed before anything leaves
+            # this process.
             minimum = max(1, int(kwargs.get("min_marker_matches") or 1))
             target_markers_matched = _markers_matched(snapshot.text, target_markers)
             if target_markers_matched < minimum:
@@ -344,7 +423,7 @@ class _OcrEntriesMixin:
         payload["capture_mode_requested"] = capture_mode
         payload["capture_mode_used"] = capture_mode_used
         payload["capture_target_title"] = title
-        payload["active_window_capture_route"] = "pil_bbox_crop"
+        payload["active_window_capture_route"] = capture_route
         payload["target_window_markers_matched"] = target_markers_matched
         payload["target_window_title"] = title
         if self._supervision is not None:
@@ -364,7 +443,11 @@ class _OcrEntriesMixin:
             payload["screen_classification"] = await self._update_screen_classification(
                 "", update_empty=True
             )
-        await self._persist_state()
+        try:
+            # A wedged state write must not swallow the text the learner already paid to read.
+            await asyncio.wait_for(self._persist_state(), timeout=10.0)
+        except asyncio.TimeoutError:
+            payload["persist_state_stalled"] = True
         return Ok(payload)
 
     @plugin_entry(

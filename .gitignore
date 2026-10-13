@@ -17,5 +17,8 @@ Thumbs.db
 # Local browser evidence and Python bytecode
 .playwright-cli/
 __pycache__/
+# Loopback acoustic captures are ~40 MB per scenario run; the JSON summary next to them
+# is what carries the numbers, so the wav stays on disk and out of history.
+docs/evidence/**/*.wav
 lessons/flutter_provider/.dart_tool/
 lessons/flutter_provider/build/

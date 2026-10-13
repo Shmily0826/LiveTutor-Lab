@@ -1,18 +1,22 @@
 {
   "source_host_revision": "1d814cf32fba8c02b5727d2890710e4e7b8ece24",
   "base_plugin": "benchmarks/raw/neko-app/resources/bin/plugins/study_companion (preserved existing patched release tree)",
-  "deployment": "benchmarks/raw/neko-product-data/plugin-code/study_companion",
+  "deployment": "benchmarks/raw/neko-teaching-quality-20261013/plugin-code/study_companion",
   "data_copied_from_base": false,
   "files": [
     {
       "path": "payload/study_companion/__init__.py",
-      "sha256": "fc2cfe764ff2d27422492534c9f277bbf5866edfec0a77fb556ebf2bfe0d69a7",
-      "deployed_matches": true
+      "sha256": "cd8d172f23fd0cc79cf6183eeeacba04fd4920991b11acc31a87a28d31f842f1",
+      "deployed_matches": false,
+      "accepted_local_deployed_sha256": "f2a544c09fa6f30989f85dec88b9eba0e25f2cbdfc484ddb46f8b5aad7a2775c",
+      "accepted_local_deployed_matches": true
     },
     {
       "path": "payload/study_companion/entry_ocr_entries.py",
-      "sha256": "15dbbffe16cc80132d280fc86a371dbbfa6e3ac656b40bd34f34483cc870e7e9",
-      "deployed_matches": true
+      "sha256": "12bf26b19ba671f0458996ca48957aa707b625d80ebafc2537a3369a48402217",
+      "deployed_matches": false,
+      "accepted_local_deployed_sha256": "940bd60679a458121a9e15b602a526601dcf44266daa3eafecd72b2b33e545b8",
+      "accepted_local_deployed_matches": true
     },
     {
       "path": "payload/study_companion/entry_tutor_context_support.py",
@@ -36,22 +40,22 @@
     },
     {
       "path": "payload/study_companion/knowledge_tracker.py",
-      "sha256": "1620b6c863bfaec6fc7d0386c1e63ac3cb3552015ea98412270af6fc249f244d",
+      "sha256": "15a5ff73d9bae24a220bc89e01204115fef8b30fba2a07af9eb3f327afbae970",
       "deployed_matches": true
     },
     {
       "path": "payload/study_companion/llm_prompts.py",
-      "sha256": "322312ce94a2c66b34bf80c6733b9086d470d7266f821b222616ae5a64acd0a2",
+      "sha256": "a43f66e909874d5465e6cf85d3952daa5eef1696d607d4d20691d4fcf0f2ce34",
       "deployed_matches": true
     },
     {
       "path": "payload/study_companion/models.py",
-      "sha256": "a96276571ab56e6adea34adf5a7588d87f10a6ac64807dbae2fee3a8e2986552",
+      "sha256": "dbb3fc93c19edcf10e5974c99fb2a1abe6e2d2d4b5e7842a0b39417af578c8b8",
       "deployed_matches": true
     },
     {
       "path": "payload/study_companion/prompt_templates.py",
-      "sha256": "4f256d5b990b0d4598a691b15722a3454be52f1d84fbd9480e01e4abbe81922f",
+      "sha256": "0c71a2eca5f6a63bd4d5f03856e3bd8c43155dcc034d95404d1c4757501595a5",
       "deployed_matches": true
     },
     {
@@ -76,7 +80,7 @@
     },
     {
       "path": "payload/study_companion/study_model_gateway.py",
-      "sha256": "926eb2ee7141851c97cd8927b9c6bef1741a678118b89a8b48e7dfc9df22d072",
+      "sha256": "a5252e9029d4584b1fbd43b0f84a99138b0e09c82220a67bfe9b74c8668a1a65",
       "deployed_matches": true
     },
     {
@@ -86,8 +90,90 @@
     },
     {
       "path": "static/main.js",
-      "sha256": "387ce8b3bf42e2f1506ca7a4022012f1e90a7b2e95083dc4348dd0cb590e7b17",
+      "sha256": "a5fa8bc95cac7975326ff18f9a44c9bbb71b0284520b66f27ff181f00b384d7a",
+      "deployed_matches": false,
+      "accepted_local_deployed_sha256": "387ce8b3bf42e2f1506ca7a4022012f1e90a7b2e95083dc4348dd0cb590e7b17",
+      "accepted_local_deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/study_avatar_tools.py",
+      "sha256": "d4d9fac7d8905aa8949dd49bed026050937bcbd0d5715c01ec6cedac40bfd6e8",
+      "deployed_matches": false,
+      "accepted_local_deployed_sha256": "d754bdf2ab2d84440f64e3895f7b44fafccd19f890e58338bfcd4cf676dc6a3f",
+      "accepted_local_deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/study_ocr_pipeline.py",
+      "sha256": "7b9f93504d0da58930bab6fade98126a3891ae73f74cc5ca08c74c6d67e0f6b4",
       "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/study_code_tools.py",
+      "sha256": "916b4f3f66cc36815209de832a4abb168a7e4a0583ffb31e78442163a2029f46",
+      "deployed_matches": true,
+      "reason": "Required existing avatar code-tool mixin; included during publication dependency closure"
     }
-  ]
+  ],
+  "prior_deployment": "benchmarks/raw/neko-product-data/plugin-code/study_companion",
+  "teaching_quality_acceptance": {
+    "at_utc": "2026-10-13T06:07:33.152030+00:00",
+    "scope": "Real isolated host/plugin/provider teaching entries and two process/plugin restarts; native spoken relay still pending.",
+    "evidence": "docs/evidence/teaching-quality-progress-2026-10-13.md",
+    "requests_before": 60,
+    "requests_after": 73,
+    "voice_connects_before": 11,
+    "voice_connects_after": 11
+  },
+  "native_teaching_acceptance": {
+    "evidence": "docs/evidence/teaching-quality-accepted-2026-10-13.md",
+    "user_confirmed": true,
+    "actual_verdict": "partial",
+    "actual_score": 55,
+    "requests_before": 120,
+    "requests_after": 140,
+    "voice_connects_before": 15,
+    "voice_connects_after": 16
+  },
+  "post_acceptance_followup": {
+    "scope": "Final real client-switch voice continuity and actual latest spoken contract/model callbacks PASS; complete goal audit recorded",
+    "evidence": "benchmarks/raw/evidence/teaching-quality-20261013-continuity-audit.json",
+    "budget_before": {
+      "deepseek": 150,
+      "lanlan_app": 17
+    },
+    "budget_after": {
+      "deepseek": 160,
+      "lanlan_app": 18
+    },
+    "goal_status": "complete",
+    "latest_offline_followup": {
+      "change": "Remove competing numeric pacing defaults; learner sentence requests retained",
+      "regression": "actual avatar request builder zh/en, full unchanged endpoint with 2 ASGI clients; no external providers or audio",
+      "online": "UNVERIFIED after pacing change; current cumulative cap exhausted"
+    },
+    "blocked_audit": "benchmarks/raw/evidence/teaching-quality-20261013-blocked-audit.json"
+  },
+  "final_teaching_goal_acceptance": {
+    "evidence": "docs/evidence/teaching-quality-goal-accepted-2026-10-13.md",
+    "audit": "benchmarks/raw/evidence/teaching-quality-20261013-goal-completion-audit.json",
+    "goal_status": "complete",
+    "spent": {
+      "api.deepseek.com": 173,
+      "www.lanlan.app": 19
+    },
+    "caps": {
+      "api.deepseek.com": 300.0,
+      "www.lanlan.app": 30.0,
+      "www.lanlan.tech": 0.0
+    },
+    "same_budget_round": "bargein-autocheck-20261012",
+    "latest_product_files_verified": 19,
+    "cleanup_processes": 0
+  },
+  "publication_dependency_closure": {
+    "required_product_files": 20,
+    "prior_goal_audit_manifest_files": 19,
+    "extra_existing_runtime_file": "payload/study_companion/study_code_tools.py",
+    "published_eol": "LF, per repository attributes; accepted original deployment hashes retained where raw CRLF differed"
+  }
 }

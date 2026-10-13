@@ -81,6 +81,8 @@ from .store import StudyStore
 from .store_notebook import NotebookStore
 from .study_habit_store import StudyHabitStore
 from .study_ocr_pipeline import StudyOcrPipeline
+from .study_avatar_tools import _StudyAvatarToolsMixin
+from .study_code_tools import _StudyCodeToolsMixin
 from .supervision import SupervisionController
 from .tutor_llm_agent import TutorLLMAgent
 from .tutor_llm_agent import diagnostic_code_for_exception
@@ -193,6 +195,8 @@ from .entry_notebook import _NotebookEntriesMixin
 # - Tutor entry mixins call context/finalization helpers from that support mixin.
 # Keep the support mixin before tutor entry mixins unless those helpers move.
 class StudyCompanionPlugin(
+    _StudyAvatarToolsMixin,
+    _StudyCodeToolsMixin,
     _TutorContextSupportMixin,
     _CommunicationPomodoroEventsMixin,
     _CommunicationReviewEventsMixin,
@@ -364,9 +368,15 @@ class StudyCompanionPlugin(
                     }
                 )
             self._study_session_id = ""
-            await self._start_study_session(self._state.active_mode)
+            # A process restart is not the learner abandoning an unanswered quiz.
+            self._state.current_question.pop("attempt_evaluation_pending", None)
+            await self._start_study_session(self._state.active_mode, resume_pending_question=True)
             self._start_study_idle_task()
             self._ocr_pipeline = StudyOcrPipeline(logger=self.logger, config=self._cfg)
+            # Build the OCR runtime here, once, while nothing is asking the plugin for anything,
+            # so a learner's first screen read never pays that import inside a worker thread.
+            self._ocr_warmup = self._ocr_pipeline.warmup()
+            self.logger.info(f"[Study] OCR runtime warm-up: {self._ocr_warmup}")
             self._agent = TutorLLMAgent(logger=self.logger, config=self._cfg)
             self._assert_notebook_agent_methods(self._agent)
             await self._refresh_dependency_status()
@@ -778,11 +788,11 @@ class StudyCompanionPlugin(
             if self._review_due_payload_future is future:
                 self._review_due_payload_future = None
 
-    async def _start_study_session(self, mode: str | None = None) -> str:
+    async def _start_study_session(self, mode: str | None = None, *, resume_pending_question: bool = False) -> str:
         async with self._study_session_lock:
-            return await self._start_study_session_locked(mode)
+            return await self._start_study_session_locked(mode, resume_pending_question=resume_pending_question)
 
-    async def _start_study_session_locked(self, mode: str | None = None, course_id: str = "") -> str:
+    async def _start_study_session_locked(self, mode: str | None = None, course_id: str = "", *, resume_pending_question: bool = False) -> str:
         session_id = f"study-{uuid.uuid4().hex}"
         selected_mode = str(mode or self._state.active_mode or self._cfg.mode)
         selected_course = str(course_id or self._state.study_course_id or "general").strip()
@@ -791,6 +801,11 @@ class StudyCompanionPlugin(
             course_id=selected_course,
         )
         async with self._lock:
+            pending_question = dict(self._state.current_question)
+            if not (resume_pending_question and self._state.study_course_id == selected_course
+                    and pending_question.get("question_id") and pending_question.get("attempt_id")
+                    and not pending_question.get("attempt_evaluated")):
+                pending_question = {}
             if self._state.study_course_id != selected_course:
                 self._state.active_practice_scope = {}
                 self._state.practice_scope_revision += 1
@@ -800,7 +815,7 @@ class StudyCompanionPlugin(
             self._state.study_course_id = selected_course
             self._state.session_summary_seed = {}
             self._state.recent_learning_events = []
-            self._state.current_question = {}
+            self._state.current_question = pending_question
             self._state.last_answer_evaluation = {}
             self._state.last_ocr_text = ""
             self._state.last_ocr_at = ""
@@ -844,7 +859,7 @@ class StudyCompanionPlugin(
             ):
                 await self._end_study_session_locked()
             if not self._study_session_id:
-                return await self._start_study_session_locked()
+                return await self._start_study_session_locked(resume_pending_question=True)
             self._study_session_last_activity = now
             return self._study_session_id
 

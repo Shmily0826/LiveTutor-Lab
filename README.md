@@ -151,3 +151,8 @@ state before UI tests, announce desktop control, and return input control afterw
 Agree the scope before configuration changes or core modifications; use isolated
 copies and reversible validation where possible. Configuration, source presence
 and synthetic tests do not replace real-device acceptance.
+
+
+## Accepted native Tutor teaching update
+
+See [the October 13 teaching release](docs/TUTOR_TEACHING_RELEASE_2026-10-13.md) for the native runtime, accepted teaching loop, bounded validation, source patches, and remaining proof limits.

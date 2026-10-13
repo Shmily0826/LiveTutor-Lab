@@ -1,0 +1,63 @@
+{
+  "old_voice_owner_with_new_actual_clients": "PASS: same original socket got pongs and input stayed active while independent display/new native connections became latest",
+  "voice_owner_pongs_during_independent_display_seconds": [
+    50.324,
+    55.339,
+    59.039,
+    60.349,
+    65.326
+  ],
+  "display_closed": "expected terminal switch when another actual native display replaced it; original recording remained active",
+  "recording_observed_until_seconds": 165.013,
+  "native_chat_answer": "函数内部算出的数是临时的局部变量，调用结束后就没了。只有通过 `return`返回的数，调用者才能拿到。",
+  "native_chat_sentence_count": 2,
+  "post_switch_native_audio_done": true,
+  "observed_chat_playback_receipts": 68,
+  "observed_chat_audible_receipts": 65,
+  "loopback_loud_chunks": 60,
+  "room_microphone": false,
+  "input": "Fake Default Audio Input, bounded fixed WAV; stopped before179.279s loop",
+  "provider_callback_two_sentences": "PASS via actual Study avatar wrapper, real gateway/model, latest pacing code",
+  "callback_reply": "函数内部算出的数只是局部变量里的中间结果，比如 add 里 total = a + b 得到的 5，函数一结束这个变量就消失了。而返回给调用者的数是 return 明确交出去的那个值，外面 add(2, 3) 只能接到 return 送出的东西，没有 return 调用者拿到的是 None。",
+  "important_proof_separation": "Native voice scene answered directly without Study callback; callback executed separately with actual model. Root recorder did not receive display answer frames; latest native chat did. Early chat frames were not captured; no claim of a complete first-turn event recording. Not a new human hearing or barge-in scene.",
+  "manifest_product_files": 19,
+  "manifest_host_files": 17,
+  "budget_before": {
+    "budgets": {
+      "api.deepseek.com": 160.0,
+      "www.lanlan.app": 18.0,
+      "www.lanlan.tech": 0.0
+    },
+    "round": "bargein-autocheck-20261012",
+    "spent": {
+      "api.deepseek.com": 160,
+      "www.lanlan.app": 18
+    }
+  },
+  "budget_after": {
+    "budgets": {
+      "api.deepseek.com": 300.0,
+      "www.lanlan.app": 30.0,
+      "www.lanlan.tech": 0.0
+    },
+    "round": "bargein-autocheck-20261012",
+    "spent": {
+      "api.deepseek.com": 167,
+      "www.lanlan.app": 19
+    }
+  },
+  "new_spent": {
+    "deepseek": 7,
+    "lanlan_app": 1
+  },
+  "cleanup": {
+    "asked": [
+      37944,
+      55660,
+      58652
+    ],
+    "stuck": [],
+    "left_over": [],
+    "host_log_still_advancing": false
+  }
+}

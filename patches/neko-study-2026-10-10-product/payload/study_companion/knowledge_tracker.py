@@ -52,11 +52,32 @@ def _slug(value: str) -> str:
     text = str(value or "").strip().lower()
     if not text:
         return "general"
-    asciiish = re.sub(r"[^a-z0-9]+", "_", text).strip("_")
-    if asciiish:
-        return asciiish[:80]
+    # Non-ASCII letters are kept. Dropping them used to fold "Provider 生命周期" and
+    # "Provider 状态" onto the same id `provider`, which silently MERGED two different
+    # concepts into one mastery row - the mirror image of the split this file is about,
+    # and the worse of the two because nothing ever looked wrong. Only spacing and
+    # punctuation collapse to underscores; a value with no word characters at all still
+    # gets a stable digest.
+    canonical = re.sub(r"[^\w]+", "_", text).strip("_")
+    if canonical:
+        return canonical[:80]
     digest = hashlib.sha1(text.encode("utf-8")).hexdigest()[:10]
     return f"topic_{digest}"
+
+
+def _canonical_topic_name(value: str) -> str:
+    """The name shape used to recognise an existing topic under a different spelling.
+
+    Matching only by exact name meant `Provider  生命周期` (double space), `provider
+    生命周期` and `Provider/生命周期` each opened a NEW topic row for one concept, so the
+    learner's mastery history for that concept started over. This is deliberately only
+    casing/spacing/punctuation: two languages naming the same idea still resolve to two
+    rows, and merging those would mean guessing a translation and rewriting history,
+    which is out of scope. Any non-word character counts as punctuation here, in any
+    script, so a full-width `！` cannot keep two spellings apart.
+    """
+
+    return re.sub(r"[\W_]+", " ", str(value or "").strip().casefold()).strip()
 
 
 def _difficulty_to_float(value: object, default: float = 0.5) -> float:
@@ -254,6 +275,10 @@ class KnowledgeGraph:
         self._quality = KnowledgeQualityStore(store)
         self._topic_id_index: set[str] = set()
         self._topic_name_index: dict[str, str] = {}
+        # Spelling-invariant view of the same rows, so one concept does not open a
+        # second mastery history because the model wrote its name with a different
+        # separator or casing. First spelling seen for a canonical shape wins.
+        self._topic_canonical_name_index: dict[str, str] = {}
         self._index_truncated = False
         self._index_dirty = True
 
@@ -263,6 +288,7 @@ class KnowledgeGraph:
             return
         self._topic_id_index.clear()
         self._topic_name_index.clear()
+        self._topic_canonical_name_index.clear()
         self._index_truncated = False
         index_limit = self._TOPIC_INDEX_LIMIT
         topics = self._store.list_topics(limit=index_limit)
@@ -287,6 +313,9 @@ class KnowledgeGraph:
                 self._topic_id_index.add(topic_id)
             if name and topic_id:
                 self._topic_name_index[name] = topic_id
+                self._topic_canonical_name_index.setdefault(
+                    _canonical_topic_name(name), topic_id
+                )
         self._index_dirty = False
 
     def mark_dirty(self) -> None:
@@ -302,6 +331,11 @@ class KnowledgeGraph:
         indexed = self._topic_name_index.get(value, "")
         if indexed:
             return indexed
+        # The same concept typed with other spacing, casing or punctuation must land on
+        # the topic that already exists, not on a second mastery history.
+        matched = self._topic_canonical_name_index.get(_canonical_topic_name(value), "")
+        if matched:
+            return matched
         if self._index_truncated:
             return self._resolve_store_topic(value)
         return ""

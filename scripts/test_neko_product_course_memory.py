@@ -100,9 +100,50 @@ for name in names:
     setattr(ProductHarness, name, namespace[name])
 ProductHarness.study_summarize_session = namespace["study_summarize_session"]
 
+avatar_tree = ast.parse((SOURCE / "study_avatar_tools.py").read_text(encoding="utf-8"))
+avatar_defs = [node for node in avatar_tree.body if isinstance(node, ast.FunctionDef)
+               and node.name in {"_envelope", "_relay_for_data"}]
+avatar_class = next(node for node in avatar_tree.body if isinstance(node, ast.ClassDef))
+session_tool = next(node for node in avatar_class.body if getattr(node, "name", "") == "study_session_tool")
+session_tool.decorator_list = []
+avatar_namespace = {"asyncio": asyncio, "Any": Any, "RELAY_NOTE": "relay"}
+exec(compile(ast.fix_missing_locations(ast.Module(body=[*avatar_defs, session_tool], type_ignores=[])),
+             str(SOURCE / "study_avatar_tools.py"), "exec"), avatar_namespace)
+ProductHarness.study_session_tool = avatar_namespace["study_session_tool"]
+ProductHarness._study_effective_language = lambda self: "zh-CN"
+
+async def raw_status(self):
+    return {"study_course_id": self._state.study_course_id, "active_mode": "teaching"}
+
+ProductHarness.study_status = raw_status
+
 class CourseMemoryTest(unittest.IsolatedAsyncioTestCase):
+    async def test_unanswered_quiz_survives_process_restart_but_not_course_switch(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            db = Path(temporary) / "study.db"
+            seed = Path(temporary) / "unused.json"
+            store = Store(db, seed, logging.getLogger("course-memory-test"))
+            store.open()
+            plugin = ProductHarness(store)
+            await plugin._restart_study_session(course_id="python-functions")
+            pending = {"question": "What does return do?", "question_id": "q-return", "attempt_id": "a-return"}
+            plugin._state.current_question = dict(pending)
+            await plugin._persist_state()
+            store.close()
+            restored_store = Store(db, seed, logging.getLogger("course-memory-test"))
+            restored_store.open()
+            restarted = ProductHarness(restored_store)
+            await restarted._start_study_session_locked(resume_pending_question=True)
+            self.assertEqual(restarted._state.current_question, pending)
+            await restarted._restart_study_session(course_id="other-course")
+            self.assertEqual(restarted._state.current_question, {})
+            restarted._state.current_question = {**pending, "attempt_evaluated": True}
+            await restarted._start_study_session_locked(resume_pending_question=True)
+            self.assertEqual(restarted._state.current_question, {})
+            restored_store.close()
+
     async def test_restart_course_history_errors_and_isolation(self):
-        with tempfile.TemporaryDirectory(dir=ROOT / ".tmp-uv-cache") as temp:
+        with tempfile.TemporaryDirectory() as temp:
             db = Path(temp) / "study.db"
             seed = Path(temp) / "unused.json"
             store = Store(db, seed, logging.getLogger("course-memory-test"))
@@ -138,6 +179,10 @@ class CourseMemoryTest(unittest.IsolatedAsyncioTestCase):
             self.assertIn("watch listens", prompt)
             self.assertIn("Flutter context.watch", prompt)
             self.assertEqual(len(context["course_learning_state"]["mastery_overview"]), 1)
+            status = await plugin.study_session_tool()
+            self.assertEqual(status["course_id"], "flutter-provider")
+            self.assertEqual(status["session_id"], session_b)
+            self.assertEqual([row["eval_result"]["verdict"] for row in status["recent_answer_records"]], ["wrong", "correct"])
 
             other = await plugin._restart_study_session(course_id="math-integrals")
             context = await plugin._build_learning_context("concept_explain", input_text="integration", session_id=other)
@@ -146,6 +191,10 @@ class CourseMemoryTest(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn("Flutter context.watch", prompt)
             self.assertEqual(context["course_learning_state"]["topic_ids"], [])
             self.assertEqual(store.list_interactions(50, course_id="math-integrals"), [])
+            status = await plugin.study_session_tool()
+            self.assertEqual(status["course_id"], "math-integrals")
+            self.assertEqual(status["recent_answer_records"], [])
+            self.assertEqual(status["weak_topics"], [])
             self.assertEqual(plugin._knowledge_tracker._resolve_topic_id("math-integrals::Provider"), "math-integrals::Provider")
             quiz_context = await plugin._build_learning_context("question_generate", input_text="math quiz",
                                                                 extra={"topic_hint": "Provider"}, session_id=other)
@@ -174,6 +223,19 @@ class CourseMemoryTest(unittest.IsolatedAsyncioTestCase):
     def test_latest_history_keeps_latest_and_chronological(self):
         rendered = prompts._recent_history_items([{"id": i, "input_text": f"turn {i}", "output_text": "reply"} for i in range(15, 0, -1)])
         self.assertEqual(rendered[-1]["input"], "turn 15")
+
+    def test_spoken_followup_avoids_competing_full_solution_contract(self):
+        question = "回顾我的错误答案和后来的纠正，不出新题。"
+        spoken = question + "\n\n[Teaching constraints] No section headings, no self-quiz at the end."
+        context = {"study_response_mode": "problem_solving"}
+        messages = prompts.build_concept_explain_messages(text=spoken, language="zh-CN", context=context)
+        contract = messages[1]["content"].split("Response contract: ", 1)[1].split("\n\nStudy text:", 1)[0]
+        self.assertNotIn("exactly four sections", contract)
+        self.assertNotIn("Give exactly one", contract)
+        self.assertIn("explicit length/no-quiz/no-code", contract)
+        self.assertIn(spoken, messages[1]["content"])
+        web = prompts.build_concept_explain_messages(text=question, language="zh-CN", context=context)
+        self.assertIn("exactly four sections", web[1]["content"])
 
     def test_summary_serialization_keeps_late_grades_and_early_lesson(self):
         rows = [{"id": index, "kind": "concept_explain",

@@ -453,14 +453,129 @@ UPGRADES = {
 }
 
 
-def upgrade_targets(targets):
+ELIGIBILITY_UPGRADES = {
+    "main_routers/websocket_router.py": (
+        ('''                if _is_voice_path_message(message) and _owns_voice_connection():''',
+         '''                if message.get("action") == "ping" and _owns_voice_connection():
+                    # A newer chat window does not revoke this voice lease.
+                    # Reply on the sender socket without granting text authority.
+                    await websocket.send_text(json.dumps({"type": "pong"}))
+                    continue
+                if _is_voice_path_message(message) and _owns_voice_connection():'''),
+    ),
+    "main_logic/omni_realtime_client/_transport.py": (
+        ("    def _capture_native_barge_in_pcm(self, pcm, speech_active, captured_at):",
+         '''    def _remember_native_barge_in_overlap(self, audio_timeline_at):
+        self._local_barge_in_overlap = None
+        getter = getattr(self, "get_native_barge_in_generation", None)
+        generation = getter() if callable(getter) else None
+        owner = getattr(self, "_native_playback_owner", None)
+        now = time.monotonic()
+        playback_at = getattr(self, "_native_playback_state_at", 0.0)
+        if (self._is_free_proxy and generation is not None and owner
+                and owner[:3] == (self._native_output_connection_token,
+                                  self._connection_generation, generation)
+                and getattr(self, "_native_playback_active", False)
+                and getattr(self, "_native_playback_audible", False)
+                and playback_at and 0 <= now - playback_at <= self._LOCAL_TALKING_WINDOW_SECONDS):
+            # Only a real playback receipt can carry this utterance across the end.
+            self._local_barge_in_overlap = (owner, now, audio_timeline_at)
+
+    def _capture_native_barge_in_pcm(self, pcm, speech_active, captured_at):'''),
+        ('''        if not audible:
+            self._note_local_onset_declined(
+                "nothing audible for %.1fs" % (now - getattr(self, "_ai_recent_activity_time", 0.0)))''',
+         '''        overlap = getattr(self, "_local_barge_in_overlap", None)
+        getter = getattr(self, "get_native_barge_in_generation", None)
+        generation = getter() if callable(getter) else None
+        playback_owner = getattr(self, "_native_playback_owner", None)
+        playback_owner_matches = bool(playback_owner and playback_owner[:3] == (
+            getattr(self, "_native_output_connection_token", None), self._connection_generation, generation))
+        if self._is_free_proxy and playback_owner and not playback_owner_matches:
+            audible = False
+        overlap_matches = bool(overlap and overlap[0][:3] == (
+            getattr(self, "_native_output_connection_token", None),
+            self._connection_generation, generation))
+        if (evidence == "speech-sustained" and overlap_matches
+                and 0 <= time.monotonic() - overlap[1] <= self._LOCAL_BARGE_IN_SECONDS + self._LOCAL_BARGE_IN_GAP_SECONDS
+                and self._LOCAL_BARGE_IN_SECONDS <= self._local_barge_in_loud_at - overlap[2]
+                    <= self._LOCAL_BARGE_IN_SECONDS + self._LOCAL_BARGE_IN_GAP_SECONDS):
+            audible = True
+        if not audible:
+            age = time.monotonic() - playback_at if playback_at else -1.0
+            feedback = ("missing" if not playback_at else "stale" if age > self._LOCAL_TALKING_WINDOW_SECONDS
+                        else "active" if getattr(self, "_native_playback_active", False) else "inactive")
+            self._note_local_onset_declined(
+                "nothing audible for %.1fs feedback=%s playback_active=%s playback_audible=%s heartbeat_age=%.3fs "
+                "feedback_rejected=%s playback_owner_match=%s overlap_owner_match=%s speech_sustained=%s" % (
+                    now - getattr(self, "_ai_recent_activity_time", 0.0), feedback,
+                    getattr(self, "_native_playback_active", None), getattr(self, "_native_playback_audible", None), age,
+                    getattr(self, "_native_playback_rejected", None), playback_owner_matches, overlap_matches,
+                    evidence == "speech-sustained"))'''),
+        ('''                        self._local_barge_in_from = audio_timeline_at
+                    self._local_barge_in_loud_at = audio_timeline_at''',
+         '''                        self._local_barge_in_from = audio_timeline_at
+                        self._local_barge_in_overlap = None
+                        if speech_active is True:
+                            self._remember_native_barge_in_overlap(audio_timeline_at)
+                    self._local_barge_in_loud_at = audio_timeline_at'''),
+        ('''                        self._local_barge_in_from = None
+                        await self._handle_local_speech_onset("speech-sustained")''',
+         '''                        self._local_barge_in_from = None
+                        try:
+                            await self._handle_local_speech_onset("speech-sustained")
+                        finally:
+                            self._local_barge_in_overlap = None'''),
+        ('''                      > self._LOCAL_BARGE_IN_GAP_SECONDS):
+                    self._local_barge_in_from = None''',
+         '''                      > self._LOCAL_BARGE_IN_GAP_SECONDS):
+                    self._local_barge_in_from = None
+                    self._local_barge_in_overlap = None'''),
+        ('''        self._native_playback_state_at = 0.0
+        if (getattr(self, "_native_barge_in_pending", False) and''',
+         '''        self._native_playback_state_at = 0.0
+        self._native_playback_owner = None
+        self._local_barge_in_overlap = None
+        if (getattr(self, "_native_barge_in_pending", False) and'''),
+    ),
+    "main_logic/core/asr_runtime.py": (
+        ('''            source._native_playback_active = active
+            source._native_playback_state_at = time.monotonic()''',
+         '''            source._native_playback_active = active
+            source._native_playback_state_at = time.monotonic()
+            getter = getattr(source, "get_native_barge_in_generation", None)
+            generation = getter() if callable(getter) else None
+            source._native_playback_owner = (token, source._connection_generation, generation, websocket)
+            source._native_playback_rejected = None
+            source._native_playback_audible = message.get("audible") is True
+        elif source is not None:
+            source._native_playback_rejected = ("websocket" if websocket is not self.websocket
+                else "token" if message.get("sdk_speech_correlation_id") != token else "invalid_active")'''),
+        ('''        if self._game_speech_correlation_for(self.read_current_speech_id()):''',
+         '''        overlap = getattr(source, "_local_barge_in_overlap", None)
+        if overlap and overlap[0][3] is not self.websocket:
+            source._note_local_onset_declined("native playback owner mismatch: websocket")
+            return False
+        if self._game_speech_correlation_for(self.read_current_speech_id()):'''),
+    ),
+    "static/app/app-audio-playback.js": (
+        ("                    source._nekoScheduledEndAudioTime = scheduledEndTime;",
+         "                    source._nekoScheduledStartAudioTime = scheduledStartTime;\n                    source._nekoScheduledEndAudioTime = scheduledEndTime;"),
+        ('''                    sdk_speech_correlation_id: state.correlationId, active: !!state.active}));''',
+         '''                    sdk_speech_correlation_id: state.correlationId, active: !!state.active,
+                    audible: state.audioContextState === 'running' && S.scheduledSources.some(function (source) {
+                        return source._nekoSpeechCorrelationId === state.correlationId &&
+                            source._nekoScheduledStartAudioTime <= state.audioContextTime &&
+                            source._nekoScheduledEndAudioTime > state.audioContextTime;
+                    })}));'''),
+    ),
+}
+
+
+def _upgrade_targets(targets, upgrades, replay):
     """Keep complete existing patch hunks verifiable, including earlier deployments."""
-    result, replay = [], [(
-        "main_logic/core/asr_runtime.py",
-        "        if self._game_speech_correlation_for(self.speech_id):",
-        "        if self._game_speech_correlation_for(self.read_current_speech_id()):",
-    )]
-    remaining = dict(UPGRADES)
+    result = []
+    remaining = dict(upgrades)
     for relative, replacements in targets:
         additions = remaining.pop(relative, ())
         covered, hunks = set(), []
@@ -482,3 +597,29 @@ def upgrade_targets(targets):
         result.append((relative, hunks))
         replay.extend((relative, old, new) for old, new in hunks)
     return tuple(result), tuple(replay)
+
+
+def upgrade_targets(targets):
+    targets, replay = _upgrade_targets(targets, UPGRADES, [(
+        "main_logic/core/asr_runtime.py",
+        "        if self._game_speech_correlation_for(self.speech_id):",
+        "        if self._game_speech_correlation_for(self.read_current_speech_id()):",
+    )])
+    targets, eligibility_replay = _upgrade_targets(targets, ELIGIBILITY_UPGRADES, [])
+    # Upgrade an existing full hunk before considering its shorter original anchor.
+    # Replay must look for the final hunk, or it inserts another feedback sender.
+    final_replay = []
+    for relative, old, new in replay:
+        for before, after in ELIGIBILITY_UPGRADES.get(relative, ()):
+            new = new.replace(before, after)
+        final_replay.append((relative, old, new))
+    return targets, eligibility_replay + tuple(final_replay)
+
+
+def normalize_playback_feedback(text):
+    """Remove the legacy sender left beside the complete audible receipt by old replay."""
+    _, inserted = UPGRADES["static/app/app-audio-playback.js"][-1]
+    legacy_sender = inserted.removeprefix("        window.NekoSpeechPlaybackState = state;\n").removesuffix("        try {")
+    if "audible: state.audioContextState === 'running'" in text:
+        return text.replace(legacy_sender, "")
+    return text

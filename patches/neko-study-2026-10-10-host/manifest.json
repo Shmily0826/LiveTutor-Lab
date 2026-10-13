@@ -39,13 +39,13 @@
     {
       "path": "main_logic/omni_realtime_client/_transport.py",
       "base_sha256": "2d6c058206c1beafc3e1d35a8f5111042ff509a31f398053ce7b97a825242423",
-      "patched_sha256": "650d9149a7ed2193ee5796bf4a96d8ebea19b243ab31f414ca302b4e1caa5b17",
-      "resealed_utc": "2026-10-12T07:18:29.850643+00:00",
-      "resealed_reason": "Native free-proxy barge-in connection isolation, bounded PCM replay, selective old-connection playback cancellation.",
+      "patched_sha256": "6c37944568f4439cd838fd177671064bdb36c8957485d5775e8363171b4aa4d4",
+      "resealed_utc": "2026-10-13T04:00:57.021870+00:00",
+      "resealed_reason": "Bounded 0.65s native overlap eligibility from fresh actually-playing owner receipt; rate-limited decision diagnostics. No VAD or PCM replay changes.",
       "verified_by": {
-        "offline": "11 production handoff tests + production frontend playback checks + 19 existing barge-in tests + 5 tool lifecycle tests; patch replay/idempotence and syntax verified.",
-        "live_real_microphone": "UNVERIFIED; no network, provider, microphone or CONNECT use.",
-        "reproduce": "python -B scripts/neko_voice_host_patch.py; python -B scripts/test_neko_native_barge_in.py; node scripts/test_neko_native_barge_in_playback.js"
+        "offline": "One isolated AST regression passed: 15 cases, crossing playback end and rejection fences; real accessor, mocked recovery only. No host/config/device/provider imports.",
+        "live_real_microphone": "UNVERIFIED for this boundary repair; Oct13 full human acceptance remains FAIL.",
+        "reproduce": "python -X utf8 -B scripts/test_neko_barge_in_overlap.py"
       },
       "prior_verified_by": {
         "own_tests": "scripts/test_neko_realtime_barge_in.py (11 tests: 4 blocker, 7 mute) + test_neko_tool_result_lifecycle.py (6)",
@@ -101,13 +101,13 @@
     {
       "path": "main_logic/core/asr_runtime.py",
       "base_sha256": "e5679d7773a431e9df23c3cfcea7e53209c07f4e63875de0c9f93474de87df5b",
-      "patched_sha256": "e7a934f09cb939472af614f152738cf3cefeb095b0d1f4b07eda811af993b650",
-      "resealed_utc": "2026-10-12T08:33:17.611076+00:00",
-      "resealed_reason": "Fix real-manager owner lookup: read_current_speech_id() instead of nonexistent manager.speech_id; ownership and cancellation protocol unchanged.",
+      "patched_sha256": "b83c5267504927d5ffa4261795de3a1078fb276482ada88bebb55b2088d50400",
+      "resealed_utc": "2026-10-13T04:00:57.027387+00:00",
+      "resealed_reason": "Bounded 0.65s native overlap eligibility from fresh actually-playing owner receipt; rate-limited decision diagnostics. No VAD or PCM replay changes.",
       "verified_by": {
-        "offline": "12 targeted native handoff tests passed, including manager without speech_id; existing frontend integration exercised by the handoff suite; no provider use.",
-        "live_real_microphone": "Pre-fix build failed 2026-10-12 21:17:33 NZDT; corrected build UNVERIFIED.",
-        "reproduce": "python -X utf8 -B scripts/test_neko_native_barge_in.py"
+        "offline": "One isolated AST regression passed: 15 cases, crossing playback end and rejection fences; real accessor, mocked recovery only. No host/config/device/provider imports.",
+        "live_real_microphone": "UNVERIFIED for this boundary repair; Oct13 full human acceptance remains FAIL.",
+        "reproduce": "python -X utf8 -B scripts/test_neko_barge_in_overlap.py"
       },
       "prior_owner_accessor_verified_by": {
         "offline": "11 production handoff tests + production frontend playback checks + 19 existing barge-in tests + 5 tool lifecycle tests; patch replay/idempotence and syntax verified.",
@@ -145,7 +145,7 @@
       "path": "main_routers/websocket_router.py",
       "base_sha256": null,
       "pre_native_handoff_sha256": "ec44eadc495fe76b30a2d493ca8a80037d1b2313d98745e30209ec816c06b8f2",
-      "patched_sha256": "428275d48440c9fb5272344c2a50b87382e45ef9d221d44d2dbe84569853afd6",
+      "patched_sha256": "885f46820dedd424cad6b09e96be7ec299577b727b9582fde66b01dd8c134539",
       "resealed_utc": "2026-10-12T07:18:29.850643+00:00",
       "resealed_reason": "Native free-proxy barge-in connection isolation, bounded PCM replay, selective old-connection playback cancellation.",
       "verified_by": {
@@ -171,13 +171,13 @@
       "path": "static/app/app-audio-playback.js",
       "base_sha256": null,
       "pre_native_handoff_sha256": "53729ddc0856cbf35751fb8e3ccd85c1f4a88e299d7f2c2e81038dd8c4cf1645",
-      "patched_sha256": "10ee7e69630024e9535cc1d68edf65dbd14c3456db1ab622c2493d6306e07b5b",
-      "resealed_utc": "2026-10-12T07:18:29.850643+00:00",
-      "resealed_reason": "Native free-proxy barge-in connection isolation, bounded PCM replay, selective old-connection playback cancellation.",
+      "patched_sha256": "b94cef0eeae4be58f54775f4d2d010f2dff377af396d8d4bf5ad614f0436611e",
+      "resealed_utc": "2026-10-13T05:15:50.287046+00:00",
+      "resealed_reason": "One complete audible playback receipt per update; remove duplicate legacy sender and fix upgrade replay ordering.",
       "verified_by": {
-        "offline": "11 production handoff tests + production frontend playback checks + 19 existing barge-in tests + 5 tool lifecycle tests; patch replay/idempotence and syntax verified.",
-        "live_real_microphone": "UNVERIFIED; no network, provider, microphone or CONNECT use.",
-        "reproduce": "python -B scripts/neko_voice_host_patch.py; python -B scripts/test_neko_native_barge_in.py; node scripts/test_neko_native_barge_in_playback.js"
+        "offline": "JS playback regression fails before repair, passes after; 15 overlap scenarios plus 4 migration/idempotence cases PASS.",
+        "live_real_microphone": "One real human trial PASS for interruption/response recovery: 166 actual owner receipts, none missing audible; old queued audio retired; user confirms stop and new reply. No loopback or cross-end human专项 proof.",
+        "reproduce": "python -B scripts/test_neko_barge_in_overlap.py; node scripts/test_neko_native_barge_in_playback.js"
       }
     }
   ],
@@ -185,12 +185,14 @@
     "scope": "ordinary native lanlan.app free-proxy audio; game speech retains its existing request ownership",
     "pattern_adopted": "N.E.K.O quarantine/reconnect + connection-generation teardown + Core listener retirement + VoiceActivationConfig/BoundedAudioFrameBuffer + SDK correlation header + existing decoder/queue/sources",
     "limits": "8s PCM / 0.3s pre-roll from existing activation defaults; bounded existing swap/close/reconnect timeouts; explicit failure instead of partial replay or retry loop",
-    "live_acceptance": "Pre-fix human trial FAIL: onset raised AttributeError on LLMSessionManager.speech_id at 2026-10-12 21:17:33 NZDT, then generic close handling dropped later PCM. Corrected build requires future live acceptance; not run.",
+    "live_acceptance": "2026-10-13 18:22-18:23 NZDT ordinary physical-microphone barge-in PASS for this trial: two handoffs 1->2->3, actual old-owner playback retired with queued time remaining, replacement audio, and user-confirmed old sound stopped/new question answered. Cross-end human boundary and teaching correctness remain unverified.",
     "live_quota_impact": "one new provider CONNECT per admitted interruption; none consumed by offline work",
     "source_scripts": {
-      "scripts/neko_voice_host_patch.py": "8e7c3e546025a8ca60c8c4d165b9c31d0f97f86aca6223403d43d131b3cff98a",
-      "scripts/neko_native_barge_in_patch.py": "50e313802dd43c2a6cdb186a5afe081a4101b5a5b58a83389b011e2ba4a4a7c8"
+      "scripts/neko_voice_host_patch.py": "59562395e25f4f8f7ae291406d4130e7a59c1e255af5985ee587b896fbe7aa21",
+      "scripts/neko_native_barge_in_patch.py": "de1fa65c30e0699d34623f83192ac4d56974f69a503aa0d09771d12743bc6b6f"
     },
-    "owner_accessor_fix": "Reuse production read_current_speech_id() contract; fixture no longer invents manager.speech_id. 12 focused offline scenarios PASS; no real-mic PASS."
+    "owner_accessor_fix": "Reuse production read_current_speech_id() contract; fixture no longer invents manager.speech_id. 12 focused offline scenarios PASS; no real-mic PASS.",
+    "prior_live_acceptance": "Pre-fix human trial FAIL: onset raised AttributeError on LLMSessionManager.speech_id at 2026-10-12 21:17:33 NZDT, then generic close handling dropped later PCM. Corrected build requires future live acceptance; not run.",
+    "live_evidence": "docs/evidence/native-barge-in-direct-takeover-2026-10-13.md"
   }
 }

@@ -1,0 +1,150 @@
+{
+  "course": "python-functions-quality-20261013",
+  "pending_question": {
+    "question": "在刚才的计算器 add 函数中，如果删掉 return total，那么 result = add(2, 3) 后执行 print(result) 会输出什么？为什么？",
+    "question_id": "q_792ab81d8f7644dbaa0773ce28238f86",
+    "attempt_id": "a_c706627df2334ccc80db83a84fe115c9"
+  },
+  "steps": [
+    {
+      "entry": "study_start_session",
+      "args": {
+        "course_id": "python-functions-quality-20261013"
+      },
+      "result": {}
+    },
+    {
+      "entry": "study_set_mode",
+      "args": {
+        "mode": "teaching",
+        "reason": "bounded teaching-quality acceptance"
+      },
+      "result": {}
+    },
+    {
+      "entry": "study_explain_text",
+      "args": {
+        "text": "用中文教零基础学生，用计算器加法解释函数、参数、返回值和接收结果的变量。\ndef add(a, b):\n    total = a + b\n    return total\nresult = add(2, 3)\nprint(result)\n请准确说明：a/b 是参数，2/3 是实参，total 是局部变量，return 把结果交给调用者，result 接收返回值，打印 5。\n一次讲一个概念，使用上面的代码，不引入类或异步，不用反问代替讲解，控制在约 250 个中文字。"
+      },
+      "result": {
+        "reply": "# 计算器加法函数\n\n看这段代码：\n\n```python\ndef add(a, b):\n    total = a + b\n    return total\nresult = add(2, 3)\nprint(result)\n```\n\n**第一步：函数像一个“加工机器”**\n\n`def add(a, b):` 定义了一个名叫 `add` 的函数。`def` 是“定义”的意思，冒号后面缩进的部分是函数体，也就是机器内部做的事。\n\n**第二步：参数是“预留的空位”**\n\n括号里的 `a` 和 `b` 叫**参数**。它们是两个空位，等着别人把数字放进来。\n\n**第三步：实参是“真正放进去的数字”**\n\n`add(2, 3)` 里的 `2` 和 `3` 叫**实参**，是实际传进去的值。此时 `a` 变成 2，`b` 变成 3。\n\n**第四步：局部变量只在函数内活着**\n\n`total = a + b` 得到 5。`total` 是**局部变量**，只在函数内部存在，外面用不了它。\n\n**第五步：return 把结果交出去**\n\n`return total` 把 5 交回给调用者。没有 `return`，函数就算完了也不给你结果。\n\n**第六步：外面用变量接住**\n\n`result = add(2, 3)` 让 `result` 接住返回的 5。最后 `print(result)` 打印出 5。\n\n小检查：如果把 `add(2, 3)` 写成 `add(2)`，会发生什么？",
+        "degraded": false,
+        "diagnostic": ""
+      }
+    },
+    {
+      "entry": "study_generate_question",
+      "args": {
+        "text": "基于刚才的计算器 add 函数，只出一道开放题：\n如果删掉 return total，result = add(2, 3) 后 print(result) 会输出什么？为什么？\n请使用题目明确的代码，不改成其他主题。只提问，暂时不要向学生透露答案。",
+        "topic": "python-functions-return"
+      },
+      "result": {
+        "reply": "在刚才的计算器 add 函数中，如果删掉 return total，那么 result = add(2, 3) 后执行 print(result) 会输出什么？为什么？",
+        "question": "在刚才的计算器 add 函数中，如果删掉 return total，那么 result = add(2, 3) 后执行 print(result) 会输出什么？为什么？",
+        "question_id": "q_792ab81d8f7644dbaa0773ce28238f86",
+        "attempt_id": "a_c706627df2334ccc80db83a84fe115c9",
+        "degraded": false,
+        "diagnostic": ""
+      }
+    },
+    {
+      "entry": "study_evaluate_answer",
+      "args": {
+        "answer": "会输出 5；即使不写 return，Python 也会自动返回函数里最后算出的数。",
+        "question": "在刚才的计算器 add 函数中，如果删掉 return total，那么 result = add(2, 3) 后执行 print(result) 会输出什么？为什么？",
+        "question_id": "q_792ab81d8f7644dbaa0773ce28238f86",
+        "attempt_id": "a_c706627df2334ccc80db83a84fe115c9"
+      },
+      "result": {
+        "reply": "你把“函数没有 return 时会返回 None”误解成了“Python 会自动返回最后算出的数”。删掉 return total 后，add(2, 3) 返回 None，result 接收到 None，print(result) 应输出 None。",
+        "question": "在刚才的计算器 add 函数中，如果删掉 return total，那么 result = add(2, 3) 后执行 print(result) 会输出什么？为什么？",
+        "question_id": "q_792ab81d8f7644dbaa0773ce28238f86",
+        "attempt_id": "a_c706627df2334ccc80db83a84fe115c9",
+        "feedback": "你把“函数没有 return 时会返回 None”误解成了“Python 会自动返回最后算出的数”。删掉 return total 后，add(2, 3) 返回 None，result 接收到 None，print(result) 应输出 None。",
+        "score": 0,
+        "verdict": "wrong",
+        "degraded": false,
+        "diagnostic": ""
+      }
+    },
+    {
+      "entry": "study_explain_text",
+      "args": {
+        "text": "结合我刚才关于没写 return 仍输出 5 的错误，解释为什么实际是 None，帮我分清计算结果和返回值。"
+      },
+      "result": {
+        "reply": "# 计算结果 ≠ 返回值\n\n先理清一条主线：**函数内部算出一个值，不等于这个值会自动回到外面。**\n\n## 为什么是 None，而不是 5\n\n看你刚才那题对应的代码（删掉 return 后）：\n\n```python\ndef add(a, b):\n    total = a + b      # 这一步确实算出了 5\n                       # 但没有 return\nresult = add(2, 3)\nprint(result)          # 输出 None\n```\n\n`total = a + b` 这行**真的算出了 5**，这没问题。问题在于：算完之后，这个 5 只待在函数内部的局部变量 `total` 里。函数一结束，`total` 就随之消失了，5 没有任何通道被送出去。\n\nPython 的规则是：**函数如果走到结尾都没有遇到 return，就自动返回 `None`**。所以 `add(2, 3)` 交回来的不是 5，而是 `None`；`result` 接到 `None`，打印出来自然是 `None`。\n\n## 计算结果和返回值到底差在哪\n\n| | 计算结果 | 返回值 |\n|---|---|---|\n| 在哪 | 函数**内部**产生 | 被送回**调用处** |\n| 谁能看到 | 只有函数内部 | 外面调用它的代码 |\n| 靠什么送出 | —— | `return` 语句 |\n\n关键点：**`return` 是唯一的“出货口”**。没有它，里面算得再对，外面也拿不到，函数返回的就是 `None`。\n\n## 一个能帮你记住的类比\n\n把函数想成一台机器，`total = a + b` 是机器**在生产线上做出零件**，而 `return total` 是把零件**从出货口递出来**。你刚才的误解，等于以为“只要生产线上有零件，出货口就会自动掉出来”——不会的，出货口不给，外面只能拿到空手（`None`）。\n\n## 顺便修正你原来的说法\n\n你说“Python 会自动返回函数里最后算出的数”——这个规则不属于 Python。有些语言或工具（比如 Excel 公式、某些 shell）确实会取最后表达式的值，但 Python 的函数**不看最后算了什么，只看有没有遇到 return**。\n\n---\n\n**小检查**：如果我把 `return total` 改成 `return a + b`（不再经过 `total`），`print(result)` 会输出什么？为什么这次和上面的情况不同？",
+        "degraded": false,
+        "diagnostic": ""
+      }
+    },
+    {
+      "entry": "study_generate_question",
+      "args": {
+        "text": "基于刚才的计算器 add 函数，只出一道开放题：\n如果删掉 return total，result = add(2, 3) 后 print(result) 会输出什么？为什么？\n请使用题目明确的代码，不改成其他主题。只提问，暂时不要向学生透露答案。",
+        "topic": "python-functions-return"
+      },
+      "result": {
+        "reply": "在刚才的计算器 add 函数中，如果删掉 return total，那么执行 result = add(2, 3) 后，print(result) 会输出什么？为什么？",
+        "question": "在刚才的计算器 add 函数中，如果删掉 return total，那么执行 result = add(2, 3) 后，print(result) 会输出什么？为什么？",
+        "question_id": "q_2a6cfd35d3c8443b9467c0a419695751",
+        "attempt_id": "a_1584f8a3f19249b483ac14de9846b0c3",
+        "degraded": false,
+        "diagnostic": ""
+      }
+    },
+    {
+      "entry": "study_evaluate_answer",
+      "args": {
+        "answer": "输出 None。a+b 仍然算出 5 并存进局部变量 total，但没有 return 把它传给调用者，函数默认返回 None，所以 result 是 None。",
+        "question": "在刚才的计算器 add 函数中，如果删掉 return total，那么执行 result = add(2, 3) 后，print(result) 会输出什么？为什么？",
+        "question_id": "q_2a6cfd35d3c8443b9467c0a419695751",
+        "attempt_id": "a_1584f8a3f19249b483ac14de9846b0c3"
+      },
+      "result": {
+        "reply": "回答完全正确，准确说明了输出 None 以及原因，并能区分局部变量与返回值。",
+        "question": "在刚才的计算器 add 函数中，如果删掉 return total，那么执行 result = add(2, 3) 后，print(result) 会输出什么？为什么？",
+        "question_id": "q_2a6cfd35d3c8443b9467c0a419695751",
+        "attempt_id": "a_1584f8a3f19249b483ac14de9846b0c3",
+        "feedback": "回答完全正确，准确说明了输出 None 以及原因，并能区分局部变量与返回值。",
+        "score": 100,
+        "verdict": "correct",
+        "degraded": false,
+        "diagnostic": ""
+      }
+    },
+    {
+      "entry": "study_summarize_session",
+      "args": {
+        "focus": "记录这门课解释过的函数、参数和返回值，以及我把计算结果误当返回值的错题、后来的正确回答和下一步练习。"
+      },
+      "result": {
+        "reply": "## 本次会话摘要\n\n- 会话主题：Python 计算器 add 函数中计算结果与返回值的区别。\n- 学生最初误以为删除 return total 后会输出 5，因为误认为 Python 会自动返回最后算出的数。\n- 经过讲解后，学生正确回答：函数没有 return 时返回 None，因此 `print(result)` 输出 None。\n\n## 亮点\n\n- 能接受讲解并纠正误解。\n- 能说明局部变量 total 与返回值的区别。\n\n## 薄弱点\n\n- 需要巩固“没有 return 时函数返回 None”这一规则。\n\n## 下一步\n\n- 复习 return 与默认返回值行为。\n- 做一道类似练习继续巩固。",
+        "degraded": false,
+        "diagnostic": ""
+      }
+    },
+    {
+      "entry": "study_explain_text",
+      "args": {
+        "text": "重启前我哪一点答错了？用四句话回顾那道题、我的错误和正确规则，不要出新题。"
+      },
+      "result": {
+        "reply": "重启前那道题问的是：删掉 `return total` 后，`result = add(2, 3)` 再 `print(result)` 会输出什么。你当时答成了“会输出 5，因为 Python 会自动返回函数里最后算出的那个数”，所以被判错。错误的关键在于：`a + b` 确实算出了 5，但它只留在函数内部的局部变量里，函数结束就消失了，不会被自动送出去。正确规则是：函数如果走完也没有遇到 `return`，就自动返回 `None`，所以这里应输出 `None`——不过你后来重新作答时已经答对了这一点。",
+        "degraded": false,
+        "diagnostic": ""
+      }
+    },
+    {
+      "entry": "study_explain_text",
+      "args": {
+        "text": "用中文教零基础学生，用计算器加法解释函数、参数、返回值和接收结果的变量。\ndef add(a, b):\n    total = a + b\n    return total\nresult = add(2, 3)\nprint(result)\n请准确说明：a/b 是参数，2/3 是实参，total 是局部变量，return 把结果交给调用者，result 接收返回值，打印 5。\n一次讲一个概念，使用上面的代码，不引入类或异步，不用反问代替讲解，控制在约 250 个中文字。"
+      },
+      "result": {
+        "reply": "# 把函数当成一台加法计算器\n\n```python\ndef add(a, b):\n    total = a + b\n    return total\nresult = add(2, 3)\nprint(result)\n```\n\n**参数**：定义函数时括号里的 `a`、`b` 是占位符，叫参数。它们没有具体数字，只是先留两个位置，说明\"这台计算器需要两个输入\"。\n\n**实参**：调用 `add(2, 3)` 时，括号里的 `2`、`3` 是真实数字，叫实参。它们被送进去，分别填到 `a` 和 `b` 的位置，于是 `a` 是 2，`b` 是 3。\n\n**局部变量**：`total = a + b` 在函数内部算出 5，存进 `total`。`total` 只活在函数里，函数一结束它就消失，外面看不到。\n\n**return**：`return total` 的作用是把 5 交给调用者，也就是把结果送出函数。没有它，函数就算完也不交东西。\n\n**接收结果的变量**：`result = add(2, 3)` 中，`add(2, 3)` 先把 5 返回，`result` 再接到这个 5。\n\n**打印**：`print(result)` 输出 5。\n\n检查一下：如果 `add` 里忘了写 `return`，那 `result` 会拿到什么？",
+        "degraded": false,
+        "diagnostic": ""
+      }
+    }
+  ]
+}

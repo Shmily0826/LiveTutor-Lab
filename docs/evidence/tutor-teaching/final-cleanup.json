@@ -1,0 +1,17 @@
+{
+  "taken_at": 1791882718.3984668,
+  "ledger": {
+    "budgets": {
+      "api.deepseek.com": 300.0,
+      "www.lanlan.app": 30.0,
+      "www.lanlan.tech": 0.0
+    },
+    "round": "bargein-autocheck-20261012",
+    "spent": {
+      "api.deepseek.com": 173,
+      "www.lanlan.app": 19
+    }
+  },
+  "host_log_mtime": 1791882547.4717455,
+  "processes": []
+}

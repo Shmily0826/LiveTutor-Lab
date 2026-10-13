@@ -1,0 +1,93 @@
+{
+  "course": "python-functions-quality-20261013",
+  "session_id": "study-77bf6f5e94284c3dbb723fc3c358d915",
+  "actual_prior_answers": [
+    {
+      "answer": "会输出 5；即使不写 return，Python 也会自动返回函数里最后算出的数。",
+      "verdict": "wrong",
+      "score": 0
+    },
+    {
+      "answer": "输出 None。a+b 仍然算出 5 并存进局部变量 total，但没有 return 把它传给调用者，函数默认返回 None，所以 result 是 None。",
+      "verdict": "correct",
+      "score": 100
+    },
+    {
+      "answer": "通过 return 吗？我不确定。",
+      "verdict": "partial",
+      "score": 55
+    }
+  ],
+  "restarted_source_host": {
+    "instrumentation": "neko-product-audio-20261013T090811Z.jsonl",
+    "pids": [
+      42896
+    ],
+    "prior_source_pids": [
+      33476,
+      34428
+    ]
+  },
+  "steps": [
+    {
+      "kind": "history",
+      "request": {
+        "question": "请回顾这门课中我曾经的一条错误答案、正确规则，以及我后来的作答记录；引用已有课程记录，不出新题、不贴代码。",
+        "text": ""
+      },
+      "result": {
+        "output": {
+          "tool": "study_explain",
+          "reply": "这门课里你有一条错误答案：你曾说删掉 return total 后会“输出 5，Python 会自动返回最后算出的数”——这是错的。正确规则是：函数没有 return 时返回 None，算出的 5 只留在局部变量里，不会交给调用者。后来同一道题你改答“输出 None，函数默认返回 None”，这次判为正确。",
+          "mode": "teaching",
+          "degraded": false,
+          "diagnostic": "",
+          "relay": "Pass the reply text on to the learner as spoken by you. Keep its wording, language and code identifiers unchanged; do not translate, lengthen or summarize it. Add nothing except, at most, one short transition."
+        },
+        "is_error": false
+      }
+    },
+    {
+      "kind": "two_sentences",
+      "request": {
+        "question": "请用中文恰好两句话解释：在计算器加法函数里，函数算出的数和返回给调用者的数有什么区别？不要出题，不要代码块。",
+        "text": "def add(a, b):\n    total = a + b\n    return total\nresult = add(2, 3)\nprint(result)"
+      },
+      "result": {
+        "output": {
+          "tool": "study_explain",
+          "reply": "函数内部算出的数只是局部变量里的中间结果，比如 add 里 total = a + b 得到的 5，函数一结束这个变量就消失了。而返回给调用者的数是 return 明确交出去的那个值，外面 add(2, 3) 只能接到 return 送出的东西，没有 return 调用者拿到的是 None。",
+          "mode": "teaching",
+          "degraded": false,
+          "diagnostic": "",
+          "relay": "Pass the reply text on to the learner as spoken by you. Keep its wording, language and code identifiers unchanged; do not translate, lengthen or summarize it. Add nothing except, at most, one short transition."
+        },
+        "is_error": false
+      }
+    }
+  ],
+  "before": {
+    "budgets": {
+      "api.deepseek.com": 300.0,
+      "www.lanlan.app": 30.0,
+      "www.lanlan.tech": 0.0
+    },
+    "round": "bargein-autocheck-20261012",
+    "spent": {
+      "api.deepseek.com": 169,
+      "www.lanlan.app": 19
+    }
+  },
+  "after": {
+    "budgets": {
+      "api.deepseek.com": 300.0,
+      "www.lanlan.app": 30.0,
+      "www.lanlan.tech": 0.0
+    },
+    "round": "bargein-autocheck-20261012",
+    "spent": {
+      "api.deepseek.com": 173,
+      "www.lanlan.app": 19
+    }
+  }
+}

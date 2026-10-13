@@ -410,6 +410,16 @@ def build_concept_explain_messages(
     response_mode = str(context.get("study_response_mode") or "unknown").strip().lower()
     if response_mode not in STUDY_CONCEPT_RESPONSE_MODE_GUIDANCE:
         response_mode = "unknown"
+    response_guidance = STUDY_CONCEPT_RESPONSE_MODE_GUIDANCE[response_mode]
+    # Avatar requests already supply a spoken contract; a second full-solution
+    # contract reintroduced headings and a quiz in actual course-history replies.
+    if "\n\n[Teaching constraints]" in text and "No section headings" in text:
+        response_guidance = (
+            "Answer the learner's current request in brief spoken prose, following "
+            "the supplied Teaching constraints and explicit length/no-quiz/no-code "
+            "requests. Do not add response-mode headings or a transfer exercise. "
+            "For a problem, give the essential reasoning and answer within those limits."
+        )
     guidance = context.get("knowledge_guidance")
     guidance_block = ""
     if isinstance(guidance, dict) and guidance:
@@ -451,7 +461,7 @@ def build_concept_explain_messages(
                 response_mode=response_mode,
                 content_type=str(context.get("study_semantic_content_type") or "unknown"),
                 intent=str(context.get("study_semantic_intent") or "unknown"),
-                response_guidance=STUDY_CONCEPT_RESPONSE_MODE_GUIDANCE[response_mode],
+                response_guidance=response_guidance,
                 text=f"{text.strip()}{guidance_block}",
                 recent_context=build_concept_recent_context(context),
             ),

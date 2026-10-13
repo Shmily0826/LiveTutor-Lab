@@ -15,7 +15,7 @@ const headerBranch = websocketBranch('                    var speechId = respons
 const stopBranch = websocketBranch('                    var cancelledCorrelationId = String(', '                // -------- cozy_audio');
 function deferred() { let resolve; const promise = new Promise(r => resolve = r); return {promise, resolve}; }
 function fixture() {
-    const signals = [], sources = [];
+    const signals = [], sources = [], updates = [];
     const graph = () => ({connect() {}, disconnect() {}, gain: {value: 1}});
     const context = {state: 'running', currentTime: 1, sampleRate: 48000, destination: {},
         createBuffer(_channels, length, rate) { return {duration: length / rate, sampleRate: rate, copyToChannel() {}}; },
@@ -25,15 +25,19 @@ function fixture() {
         incomingAudioEpoch: 4, seqCounter: 0, audioPlayerContext: context, nextChunkTime: 1,
         globalAnalyser: graph(), lipSyncActive: true, currentPlayingSpeechId: 'reused-speech',
         currentPlayingSpeechCorrelationId: 'native_connection_A', socket: {send(text) { signals.push(JSON.parse(text)); }}};
-    const window = {appState: S, appConst: {}, addEventListener() {}, dispatchEvent() {}, syncAudioGlobals() {},
+    const window = {appState: S, appConst: {}, addEventListener() {}, dispatchEvent(event) {
+        if (event.type === 'neko-speech-playback-state') updates.push(event.detail);
+    }, syncAudioGlobals() {},
         setTimeout() { return 1; }, clearTimeout() {}};
     const sandbox = {window, S, document: {getElementById() { return null; }}, console: {log() {}, warn() {}, error() {}},
-        localStorage: {setItem() {}}, CustomEvent: class {}, setTimeout: window.setTimeout, clearTimeout() {},
+        localStorage: {setItem() {}}, CustomEvent: class {
+            constructor(type, options) { this.type = type; this.detail = options.detail; }
+        }, setTimeout: window.setTimeout, clearTimeout() {},
         logAssistantLifecycle() {}, resolveAssistantLifecycleTurnId() { return ''; },
         applyUserActivityCancel() { throw new Error('native handoff must not enter the global cancellation path'); },
         cancelAnimationFrame() {}, decodeOggOpusChunk: async () => ({float32Data: new Float32Array(2), sampleRate: 48000})};
     vm.createContext(sandbox); vm.runInContext(source, sandbox);
-    return {S, api: window.appAudioPlayback, sandbox, sources, signals};
+    return {S, api: window.appAudioPlayback, sandbox, sources, signals, updates};
 }
 const pcm = () => ({arrayBuffer: async () => new Int16Array([1, 2]).buffer});
 const ogg = () => ({arrayBuffer: async () => new Uint8Array([79, 103, 103, 83]).buffer});
@@ -41,6 +45,11 @@ const tokens = items => Array.from(items, item => item.correlationId);
 async function run() {
     let f = fixture();
     await f.api.handleAudioBlob(pcm(), 4, 'reused-speech', '', 1, 'native_connection_A');
+    const feedback = f.signals.filter(s => s.action === 'native_speech_playback_state');
+    assert.ok(feedback.length > 0);
+    assert.ok(feedback.every(s => typeof s.audible === 'boolean'), 'every receipt must preserve audible eligibility');
+    assert.equal(feedback.length, f.updates.filter(s => s.correlationId === 'native_connection_A').length,
+        'one complete socket receipt per playback update');
     f.S.currentPlayingSpeechCorrelationId = 'native_connection_B';
     await f.api.handleAudioBlob(pcm(), 4, 'reused-speech', '', 1, 'native_connection_B');
     f.api.scheduleAudioChunks(); // advance the existing scheduler's next timer tick

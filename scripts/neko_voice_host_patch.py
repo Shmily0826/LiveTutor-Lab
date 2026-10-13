@@ -742,6 +742,7 @@ def _owner_trace_targets(targets):
 TARGETS, _OWNER_TRACE_REPLAY = _owner_trace_targets(TARGETS)
 
 from neko_native_barge_in_patch import upgrade_targets as _native_barge_in_targets
+from neko_native_barge_in_patch import normalize_playback_feedback
 
 TARGETS, _NATIVE_BARGE_IN_REPLAY = _native_barge_in_targets(TARGETS)
 _OWNER_TRACE_REPLAY += _NATIVE_BARGE_IN_REPLAY
@@ -761,6 +762,8 @@ def state(path: Path) -> str:
     if not path.is_file():
         return "missing"
     text = path.read_text(encoding="utf-8")
+    if path.as_posix().endswith("static/app/app-audio-playback.js") and normalize_playback_feedback(text) != text:
+        return "partial(duplicate-playback-feedback)"
     replacements = hunks_for(path)
     hits = sum(1 for old, new in replacements if new in text)
     if hits == len(replacements):
@@ -775,6 +778,8 @@ def apply_to(path: Path) -> str:
     if current == "patched":
         return "already patched"
     text = path.read_text(encoding="utf-8")
+    if path.as_posix().endswith("static/app/app-audio-playback.js"):
+        text = normalize_playback_feedback(text)
     for relative, old, new in _OWNER_TRACE_REPLAY:
         if path.as_posix().endswith(relative) and new not in text and text.count(old) == 1:
             text = text.replace(old, new)
