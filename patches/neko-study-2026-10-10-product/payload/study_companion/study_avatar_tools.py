@@ -830,13 +830,29 @@ class _StudyAvatarToolsMixin:
                 failure_language=requested or self._study_effective_language()))
         # A proxy may issue overlapping explanations. Serialize their temporary
         # cfg overrides so one cannot restore another's temporary language.
+        from .study_materials import material_context
+        observed = material_context(self, include_material=not str(text or "").strip())
+        await self._ensure_active_study_session()
+        async with self._lock:
+            # Snapshot before waiting behind another explanation. Never adopt a
+            # different course/image when this queued request finally starts.
+            context = material_context(self, include_material=not str(text or "").strip())
+            # Only an initially absent session may be initialized here. A
+            # replaced or expired existing session requires a fresh question.
+            if any(context.get(key) != value for key, value in observed.items()
+                   if key != "session_id" or value):
+                return {"ok":False,"error":"course_context_changed","reply":"课程已切换或材料已更新，请使用当前材料重新提问。"}
+            image = str(getattr(self._state, "last_vision_image_base64", "") or "") if has_image_context and not str(text or "").strip() else ""
+            captured_text = str(getattr(self._state, "last_ocr_text", "") or "")
         lock = getattr(self, "_study_explanation_language_lock", None)
         if lock is None:
             lock = self._study_explanation_language_lock = asyncio.Lock()
         async with lock:
-            return await self._study_explain_for_turn(question=question, text=text, requested=requested)
+            return await self._study_explain_for_turn(question=question, text=text, requested=requested,
+                                                     context=context, image=image, captured_text=captured_text)
 
-    async def _study_explain_for_turn(self, *, question: str, text: str, requested: str):
+    async def _study_explain_for_turn(self, *, question: str, text: str, requested: str,
+                                    context: dict, image: str, captured_text: str):
         # previous first: the directive below writes the remembered course preference
         # into cfg.language, and that is the value a one-off request has to go back to.
         previous = str(getattr(self._cfg, "language", "") or "")
@@ -845,13 +861,14 @@ class _StudyAvatarToolsMixin:
                 str(text or ""),
                 _with_screen_identifiers(str(question or ""),
                                          str(text or "")
-                                         or str(getattr(self._state, "last_ocr_text", "") or "")),
+                                         or captured_text),
                 requested)
             # Only cfg.language reaches the prompt builder's `Language:` line, so the
             # override has to be applied there for the call and undone after it.
             if requested:
                 self._cfg.language = requested
-            payload = _envelope(await self.study_explain_text(text=body))
+            payload = _envelope(await self.study_explain_text(text=body, vision_image_base64=image,
+                                                            _material_context=context))
             reply = _first_text(payload, "reply", "summary", "answer", "explanation")
             if not reply:
                 return payload

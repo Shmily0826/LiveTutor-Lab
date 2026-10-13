@@ -751,6 +751,10 @@ from neko_late_asr_tool_patch import upgrade_targets as _late_asr_tool_targets
 TARGETS, _LATE_ASR_TOOL_REPLAY = _late_asr_tool_targets(TARGETS)
 _OWNER_TRACE_REPLAY += _LATE_ASR_TOOL_REPLAY
 
+from neko_study_singleflight_patch import upgrade_targets as _study_singleflight_targets
+TARGETS, _STUDY_SINGLEFLIGHT_REPLAY = _study_singleflight_targets(TARGETS)
+_OWNER_TRACE_REPLAY += _STUDY_SINGLEFLIGHT_REPLAY
+
 
 def hunks_for(path: Path):
     """The replacement list that belongs to this file."""

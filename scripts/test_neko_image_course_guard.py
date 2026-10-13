@@ -1,6 +1,7 @@
 """Exercise the actual image entry's course guard without a model or host."""
 import ast
 import asyncio
+import importlib.util
 from copy import deepcopy
 from pathlib import Path
 import time
@@ -10,6 +11,9 @@ from unittest.mock import AsyncMock
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'patches/neko-study-2026-10-10-product/payload/study_companion/entry_tutor_explain_entries.py'
+spec = importlib.util.spec_from_file_location('actual_materials', SOURCE.with_name('study_materials.py'))
+materials = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(materials)
 
 
 class EntryError(dict):
@@ -39,7 +43,8 @@ def explain_namespace():
             '_plugin_lock': lambda lock: lock, 'Err': EntryError, 'SdkError': StudyError,
             'handle_user_intent': lambda text, **kwargs: {'matched': False, 'remaining_text': text},
             '_validate_optional_vision_image_payload': lambda host, image, **kwargs: image,
-            'LLM_OPERATION_CONCEPT_EXPLAIN': 'concept_explain', '_entry_exception_error': unexpected_error}
+            'LLM_OPERATION_CONCEPT_EXPLAIN': 'concept_explain', '_entry_exception_error': unexpected_error,
+            'material_context_current':materials.material_context_current, 'MaterialContextChanged':materials.MaterialContextChanged}
 
 
 class ImageCourseGuard(unittest.IsolatedAsyncioTestCase):
@@ -50,7 +55,8 @@ class ImageCourseGuard(unittest.IsolatedAsyncioTestCase):
         saves, explanations = [], []
         namespace = {'asyncio': asyncio, '_normalize_submitted_image_payload': lambda s: s,
                      '_plugin_lock': lambda lock: lock, 'Err': lambda e: {'error': str(e)},
-                     'SdkError': lambda message, **kwargs: ValueError(message), 'save_material': lambda *args: saves.append(args)}
+                     'SdkError': lambda message, **kwargs: ValueError(message), 'save_material': lambda *args: saves.append(args),
+                     'material_context':materials.material_context}
         exec(compile(ast.Module(body=[method], type_ignores=[]), str(SOURCE), 'exec'), namespace)
         state = SimpleNamespace(study_course_id='before', last_vision_image_base64='current-image', last_ocr_text='current')
         async def ensure(): state.study_course_id = 'after'
@@ -68,7 +74,9 @@ class ImageCourseGuard(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result['ok'])
         self.assertEqual(saves[0][1], 'after')
         self.assertEqual(explanations[0]['vision_image_base64'], 'new-image')
-        self.assertEqual(explanations[0]['_material_context'], {'course_id': 'after', 'session_id': 'session-after'})
+        self.assertEqual(explanations[0]['_material_context']['course_id'], 'after')
+        self.assertEqual(explanations[0]['_material_context']['session_id'], 'session-after')
+        self.assertEqual(len(explanations[0]['_material_context']['material_identity']), 64)
 
     async def test_course_changes_while_context_building_refuses_before_model(self):
         explain = product_method(SOURCE, 'study_explain_text', explain_namespace())
@@ -108,6 +116,7 @@ class ImageCourseGuard(unittest.IsolatedAsyncioTestCase):
 
     async def test_old_session_record_does_not_pollute_new_live_progress(self):
         namespace = {'_plugin_lock': lambda lock: lock, 'time': time, 'utc_now_iso': lambda: 'now',
+                     'material_context_current':materials.material_context_current,
                      'LLM_OPERATION_KNOWLEDGE_TRACK': 'knowledge_track', 'LLM_OPERATION_QUESTION_GENERATE': 'question_generate',
                      'LLM_OPERATION_ANSWER_EVALUATE': 'answer_evaluate', 'LLM_OPERATION_SUMMARIZE_SESSION': 'summarize_session'}
         record = product_method(SOURCE.with_name('entry_tutor_context_support.py'), '_record_tutor_result', namespace)

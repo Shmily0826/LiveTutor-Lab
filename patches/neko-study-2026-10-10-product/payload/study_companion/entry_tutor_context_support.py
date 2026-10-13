@@ -24,6 +24,7 @@ from .knowledge_graph_guidance import build_knowledge_guidance_payload
 from .knowledge_graph_guidance import match_topics
 from .models import public_current_question_payload
 from .learning_preferences import load_preferences, validate_preferences
+from .study_materials import material_context_current, MaterialContextChanged
 from .practice_scope import filter_question_params_to_scope
 from ._semantic_routing import (
     StudyInputSemantics,
@@ -837,6 +838,8 @@ class _TutorContextSupportMixin:
             # History is already bound to the request session. Do not add its
             # delayed result to a newly selected course's live progress.
             request_session_id = str((extra or {}).get("session_id") or "")
+            if not material_context_current(self, (extra or {}).get("_material_context")):
+                return
             if request_session_id and request_session_id != str(self._study_session_id):
                 return
             event = {
@@ -894,6 +897,8 @@ class _TutorContextSupportMixin:
         diagnostic = str(reply.diagnostic or "")
         if reply.degraded:
             async with _plugin_lock(self._lock):
+                if not material_context_current(self, (extra_context or {}).get("_material_context")):
+                    raise MaterialContextChanged("the requested material was replaced before failure state update")
                 if diagnostic:
                     self._state.last_error = diagnostic
             if public_payload is not None:
@@ -912,17 +917,29 @@ class _TutorContextSupportMixin:
 
         progress = finalize_progress or _TutorFinalizeProgress()
         request_session_id = str((extra_context or {}).get("session_id") or "").strip()
-        if request_session_id:
+        async def append_history():
             await _append_interaction_cancel_safe(
                 self._store,
                 progress=progress,
                 kind=history_kind,
                 input_text=reply.input_text,
                 output_text=reply.reply,
-                metadata=metadata,
+                metadata={**metadata, **({"material_context": dict((extra_context or {})["_material_context"])}
+                                         if (extra_context or {}).get("_material_context") else {})},
                 history_limit=self._cfg.history_limit,
                 session_id=request_session_id,
             )
+        if request_session_id:
+            expected_material = (extra_context or {}).get("_material_context")
+            if expected_material:
+                # Coordinate the short DB commit with the existing material/state
+                # lock; no network/model work runs while this lock is held.
+                async with _plugin_lock(self._lock):
+                    if not material_context_current(self, expected_material):
+                        raise MaterialContextChanged("the requested material was replaced before history commit")
+                    await append_history()
+            else:
+                await append_history()
         else:
             self.logger.warning("study interaction has no request session id")
         await self._record_tutor_result(operation, reply, extra=extra_context)

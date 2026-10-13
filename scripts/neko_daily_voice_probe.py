@@ -1,4 +1,4 @@
-"""One bounded Study-picture -> native role voice attempt, no room microphone."""
+"""Bounded Study-picture -> native role voice, optional same-session follow-up, no room microphone."""
 from __future__ import annotations
 import argparse
 import asyncio
@@ -61,6 +61,12 @@ def stop_owned_host(process):
 
 async def main(args):
     if args.output.exists(): raise RuntimeError("do not overwrite or repeat a voice attempt")
+    if args.followup_wav and (not args.wav or args.manual_turn_probe or args.point_code):
+        raise ValueError("same-session follow-up requires fixed WAV picture mode, no manual/point probe")
+    if args.followup_wav and not (args.prepare_picture or args.verify_picture_state):
+        raise ValueError("same-session follow-up requires isolated picture mode")
+    for wav_path in (args.wav, args.followup_wav):
+        if wav_path and not wav_path.is_file(): raise ValueError("fixed WAV missing; do not start host")
     store_path = (ROOT / 'benchmarks/raw' / args.store).resolve()
     if not store_path.is_relative_to((ROOT / 'benchmarks/raw').resolve()):
         raise ValueError('voice fixture store must stay under project raw directory')
@@ -229,59 +235,79 @@ async def main(args):
                         await asyncio.sleep(0.2)
                 observer_task = asyncio.create_task(observe_native())
                 meter = subprocess.Popen([str(host.SOURCE_PYTHON), "-X", "utf8", str(ROOT / "scripts/neko_loopback_meter.py"),
-                    "--seconds", "75", "--out", str(args.output.with_suffix(".loopback.wav"))],
+                    "--seconds", "195" if args.followup_wav else "75", "--out", str(args.output.with_suffix(".loopback.wav"))],
                     cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
-                report["input_submitted_at"] = round(time.monotonic() - origin, 3)
-                report["input_wall"] = time.time()
-                ended.clear()
-                first_audio = None
-                save()
-                if args.wav:
-                    with wave.open(str(args.wav)) as wav:
-                        assert wav.getsampwidth() == 2
-                        samples = np.frombuffer(wav.readframes(wav.getnframes()), dtype="<i2").astype(np.float32)
-                        if wav.getnchannels() > 1: samples = samples.reshape(-1, wav.getnchannels()).mean(axis=1)
-                        samples = soxr.resample(samples, wav.getframerate(), 48000).astype("<i2")
-                    samples = np.concatenate((np.zeros(48000, dtype="<i2"), samples, np.zeros(144000, dtype="<i2")))
-                    report["input_wav_sha256"] = hashlib.sha256(args.wav.read_bytes()).hexdigest()
-                    speech_samples = np.flatnonzero(np.abs(samples.astype(np.int32)) > 300)
-                    report["fixed_speech_end_offset"] = float(speech_samples[-1] / 48000) if speech_samples.size else None
-                    if args.manual_turn_probe and speech_samples.size:
-                        samples = samples[:int(speech_samples[-1]) + 57600]
-                    report["input"] = "fixed WAV through actual RNNoise input; no live microphone"
-                    began = time.monotonic()
-                    report["input_audio_start_wall"] = time.time()
-                    for offset in range(0, len(samples), 480):
-                        await send({"action": "stream_data", "input_type": "audio", "data": samples[offset:offset+480].tolist()})
-                        await asyncio.sleep(max(0, began + (offset+480)/48000 - time.monotonic()))
-                    report["input_end_at"] = round(time.monotonic() - origin, 3)
-                    report["input_end_wall"] = time.time()
-                    report["fixed_speech_end_wall"] = report["input_audio_start_wall"] + report["fixed_speech_end_offset"] if speech_samples.size else None
-                    if args.manual_turn_probe:
-                        report["manual_end_sent_wall"] = time.time()
-                        await send({"action": "end_audio_turn", "request_id": "manual-support-20261014-1"})
-                else:
-                    await send({"action": "stream_data", "input_type": "text",
-                        "data": "请先调用 study_material 检查我刚交给 Study 的图片，再调用 study_explain，用中文两句话讲天气请求路线。不要用你自己的直接看图路线，不出题。",
-                        "request_id": "daily-picture-voice-20261014"})
-                deadline = time.monotonic() + 75
-                while time.monotonic() < deadline:
-                    if observer_task.done():
-                        observer_task.result()
+                report["turns"] = []
+                for input_wav in ([args.wav, args.followup_wav] if args.followup_wav else [args.wav]):
                     if failed.is_set(): break
-                    # Observe delayed fragments too; a first turn end may be premature.
-                    playback = (report.get("native_final") or {}).get("playback") or {}
-                    min_observation = 55 if args.prepare_picture or args.verify_picture_state else 35
-                    if ended.is_set() and time.time() - report["input_wall"] > min_observation and time.monotonic() - native_changed > 6 and not playback.get("active"):
-                        break
-                    await asyncio.sleep(0.25)
-                else: report["turn_timeout"] = True
-                await asyncio.sleep(3)
-                report["first_socket_audio_at"] = first_audio
-                report["reply"] = "".join(e.get("text", "") for e in report["events"]
-                    if e.get("type") == "gemini_response" and e["at"] >= report["input_submitted_at"])
-                report["native_reply"] = "".join(e.get("text", "") for e in (report.get("native_final", {}).get("trace") or {}).get("events", [])
-                    if e.get("type") == "gemini_response" and e["wall"] >= report["input_wall"])
+                    frames_before = (report.get("native_final") or {}).get("trace", {}).get("binaryFrames", 0)
+                    report["input_submitted_at"] = round(time.monotonic() - origin, 3)
+                    report["input_wall"] = time.time()
+                    ended.clear()
+                    first_audio = None
+                    save()
+                    if input_wav:
+                        with wave.open(str(input_wav)) as wav:
+                            assert wav.getsampwidth() == 2
+                            samples = np.frombuffer(wav.readframes(wav.getnframes()), dtype="<i2").astype(np.float32)
+                            if wav.getnchannels() > 1: samples = samples.reshape(-1, wav.getnchannels()).mean(axis=1)
+                            samples = soxr.resample(samples, wav.getframerate(), 48000).astype("<i2")
+                        samples = np.concatenate((np.zeros(48000, dtype="<i2"), samples, np.zeros(144000, dtype="<i2")))
+                        report["input_wav_sha256"] = hashlib.sha256(input_wav.read_bytes()).hexdigest()
+                        speech_samples = np.flatnonzero(np.abs(samples.astype(np.int32)) > 300)
+                        report["fixed_speech_end_offset"] = float(speech_samples[-1] / 48000) if speech_samples.size else None
+                        if args.manual_turn_probe and speech_samples.size:
+                            samples = samples[:int(speech_samples[-1]) + 57600]
+                        report["input"] = "fixed WAV through actual RNNoise input; no live microphone"
+                        began = time.monotonic()
+                        report["input_audio_start_wall"] = time.time()
+                        for offset in range(0, len(samples), 480):
+                            await send({"action": "stream_data", "input_type": "audio", "data": samples[offset:offset+480].tolist()})
+                            await asyncio.sleep(max(0, began + (offset+480)/48000 - time.monotonic()))
+                        report["input_end_at"] = round(time.monotonic() - origin, 3)
+                        report["input_end_wall"] = time.time()
+                        report["fixed_speech_end_wall"] = report["input_audio_start_wall"] + report["fixed_speech_end_offset"] if speech_samples.size else None
+                        if args.manual_turn_probe:
+                            report["manual_end_sent_wall"] = time.time()
+                            await send({"action": "end_audio_turn", "request_id": "manual-support-20261014-1"})
+                    else:
+                        await send({"action": "stream_data", "input_type": "text",
+                            "data": "请先调用 study_material 检查我刚交给 Study 的图片，再调用 study_explain，用中文两句话讲天气请求路线。不要用你自己的直接看图路线，不出题。",
+                            "request_id": "daily-picture-voice-20261014"})
+                    deadline = time.monotonic() + 75
+                    while time.monotonic() < deadline:
+                        if observer_task.done():
+                            observer_task.result()
+                        if failed.is_set(): break
+                        # Observe delayed fragments too; a first turn end may be premature.
+                        playback = (report.get("native_final") or {}).get("playback") or {}
+                        min_observation = 55 if args.prepare_picture or args.verify_picture_state else 35
+                        if ended.is_set() and time.time() - report["input_wall"] > min_observation and time.monotonic() - native_changed > 6 and not playback.get("active"):
+                            break
+                        await asyncio.sleep(0.25)
+                    else: report["turn_timeout"] = True
+                    await asyncio.sleep(3)
+                    report["first_socket_audio_at"] = first_audio
+                    report["reply"] = "".join(e.get("text", "") for e in report["events"]
+                        if e.get("type") == "gemini_response" and e["at"] >= report["input_submitted_at"])
+                    report["native_reply"] = "".join(e.get("text", "") for e in (report.get("native_final", {}).get("trace") or {}).get("events", [])
+                        if e.get("type") == "gemini_response" and e["wall"] >= report["input_wall"])
+                    turn_fields = ("input_submitted_at", "input_wall", "input_wav_sha256", "fixed_speech_end_offset",
+                                   "input_audio_start_wall", "input_end_at", "input_end_wall", "fixed_speech_end_wall",
+                                   "first_socket_audio_at", "reply", "native_reply", "turn_timeout")
+                    turn = {key: report[key] for key in turn_fields if key in report}
+                    turn["observation_end_wall"] = time.time()
+                    turn["native_pcm_frames"] = (report.get("native_final") or {}).get("trace", {}).get("binaryFrames", 0) - frames_before
+                    turn_events = [event for event in (report.get("native_final") or {}).get("trace", {}).get("events", [])
+                                   if event.get("wall", 0) >= turn["input_wall"]]
+                    turn["native_first_pcm_wall"] = next((event["wall"] for event in turn_events if event.get("type") == "audio_frame"), None)
+                    turn["playback_first_scheduled_wall"] = next((event["wall"] for event in turn_events
+                        if event.get("type") == "native_speech_playback_state" and event.get("active")), None)
+                    report["turns"].append(turn)
+                    save()
+                    if failed.is_set() or report.get("turn_timeout"): break
+                if args.followup_wav:
+                    report["native_reply"] = "\n".join(turn.get("native_reply", "") for turn in report["turns"])
                 if args.point_code:
                     report['role_point_command'] = surface.command
                     if surface.command:
@@ -312,7 +338,7 @@ async def main(args):
             except Exception as exc: report["telemetry_cleanup_error"] = type(exc).__name__
         if meter is not None:
             try:
-                out, err = await asyncio.to_thread(meter.communicate, timeout=85)
+                out, err = await asyncio.to_thread(meter.communicate, timeout=205 if args.followup_wav else 85)
                 report["loopback"] = json.loads(out.strip().splitlines()[-1]) if out.strip() else {"error": err[-400:]}
             except Exception as exc:
                 meter.terminate(); report["loopback_error"] = type(exc).__name__
@@ -329,7 +355,7 @@ async def main(args):
                 fresh_log = handle.read().decode("utf-8", errors="replace")
             # These bounded diagnostic lines contain event timestamps, not credentials.
             report["timing_log"] = [line for line in fresh_log.splitlines() if any(mark in line for mark in (
-                "voice user_transcript", "TRIGGER entry='__llm_tool__study_", "首个 audio.delta", "/api/llm-tools/callback/study_companion/", "native-timing", "study voice admission"))]
+                "voice user_transcript", "TRIGGER entry='__llm_tool__study_", "首个 audio.delta", "/api/llm-tools/callback/study_companion/", "native-timing", "study voice admission", "study voice identical"))]
             wire_records = []
             for line in fresh_log.splitlines():
                 if "[wire-trace] " in line:
@@ -337,7 +363,7 @@ async def main(args):
                     except ValueError: pass
             report["wire_trace"] = wire_records
         report["proof"] = "separate actual provider/native/loopback; fixed input proves this device route, human listening remains unverified"
-        if args.prepare_picture or args.verify_picture_state:
+        if (args.prepare_picture or args.verify_picture_state) and not args.followup_wav:
             speech_end = report.get('fixed_speech_end_wall')
             audio = [e['t'] for e in report.get('wire_trace',[]) if e.get('dir') == 'recv' and e.get('type') == 'response.audio.delta']
             calls = [line for line in report.get('timing_log',[]) if "TRIGGER entry='__llm_tool__study_explain'" in line]
@@ -360,6 +386,29 @@ async def main(args):
             report['picture_constraint_acceptance']={'checks':checks,
                 'result':'CANDIDATE_CHECKS_PASS_REQUIRES_SEMANTIC_REVIEW' if all(checks.values()) else 'FAIL_OR_PARTIAL',
                 'scope':'automatic timing/shape/device checks only; final question/no-quiz/database/diagram facts must be reviewed, human pending'}
+        if args.followup_wav:
+            turns = report.get('turns', [])
+            for turn in turns:
+                audio = [event['t'] for event in report.get('wire_trace', [])
+                         if event.get('dir') == 'recv' and event.get('type') == 'response.audio.delta'
+                         and turn['input_wall'] <= event.get('t', 0) <= turn['observation_end_wall']]
+                turn['no_early_provider_audio'] = bool(audio) and bool(turn.get('fixed_speech_end_wall')) and min(audio) >= turn['fixed_speech_end_wall']
+                turn['provider_first_audio_wall'] = min(audio) if audio else None
+            before_p = report.get('preferences_before_voice', {}).get('output', {}).get('preferences', {})
+            after_p = report.get('preferences_after_voice', {}).get('output', {}).get('preferences', {})
+            before_m = report.get('material_before_voice', {}).get('output', {})
+            after_m = report.get('material_after_voice', {}).get('output', {})
+            checks = {
+                'two_completed_turns': len(turns) == 2 and not any(turn.get('turn_timeout') for turn in turns),
+                'no_early_provider_audio_each_turn': len(turns) == 2 and all(turn['no_early_provider_audio'] for turn in turns),
+                'native_pcm_each_turn': len(turns) == 2 and all(turn['native_pcm_frames'] > 0 for turn in turns),
+                'preferences_still_chinese': before_p == after_p and after_p.get('language') == 'zh-CN',
+                'same_current_picture': bool(before_m.get('material_id')) and before_m.get('material_id') == after_m.get('material_id'),
+                'session_normal': not report.get('failure') and not report.get('turn_timeout'),
+            }
+            report['continuity_acceptance'] = {'checks': checks,
+                'result': 'CANDIDATE_CHECKS_PASS_REQUIRES_SEMANTIC_REVIEW' if all(checks.values()) else 'FAIL_OR_PARTIAL',
+                'scope': 'same bounded audio session, per-turn provider timing and native PCM; language/facts and per-turn loopback need review; human pending'}
         if args.point_code:
             browser = report.get('role_point_browser_checks') or []
             inspector = (report.get('role_point_inspector') or {}).get('results') or []
@@ -400,6 +449,7 @@ if __name__ == "__main__":
     parser.add_argument("--store", default="neko-daily-acceptance-20261014")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--wav", type=Path, help="fixed PCM WAV; never opens a room microphone")
+    parser.add_argument("--followup-wav", type=Path, help="one fixed WAV follow-up in the same bounded audio session; isolated picture mode only")
     parser.add_argument("--manual-turn-probe", action="store_true", help="one opt-in explicit-end support scene; no production VAD change")
     parser.add_argument("--point-code", action="store_true", help="prepare authorized source selected by learner; require actual role to point")
     parser.add_argument("--speech-gate", action="store_true", help="one opt-in Study execution-admission scene; never changes onset/cancel")

@@ -27,7 +27,7 @@ class Harness(scope['_StudyAvatarToolsMixin'],ProductHarness):
     def __init__(self,store):
         ProductHarness.__init__(self,store);self.calls=[];self.fail=False
         self._cfg.language='zh-CN'
-    async def study_explain_text(self,*,text):
+    async def study_explain_text(self,*,text,**kwargs):
         self.calls.append((self._cfg.language,text))
         if self.fail:raise RuntimeError('controlled model failure')
         return {'reply':'First sentence. Second sentence.' if self._cfg.language=='en-US' else '第一句。第二句。'}
@@ -69,7 +69,7 @@ class ExplanationLanguage(unittest.IsolatedAsyncioTestCase):
 
     async def test_overlapping_one_turn_calls_do_not_restore_another_temporary_language(self):
         entered=asyncio.Event();release=asyncio.Event();calls=[]
-        async def slow_backend(*,text):
+        async def slow_backend(*,text,**kwargs):
             calls.append(self.h._cfg.language)
             if len(calls)==1:
                 entered.set();await release.wait()

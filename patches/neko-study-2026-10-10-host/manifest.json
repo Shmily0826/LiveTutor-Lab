@@ -183,13 +183,18 @@
     {
       "path": "main_logic/omni_realtime_client/_tools.py",
       "base_sha256": "51afd6f606a4c011b1bb1a88f35da2d443a458f335c0cbc177601c5a648b3514",
-      "patched_sha256": "3ca573fe366482dada517189e60621fdb92594bf6071d39a5b3adabc3f07517b",
-      "resealed_utc": "2026-10-13T17:08:53.731616+00:00",
+      "patched_sha256": "f43e4253c9225b57d7cc2f0fadc9e5e22e40a3cdc7490c921998982d13077dfc",
+      "resealed_utc": "2026-10-13T18:23:15.001215+00:00",
       "resealed_reason": "Opt-in all-Study admission, current received-ASR/quiet/ready plus at most 200ms neighboring-ASR promotion; older prefix args cannot acquire final scope. Daily default off.",
       "verified_by": {
         "offline": "14 Study gate, 6 ordering, 5 deployed tool lifecycle/byte roundtrip passed; onset/PCM unchanged",
-        "fixed_input_device": "adjacent6 single source-point utterance passed. Neighbor8 PARTIAL: five ASR, old prefixes refused/no early provider audio/28 native PCM/72 loud loopback, but three explain executions and Chinese rather than requested temporary English. Preferences and picture retained; final paid teaching constraints not passed.",
+        "fixed_input_device": "adjacent6 source point passed. Voice9 and continuity10 have no early audio and actual native/loopback; continuity10 one CONNECT English-body then Chinese, per-turn one explain/25+27 PCM/75+71 loud bins, prefs and picture retained. Strict whole-English and tiny label condition failed: weather miss read as hit; overall PARTIAL, human pending.",
         "live_real_microphone": "PENDING for this increment; inherited normal teaching/barge-in is a separate acceptance"
+      },
+      "study_identical_inflight": {
+        "enabled": "only with opt-in Study speech gate on exact free route and a ready completed ASR scope",
+        "proof": "7 actual owner/batch checks plus 14 gate, 6 ordering and 5 lifecycle/replay passed. Voice9 and continuity10 have one call per input and no joined trace; physical sharing branch unverified, not inferred from fewer requests.",
+        "scope": "identical simultaneous study_explain arguments only; own call ids/response batches retained; no completed answer cache, quiz/grade/preferences sharing, provider/scope adoption or response alias"
       }
     }
   ],

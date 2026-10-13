@@ -40,3 +40,11 @@ B opt-in gate已实现、10离线守卫过，但gated5实际只改善为整句�
 - F本地503 SDK/DB恢复已有证据，不重跑；任意桌面、密集小字、真人新能力各保留范围。剩余可自主开发/核证不少，Goal active。最终真人集中10–20分钟等明确“准备好了”。
 
 neighbor8已结束，432/45/0，旧prefix不再升格、无提前audio、实际中文28PCM/72响声；仍三次explain且英文失败，局部B未解除。确认检测漏“用两句英文”，role question丢明确English output；已加一次language参数/count/否定、4 wrapper+SQLite守卫和5失败guard/shape过，最新增量只有离线。较早缺PCM的失败由本场设备路线部分解除，不能称整个paid语音闭环过。下一步离线同一最终ASR重复工具/结果owner分析，必要时再定向完整英文；当前无活动online，本轮候选仍off，继续阶段发布与F日常连续学习。
+
+最新voice9已结束440/46/0：一个actual explain、两句英文主体含原中文模块标签、23PCM/68响声，无提前audio/长期prefs污染。严格全英文检查仍失败；不能因主体英文称纯英文通过。新inflight精确合并7离线过，但这场只有一call没有joined，不声称物理分支已过。全长停顿跨片/persistent control语义仍不普遍保证，候选默认off。下一步是同场语言接续必要验证，不为触发joined重复付费。
+
+Native材料竞态审查两个条件性P1主路径源码已修、9离线过；非空session ensure替换也拒绝。无新版实际事故或换图播放通过声明。短SQL既有lock保留旧identity已提交history，新材料不接纳旧live seed/返回；已经安排event/发送tool结果/排native audio之后的材料变化还未驱动播放取消。下一步研究该材料事件与现有owner/cancel接口的最小关联；不延迟普通真人onset。先完成不依赖这一缺口的连续语言/交付。所有增量未发布，线上前需刷新manifest；不作全局blocked。
+
+continuity10已结束458/47/0：两轮同场正常解释经最新guard、临时英文主体后回中文、各一explain/native25/27/回环75/71、prefs不变。解除这一场语言恢复与实际设备连续性缺口，但严格纯英文/真人尚待。新实际失败：中文把HTML5217/5219『天气未命中 / 百科 HTTPS』的『未』漏掉，关键条件被改。完整WAV/JSON保留raw，不反复跑相同paid图片准备。恢复路线：纠正后重查已授权当前材料、明确引用精确文字或承认看不清；受控HTML定位元数据可提示位置，但不能冒充PNG像素证据或默认将不同材料合并。继续材料cancel/阶段交付，非全局阻塞。
+
+计时量具边界：native500events最终截断第一轮首PCM/scheduled，不能把稍后heartbeat当开始；首次native时间未知不重跑该场。计数25、loopback实际WAV仍可核，按完整WAV重算75/71响声，JSON曲线初60bins不用于错误宣称无播放。下一量具每轮保存首PCM/scheduled，离线修正后继续其他工作。主要延迟已定位工具/代理，不更改普通真人onset。

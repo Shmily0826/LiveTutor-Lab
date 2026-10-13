@@ -45,3 +45,9 @@
 当前接续：465da5b第二阶段已发布，B opt-in all-Study准入仍默认off。实际point adjacent6通过单固定指令；图片gated7暴露旧prefix升格和重复paid工具，最新限制200ms邻接ASR接续、14/6/5离线过后进行neighbor8单场。不把candidate检查/英文形状当完整语义或真人通过。D真实文字结构/file窗口/纠正续问补证，保留值写反与缺key混淆、超出两句的模型失败；最新persona短答/事实规则源码修正待实际确认。先核本场结果与清理、更新证据和范围；在同managed worktree提交必要B/D增量，再继续B延迟/术语与F多轮日常整合。旧status全文存evidence/status-history，压缩仍先读取当前四文件，不大范围扫描。
 
 neighbor8补证仍PARTIAL（旧prefix拒绝、中文实际播放，但重复三次/英文失败），432/45/0、场景已终止；新一次language schema/检测/临时解释锁4项离线过。阶段三发布后继续最终ASR重复工具及result/audio owner离线复现、必要英文设备补证与F连续日常操作，不重复已验旧教学/图片题/503。集中真人未做保持pending。接续规则和完整contract不变。
+
+阶段三d6405af9c92e629a96e355c75c48699eeff26271已push同codex分支，25必要文件，parent465da5b。已确认远端与clean managed worktree、原HEAD/index/contract保留，未合并/强推。上述下一工作仍未完成，Goal active；每次压缩/自动续跑仍先完整读取四文件。
+
+最新接续：voice9完成，账本440/46/0。新增同scope/ASR/args的inflight explain合并7项真实工具离线过，14/6/5旧受影响准入/生命周期检查过；voice9只有一个call，不能把请求减少归因于合并。新Native材料快照和短SQL身份守卫9项通过，非空session在ensure窗口替换已追加拒绝，首次空session初始化允许；受影响language4/course4/failure5/memory6此前通过。当前生产增量未发布，材料更换后的已排native音频取消仍是单独工作。下一步更新23文件部署指纹，进行有界同会话英文→中文追问，不重复paid图片准备；之后审查并阶段发布，再继续其余A–F。当前无线上会话，恢复前核实际进程/账本。
+
+continuity10结束458/47/0，一CONNECT两轮英文主体→中文恢复，各一explain、25/27PCM、75/71回环响声、prefs/图不变、无提前audio。细字『未命中』被误读成『命中』，严格纯英文也未满足，整体PARTIAL而非全语义验收。正常新版材料guard模型路径有证据，竞态替换后播放取消没有。精确合并无joined不称设备branch验收。场景已终止，下一步阶段发布后继续材料音频取消最小接口与实际细字纠正重查；不为首native trace截断或找joined重跑场景。恢复时以最新status/真实账本为准。

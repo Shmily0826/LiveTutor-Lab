@@ -59,6 +59,32 @@ gated7从395/43到416/44。实际五次ASR；三个prefix explain被scope替换�
 
 全部本场owned host/native/surface/meter结束，432/45/0，日常gate仍off。后续先离线处理同一最终ASR的重复工具/多个response结果与音频owner，再基于真实失败安排必要单场；不重复MANUAL或图片quiz闭环，不用余量安排无意义测试。D窗口读取/纠正与F日常整合可独立继续。Goal仍active。
 
+## 新同输入inflight保护与voice9（阶段三之后）
+
+新增 `neko_study_singleflight_patch.py` 仅opt-in/exact free route、ready completed ASR/current owner，key为connection/scope/ASR接收时刻/完全相同arguments，且provider session必须同一对象。只有同时在途的study_explain共享一次backend执行；每个call保留自己的ID、response batch和deepcopy输出。取消副本不取消原请求；原请求取消时等待者取消，scope/connection变化拒绝旧结果。没有已完成缓存、quiz/grade/preferences或不同参数合并，不采用未知response alias。7项真实工具/owner检查与受影响14gate/6ordering/5lifecycle/replay通过，未知patch锚点拒绝后修正明确完整run锚点，双runtime工具文件一致、启动fingerprint封存。源码/离线通过，不等于重复物理branch已验。
+
+voice9使用原单指令WAV/原隔离课和Sky图，只读verify、不paid重交图片。432/45→440/46/0，同round、不重置。五片ASR，只有一个provider functioncall和一个真实SDK explain，没有identical joined trace。角色实际两句：Flutter观测页面经客户端HTTP服务GET /api/weather到Express；Express再取外部天气源并把JSON返回页面。英文主体保留原中文标签，23native PCM、68设备回环响声，末尾约束no-quiz/no-save与前后zh-CN/brief/no-proactive/原材料一致。无提前provider音频，正常结束；严格zero-CJK English形状失败，整体PARTIAL。不能把单call数量归因于合并，不能称纯英文、真人或全部endpointing通过。
+
+实际时间线（原时基秒，0.25秒回环分桶）：固定末非静音1791913029.518、最后ASR1791913030.837、唯一call1791913031.575、function_call_output发送1791913035.786、首native PCM1791913042.216、首chunk安排1791913042.290。工具结果发送是host可见工具完成上界，不能替代模型内部用时；native/设备时间由各自产物确认。后续同会话英文→中文追问单场continuity10正在观察，最新材料guard源/部署23匹配；不反复付费寻找joined条件，单独处理材料事件和已排音频取消。
+
+## continuity10：同场临时英文→中文、细字条件仍误读
+
+复用相同隔离store/课/图/第一WAV，第二WAV新增中文追问『接着刚才那条天气路线，服务器具体连到哪个数据源？只按当前图回答，不出题。』，离线Huihui文件输出9.866秒、SHA4d3c9f2ec98b324bf7daf7c05f185fb8c181ef8b4519ff1f3f0932411843333d，无room mic/speaker生成播放。optional --followup-wav有界两轮同CONNECT，每轮结果上限75秒、host360秒、meter195秒，失败不继续下一轮、不重连；默认单轮保持。440/46→458/47/0，无paid图片准备。
+
+真实角色第一轮两句英文主体含中文模块标签，Flutter→HTTP服务→Express→外部Open-Meteo→JSON；第二轮中文回答04 Express连天气/百科数据源，列Open-Meteo、MET Norway、Wikipedia。两轮provider各一study_explain、实际SDK2次、没有joined；ASR5/3、nativePCM25/27、实际WAV0.25秒分桶响声75/71。current picture/prefs zh-CN/brief/step_by_step/no-proactive前后一致、noquiz、两轮无提前provider audio、正常终止及finally清理。临时语言恢复和正常新版材料guard模型/device路径有定向证据；图/课竞态取消、纯英文、合并物理branch、真人没有新通过。
+
+实际语义失败保留：第二轮原话把虚线『天气未命中 / 百科 HTTPS』读成『天气命中 / 百科 HTTPS』。只读核对原Sky HTML5217/5219的data-edge-label与text均有『未』，数据源列表相符，关键条件却改变。第一轮笼统HTTPS是图HTTP(S) GET的收窄，不当源码协议验收。总体PARTIAL，不能用自动continuity checks全部true代替语义。后续根据这一实际错误验证纠正后重查，不重复画图或修改Sky。
+
+| 时间段（末非静音起） | 英文轮 | 中文轮 |
+|---|---:|---:|
+| 最后ASR | 1.485s | 2.114s |
+| 首tool result发送（完成上界） | 6.472s | 5.101s |
+| 首provider音频 | 14.062s | 9.321s |
+| 首native PCM / scheduled | 未采全 | 9.326 / 9.328s |
+| 首设备回环（0.25s桶） | 14.759s | 9.267s |
+
+ASR后到tool send约4.99/2.99秒，发送到proxy首音约7.59/4.22秒；不靠延后普通barge-in优化此等待。中文回环桶比provider早54ms是分桶前沿，不是提前生成音频。native最终500events截掉英文首PCM，未知，不拿稍后heartbeat补时间；每轮计数25仍存。meter JSON只60初始bins，完整实际WAV保留并重新计算全曲线，首次汇总因只读截断curve显示0响声已更正。新版量具每轮保存首次PCM/scheduled，未为补时间额外重跑。raw与review JSON/WAV不发布，报告可审阅。
+
 ## 最新解释语言增量的最终只读审查
 
 仅审查 `study_avatar_tools.py` 的可选language schema、counted/negation检测、`_study_explanation_language_lock` / `_study_explain_for_turn` 和对应4项真实wrapper/现有SQLite检查源码，没有重跑测试、上线、音频或账本操作。显式language仅允许zh-CN/en-US，非法值在backend前拒绝；显式参数优先于问题内检测和临时偏好，不写course/Store。解释间lock在任何await前创建，串行保护一次cfg覆盖，try/finally在成功、异常及取消时恢复原值；空reply也经过finally。该lock只保证同实例explain与explain之间的恢复顺序，**不保证quiz/answer/language/preferences/session等其他不同工具的并发隔离**，因为这些路径仍共享cfg。自然文本fallback仍有明确范围：计数词与相邻否定已有离线例子，但全字符串COURSE_LEVEL_REQUEST关键词检测会把“这次用两句英文，不要长期保存”中的“长期”当成课程级请求，显式language能绕过此剩余歧义；不能把当前检测描述为任意自然语义保证。主线4项language、5项failure guard及shape属于离线通过；neighbor8整体PARTIAL（三次explain、中文及实际播放，无提前audio）不能证明这个最新英文参数已通过真实模型/设备/真人。候选默认off，原始单场失败与层次边界保留。此限定审查已完成，本子任务文件修改冻结，后续发布由主Agent执行。

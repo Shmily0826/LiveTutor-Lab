@@ -16,7 +16,7 @@
     },
     {
       "path": "payload/study_companion/entry_tutor_context_support.py",
-      "sha256": "d89d672ed2ce2fa8fbd77d625f58c0b77a0008531d46eea73e03e9ef1a74197b",
+      "sha256": "72b836989fe3b40f358f3a5d20e2376e6091dcaa1ef2aa3de695cd3ba77a2a77",
       "deployed_matches": true
     },
     {
@@ -91,7 +91,7 @@
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
-      "sha256": "7a1767ee442c0f276523b0fea21067646f52e102a96a0ffc782fe8747acbacfb",
+      "sha256": "d60de82bb557d9a9e203daafaacb7a9f1c965886499913ecac569fb93fc05e06",
       "deployed_matches": true
     },
     {
@@ -107,7 +107,7 @@
     },
     {
       "path": "payload/study_companion/entry_tutor_explain_entries.py",
-      "sha256": "2630e8979ba872ad9a3d1d08213f78875fd15e494d54b4fb41607c75d9afa8d8",
+      "sha256": "a206a71cb4b25ed1f3cb47045b6eb030dca31f55f7e9e2fb300ad19efe357aa8",
       "deployed_matches": true
     },
     {
@@ -117,7 +117,7 @@
     },
     {
       "path": "payload/study_companion/study_materials.py",
-      "sha256": "0f15fa494acdafade4c93a98dfe1d0cf688b2a4b6792c2174fbbce0c7992a26d",
+      "sha256": "193daf2d8fd3ed6745a0335b693ae5299211903b4a4b7f1407c2b6e6b510464d",
       "deployed_matches": true
     }
   ],
@@ -189,8 +189,13 @@
     "code_window": "4 file-window guards, 1 structure route check, 1 current revision history check passed; actual character file and correction receipts are recorded separately in code-coverage report"
   },
   "daily_explanation_language_update": {
-    "proof": "SOURCE_OFFLINE_ONLY; latest optional language argument has not been newly model/device/human tested",
+    "proof": "SOURCE_OFFLINE + voice9 and continuity10 actual English-body/two-sentence then Chinese follow-up in same CONNECT, native PCM/loopback and prefs unchanged. Original Chinese labels retained; optional language-field branch not directly captured, strict whole-English and human pending.",
     "tests": "4 actual wrapper/existing SQLite checks: one-turn language enters prompt/cfg without saved mutation, counted Chinese/negation/noun cases, failure restore/invalid refusal, overlapping explanations restore prior language and next answer uses saved default; 5 teaching failure guards and reply shape passed",
     "scope": "explanation-only optional zh-CN/en-US language, no course/default pin; explanation lock serializes only explanations, not every kind of study tool"
+  },
+  "daily_native_material_update": {
+    "proof": "SOURCE_OFFLINE + continuity10 normal wrapper/entry/actual-model/native-device path. Material replacement races and queued-audio cancellation still offline/pending, not inferred from the normal scene.",
+    "tests": "9 actual native wrapper/explain entry/finalizer/existing SQLite tests; prior affected language4/course4/failure5/course-memory6 passed",
+    "scope": "observed course/session/content identity retained through queued explanations and short SQL append, only absent session initialization may adopt session; committed original identity history preserved; no queued-native-audio cancellation claimed"
   }
 }

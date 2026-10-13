@@ -13,7 +13,7 @@ from ._solution_structure import (
 from .tutor_llm_agent_concept_explain import repair_solution_structure
 from .entry_tutor_context_support import _TutorFinalizeProgress
 from .llm_prompts import build_concept_recent_context
-from .study_materials import save_material
+from .study_materials import save_material, material_context, material_context_current, MaterialContextChanged
 from .entry_common import (
     Any,
     Err,
@@ -149,8 +149,7 @@ class _TutorExplainEntriesMixin:
                 return Err(SdkError("课程已切换，请重新选择当前课程的图片后提交。", code="course_context_changed"))
             self._state.last_vision_image_base64 = image_payload
             self._state.last_ocr_text = normalized_text
-            material_context = {"course_id": str(self._state.study_course_id),
-                                "session_id": str(self._study_session_id)}
+            expected_material = material_context(self)
             if getattr(self, "_store", None) is not None:
                 await asyncio.to_thread(save_material, self._store, self._state.study_course_id,
                                         image_payload, normalized_text)
@@ -161,7 +160,7 @@ class _TutorExplainEntriesMixin:
         return await self.study_explain_text(
             text=source_text,
             vision_image_base64=image_payload,
-            _material_context=material_context,
+            _material_context=expected_material,
             **kwargs,
         )
 
@@ -193,8 +192,7 @@ class _TutorExplainEntriesMixin:
             if not material_context:
                 return True
             async with _plugin_lock(self._lock):
-                return (str(self._state.study_course_id) == material_context["course_id"]
-                        and str(self._study_session_id) == material_context["session_id"])
+                return material_context_current(self, material_context)
         if not await material_is_current():
             return Err(SdkError("课程已切换，请重新选择当前课程的图片后提交。", code="course_context_changed"))
         target_lanlan = self._resolve_study_target_lanlan(kwargs)
@@ -296,6 +294,10 @@ class _TutorExplainEntriesMixin:
             if vision_image_payload:
                 extra_context["vision_enabled"] = True
                 extra_context["vision_image_base64"] = vision_image_payload
+            elif material_context and "material_identity" not in material_context:
+                # Native explicit text has its own immutable source. Do not add
+                # an unrelated picture still saved on this course by default.
+                extra_context.update(vision_enabled=False, vision_image_base64="", vision_snapshot={})
             tutor_context = await self._build_learning_context(
                 LLM_OPERATION_CONCEPT_EXPLAIN,
                 input_text=source_text,
@@ -439,6 +441,8 @@ class _TutorExplainEntriesMixin:
                                     language=self._cfg.language,
                                 )
             finalize_progress = _TutorFinalizeProgress()
+            if material_context:
+                tutor_context["_material_context"] = dict(material_context)
             try:
                 if not await material_is_current():
                     return Err(SdkError("课程已切换，请重新选择当前课程的图片后提交。", code="course_context_changed"))
@@ -461,6 +465,8 @@ class _TutorExplainEntriesMixin:
                     ),
                     timeout=_FINALIZE_TIMEOUT_SECONDS,
                 )
+            except MaterialContextChanged:
+                return Err(SdkError("课程已切换或材料已更新，请重新选择当前材料后提交。", code="course_context_changed"))
             except asyncio.TimeoutError:
                 self.logger.warning("study explanation history persistence timed out")
                 payload = _build_finalize_failure_payload(
@@ -475,6 +481,8 @@ class _TutorExplainEntriesMixin:
                     diagnostic="history_persist_failed",
                     history_persisted=finalize_progress.history_persisted.is_set(),
                 )
+            if not await material_is_current():
+                return Err(SdkError("课程已切换或材料已更新，请重新选择当前材料后提交。", code="course_context_changed"))
             narration_scheduled = False
             narration_status = "disabled"
             narration_reason = ""

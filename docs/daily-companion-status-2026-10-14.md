@@ -4,7 +4,7 @@
 
 ## 已发布与工作树
 
-远端 `codex/daily-learning-companion` 最新已核 SHA465da5b410698047c73a6118438305c092f273a0，前一阶段3c2bc065。独立 managed worktree `C:\Users\Shmily\.codex\worktrees\daily-companion\LiveTutor-Lab` 用于明确allowlist增量，未合并/强推。主项目master HEAD2c541755344eb8bcf35e310f871c513ea809e1a5/index保持原状，.workbuddy及无关改动保留。当前本轮B/D增量尚未发布；不能将此说明当新版本push确认。
+远端 `codex/daily-learning-companion` 最新已核 SHAd6405af9c92e629a96e355c75c48699eeff26271，唯一parent465da5b，阶段三25个明确allowlist文件已commit/push。独立 managed worktree `C:\Users\Shmily\.codex\worktrees\daily-companion\LiveTutor-Lab` clean；未合并/强推，远端master/教学分支未动。主项目master HEAD2c541755344eb8bcf35e310f871c513ea809e1a5/index保持原状，.workbuddy及无关改动保留。contract与已发布副本SHA一致，此发布确认在push后本地更新。
 
 ## 分层证据和剩余
 
@@ -23,6 +23,26 @@ gated7/neighbor8均已结束，exec34320/88166已返回terminal。本场用单�
 
 本轮B/D结果与边界详见study-speech-gate和code-coverage报告。接着整理必要文件闭包、隔离审查/commit/push阶段成果，之后B优先同一最终ASR的重复paid tool及其多个response结果/音频owner离线复现，保留普通打断，不加未知response alias；再有依据进行一次必要的完整临时英文设备补证。F继续日常连续材料/换课/重启操作接续，真人集中体验等“准备好了”。局部问题不结束Goal，不以小阶段/清晨标完成。
 
+阶段三已发布，Goal再次核对active。下一续跑先读四文件，再从neighbor8具体重复调用/response owner复现继续；不重跑A/C/E已过批次，不因d6405af阶段成果结束Goal。最新manifest23/23部署到固定daily store，双runtime_tools/transport startup fingerprint匹配。最后进程核对：已知gated7/neighbor8 native PID不在、48911/48916无listener，无本任务online会话。
+
 历史完整阶段记录保存在 `docs/evidence/daily-companion-status-history-through-gated5-2026-10-14.md`，含原失败、已尝试、旧进程快照与推断更正；旧计数/进程不是当前值。当前源码/模型/设备/真人各层不得互相替代。
 
-最新实际账本：DeepSeek432/2000，Lanlan.app45/无累计上限，Lanlan.tech0/0；round bargein-autocheck-20261012，不重置。请求不是账单金额，不以剩余额度安排测试。
+最新实际账本：DeepSeek440/2000，Lanlan.app46/无累计上限，Lanlan.tech0/0；round bargein-autocheck-20261012，不重置。请求不是账单金额，不以剩余额度安排测试。
+
+## d640之后未发布增量（覆盖旧下一步与进程快照）
+
+B：`neko_study_singleflight_patch.py`只在opt-in free lanlan_app/no serverVAD、已完成ASR/current owner、同connection/scope/ASR接收时刻/完全相同args、同provider session的在途study_explain合并。结果保留各自call ID/原response batch，不加未知alias、不缓存已完成结果、不合并评分/偏好/不同参数。7实际工具/owner检查通过，14准入/6ordering/5lifecycle与重放过；PCM/onset未改。
+
+voice9固定16.978秒单指令含0.900秒停顿、复用既有隔离图/课，已结束（exec6759 terminal、owned finally清理）。5片ASR后只有一个study_explain和真实SDK执行；角色说两句英文主体，保留03/04等图中中文标签，23native PCM、68回环响声、无提前provider音频、课程/图/长期zh-CN/brief/no-proactive不变。严格全英文形状检查因中文标签失败，整体PARTIAL；无identical-joined trace，不能称合并分支实际设备验证。新单次语言结果已有模型/设备证据，纯英文、下一轮默认中文与真人听感仍需区分。raw证据`daily-companion-20261014-picture-singleflight9.json`，不发布录音/用户数据。
+
+A：Native wrapper首次await前记录课/会话/图+OCR指纹，ensure后核对并捕获材料；语言锁排队不能重绑定新材料。首次空会话允许初始化，非空会话替换拒绝。UI提交共用身份，entry在build/model/finalize前后检查；finalizer仅短SQL提交占既有state lock，不跨网络，保留已提交原identity历史、不更新新live seed/错误/叙述。9真实wrapper→entry/finalizer→现有SQLite检查过；explicit source text关闭不相关saved图。受影响language4/course4/failure5/memory6此前通过。新版材料guard尚无模型/设备换图验证；材料事件未取消已经安排的native音频，不能冒称全链已解决。
+
+生产材料guard增量尚未部署刷新manifest，inflight工具双runtime指纹已封存；阶段三published hash不变。两个Agent报告已冻结，无在线/共享生产并发修改。当前没有本任务online会话，启动新场前再核具体PID/端口。下一步刷新23源/部署指纹，增加有界同会话英文→中文追问，审查后同codex分支阶段发布。现有Goal刚核active，完整contract继续绑定，未重建/改预算；压缩/自动续跑先读四文件。
+
+当前更新：23产品源/固定daily部署指纹已刷新匹配、source audio gate匹配。same-session continuity10已经启动，exec41824，native owned PID34592（这是启动快照，续跑先核，不按旧PID清理），同隔离课/图、原英文复合WAV+新增9.866秒中文追问WAV4d3c9f2e...。每轮有75秒结果上限、整体host360秒、meter195秒；无重连/paid图片准备、fake silent native input/room mic=false/音量未改。结果尚在观察，启动前440/46/0，结束后再记实际值。screen_guidance Agent仅只读审查材料事件→现有audio owner/cancel路线，单独新报告文件；不动进程/账本/生产。
+
+continuity10已结束，exec41824 terminal、owned finally已执行。账本458/2000 DS、47 app、0 tech，同round无重置。一个CONNECT/同课同图，两轮各一study_explain/真实SDK执行，ASR分别5/3片、native PCM25/27、从实际保存WAV按0.25秒重算响声75/71（总146）。第一轮英文主体两句含中文原标签，第二轮恢复中文，两轮无提前provider audio，长期zh-CN/brief/step_by_step/no-proactive不变、未出题。材料guard新版已走正常模型/设备解释路径，但没有在线竞态换图测试，不能称替换取消通过；无singleflight joined，仍未设备触发合并branch。
+
+整体PARTIAL：第二轮错误把Sky原HTML5217/5219『天气未命中 / 百科 HTTPS』说成『天气命中 / 百科 HTTPS』，主节点/数据源列表相符，细字关键否定误读；第一轮笼统称HTTPS不等于实际代码协议已核（图是HTTP(S) GET）。不能以所有自动continuity checks green称细字/语义通过。第一轮最终native trace500封顶截掉首PCM时间，未知；计数仍25。后续量具按每轮保存首PCM/scheduled，未为时序缺失重跑付费。回环JSON仅60初始bins，原WAV保留，重算完整曲线；第二轮分桶首响比provider早约54ms属0.25秒桶边界，非提前播放。
+
+末非静音→末ASR/首tool-result-send/首provider/首loopback分别第一轮1.485/6.472/14.062/14.759秒，第二轮2.114/5.101/9.321/9.267秒。工具send是完成上界，ASR后backend约4.99/2.99秒、发送后proxy首音约7.59/4.22秒。不因这些测量更改普通onset/cancel。当前scene无活动online，下一步核清理，审查发布本阶段必要代码/记录，再推进细字纠正后重查和材料事件→已有音频取消。没有新真人通过，集中体验仍待『准备好了』。

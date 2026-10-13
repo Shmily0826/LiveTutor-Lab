@@ -11,12 +11,15 @@ import re
 import sys
 from types import SimpleNamespace
 import unittest
+import importlib.util
 
 import httpx
 from openai import APIConnectionError
 
 ROOT = Path(__file__).resolve().parents[1]
 PAYLOAD = ROOT / "patches/neko-study-2026-10-10-product/payload/study_companion"
+material_spec=importlib.util.spec_from_file_location('failure_materials',PAYLOAD/'study_materials.py')
+materials=importlib.util.module_from_spec(material_spec);material_spec.loader.exec_module(materials)
 sys.path.insert(0, str(ROOT / "scripts"))
 import neko_desktop_tutor_host as host
 
@@ -44,7 +47,7 @@ class TeachingFailureTest(unittest.TestCase):
     def test_submitted_picture_survives_first_session_and_replaces_old_material(self):
         ns = definitions(PAYLOAD / "entry_tutor_explain_entries.py", set(),
                          {"_normalize_submitted_image_payload": lambda raw: "validated:"+raw,
-                          "_plugin_lock": lambda lock: lock}, method="study_submit_image")
+                          "_plugin_lock": lambda lock: lock,"material_context":materials.material_context}, method="study_submit_image")
         async def scenario():
             state = SimpleNamespace(last_vision_image_base64="old picture", last_ocr_text="old OCR", study_course_id="image-course")
             seen = []
@@ -63,7 +66,7 @@ class TeachingFailureTest(unittest.TestCase):
             await ns["study_submit_image"](plugin, image_base64="second", text="")
             self.assertEqual(seen[-1][0:2], ("validated:second", ""))
             self.assertEqual(seen[-1][2]["vision_image_base64"], "validated:second")
-            self.assertEqual(seen[-1][2]["_material_context"], {"course_id":"image-course","session_id":"image-session"})
+            self.assertEqual(seen[-1][2]["_material_context"], materials.material_context(plugin))
         asyncio.run(scenario())
 
     def test_fine_diagram_details_preserve_explicit_quality_and_source_messages(self):
