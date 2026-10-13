@@ -747,6 +747,10 @@ from neko_native_barge_in_patch import normalize_playback_feedback
 TARGETS, _NATIVE_BARGE_IN_REPLAY = _native_barge_in_targets(TARGETS)
 _OWNER_TRACE_REPLAY += _NATIVE_BARGE_IN_REPLAY
 
+from neko_late_asr_tool_patch import upgrade_targets as _late_asr_tool_targets
+TARGETS, _LATE_ASR_TOOL_REPLAY = _late_asr_tool_targets(TARGETS)
+_OWNER_TRACE_REPLAY += _LATE_ASR_TOOL_REPLAY
+
 
 def hunks_for(path: Path):
     """The replacement list that belongs to this file."""

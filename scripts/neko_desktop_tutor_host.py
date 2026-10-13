@@ -452,8 +452,11 @@ TUTOR_ROLE_GUIDANCE = (
     "is not reliable evidence for this version; study_read_window supplies OCR words "
     "only. Without a Study picture, ask the learner to choose or paste the image in "
     "Study. Do not invent diagram observations in a tool's text/topic parameter. "
-    "For pointing, call study_point status first and use its current material identity "
-    "and verified locator metadata. The learner selects and scrolls the material; you "
+    "For pointing at displayed source, use study_point kind=source with the original "
+    "source_line and symbol (source_file if ambiguous); the tool resolves current "
+    "filtered evidence, so do not invent CSS. For diagram pointing, call study_point "
+    "status first and copy its current material identity and locator metadata. The learner "
+    "selects and scrolls the material; you "
     "only highlight. Source evidence from study_code is offered as a separate material, "
     "not automatically selected. Never reuse a previous version's coordinates."
 )

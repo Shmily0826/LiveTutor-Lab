@@ -12,6 +12,7 @@ from html.parser import HTMLParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import math
+import re
 from pathlib import Path
 import secrets
 import threading
@@ -107,10 +108,24 @@ class LearningSurface(ThreadingHTTPServer):
         commit = str(payload.get("repo_commit") or "unversioned")[:80]
         digest = hashlib.sha256((project + "@" + commit + "\n" + evidence).encode()).hexdigest()
         material_id = "code-" + digest[:24]
-        lines = []
+        lines, source_targets = [], []
+        source_file, in_source = "", False
         for index, line in enumerate(evidence.splitlines(), 1):
             target = f"evidence-{index}"
             lines.append(f'<div data-line="{target}" data-node-label="{html.escape(line[:120], quote=True)}">{html.escape(line)}</div>')
+            header = re.fullmatch(r'\*\*`([^`]+)`\*\*(?:\s+—\s+.*)?', line.strip())
+            if header:
+                source_file = header.group(1)
+            if line.strip().startswith('```'):
+                if in_source:
+                    in_source, source_file = False, ""
+                else:
+                    in_source = bool(source_file)
+            number = re.match(r'^(\d+)\t', line) if in_source and source_file else None
+            if number:
+                source_targets.append({"selector": f'[data-line="{target}"]', "label": line[:160],
+                                       "type": "data-line", "id": target,
+                                       "source_file": source_file, "source_line": int(number.group(1))})
         content = ('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
                    '<title>当前源码证据</title><style>body{margin:24px;background:#101a1a;color:#edf4f1;font:16px/1.7 system-ui}h1{font-size:22px}p{color:#b3c7c0}pre{font:14px/1.8 Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere}pre div{min-height:1.8em}::selection{background:#007f68;color:white}</style>'
                    f'<h1>{html.escape(project)} · {html.escape(commit)}</h1>'
@@ -120,7 +135,7 @@ class LearningSurface(ThreadingHTTPServer):
         material = {"id": material_id, "name": f"当前源码证据 · {project}@{commit[:12]}",
                     "sha256": hashlib.sha256(content).hexdigest(), "kind": "html", "source": "filtered_codegraph_evidence",
                     "url": f"/material/{material_id}", "content": content, "mime": TYPES[".html"],
-                    "targets_for_pointing": parser.targets}
+                    "targets_for_pointing": source_targets[:80] if source_targets else parser.targets}
         with self.lock:
             if material_id in self.materials:
                 return {"material_id": material_id, "sha256": material["sha256"],

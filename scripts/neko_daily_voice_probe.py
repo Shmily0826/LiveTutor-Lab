@@ -26,6 +26,19 @@ from neko_tutor_start import plugin_server_ready
 ROOT = Path(__file__).resolve().parents[1]
 
 
+class ObservedSurface(LearningSurface):
+    def guide(self, command):
+        record = {"wall": time.time(), "command": dict(command)}
+        self.guide_attempts.append(record)
+        try:
+            result = super().guide(command)
+            record["accepted"] = True
+            return result
+        except (LookupError, ValueError) as error:
+            record.update(accepted=False, reason=str(error))
+            raise
+
+
 def stop_owned_host(process):
     if process.poll() is not None:
         return
@@ -55,7 +68,8 @@ async def main(args):
     ledger_path = ROOT / "benchmarks/raw/neko-desktop-egress-cap"
     report["before"] = json.loads(ledger_path.read_text())
     assert report["before"]["round"] == "bargein-autocheck-20261012"
-    surface = LearningSurface([path for path in DEFAULT_MATERIALS if path.is_file()], port=0)
+    surface = ObservedSurface([path for path in DEFAULT_MATERIALS if path.is_file()], port=0)
+    surface.guide_attempts = []
     import threading
     surface_thread = threading.Thread(target=surface.serve_forever, daemon=True); surface_thread.start()
     env = {**os.environ, "PYTHONIOENCODING": "utf-8", "NEKO_REALTIME_WIRE_TRACE": "1", "NEKO_LEARNING_SURFACE_URL": f"http://127.0.0.1:{surface.server_port}",
@@ -85,6 +99,26 @@ async def main(args):
         if not ready: raise RuntimeError("host not ready: " + reason)
         print("隔离 Study 宿主就绪；开始一场有超时的角色语音会话。", flush=True)
         report["host_ready"] = True
+        if args.point_code:
+            from neko_native_avatar_toolchain import call
+            from neko_role_point_browser import RolePointHandler
+            code = await asyncio.to_thread(call, 'study_code', {'mode':'explore','query':'WeatherService fetchWeather in weather_service.dart: show the actual function declaration and request construction'})
+            report['prepared_code'] = code
+            output = code.get('output', {})
+            publication = output.get('learning_surface') or {}
+            if code.get('is_error') or not output.get('ok') or not publication.get('available'):
+                raise RuntimeError('authorized code material not available; no voice connection')
+            # Represents the learner selecting this returned snapshot, not a role action.
+            surface.select(publication['material_id'])
+            source_targets = surface.materials[publication['material_id']]['targets_for_pointing']
+            declarations = [t for t in source_targets if t.get('source_line') == 13 and 'fetchWeather' in t.get('label', '')]
+            if len(declarations) != 1:
+                raise RuntimeError('current source locator metadata is missing or ambiguous; no voice connection')
+            report['prepared_source_target'] = declarations[0]
+            surface.RequestHandlerClass = RolePointHandler
+            surface.role_point_done = threading.Event()
+            surface.role_point_checks = None
+            report['learner_selected_code'] = publication['material_id']
         save()
         import urllib.request
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -204,6 +238,14 @@ async def main(args):
                     if e.get("type") == "gemini_response" and e["at"] >= report["input_submitted_at"])
                 report["native_reply"] = "".join(e.get("text", "") for e in (report.get("native_final", {}).get("trace") or {}).get("events", [])
                     if e.get("type") == "gemini_response" and e["wall"] >= report["input_wall"])
+                if args.point_code:
+                    report['role_point_command'] = surface.command
+                    if surface.command:
+                        run = await asyncio.to_thread(subprocess.run, ['node',r'D:\AI\tools\web-inspector\cli.mjs',env['NEKO_LEARNING_SURFACE_URL']+'/', '--desktop','--screenshot','--json'],capture_output=True,text=True,encoding='utf-8',timeout=25)
+                        report['role_point_inspector'] = json.loads(run.stdout)
+                        report['role_point_browser_checks'] = surface.role_point_checks
+                    else:
+                        report['role_point_unverified'] = 'role produced no pointer; fixture submits no commands'
                 await observer.screenshot(args.output.with_suffix(".native.png"))
                 save()
                 if failed.is_set(): raise RuntimeError("voice session ended abnormally")
@@ -231,6 +273,7 @@ async def main(args):
         startup_handle.close()
         surface.shutdown(); surface.server_close(); surface_thread.join(timeout=3)
         report["after"] = json.loads(ledger_path.read_text())
+        report['surface_guide_attempts'] = surface.guide_attempts
         if log_path.exists():
             with log_path.open("rb") as handle:
                 handle.seek(log_start)
@@ -245,10 +288,24 @@ async def main(args):
                     except ValueError: pass
             report["wire_trace"] = wire_records
         report["proof"] = "separate actual provider/native/loopback; fixed input proves this device route, human listening remains unverified"
+        if args.point_code:
+            browser = report.get('role_point_browser_checks') or []
+            inspector = (report.get('role_point_inspector') or {}).get('results') or []
+            trace = (report.get('native_final') or {}).get('trace') or {}
+            checks = {
+                'actual_role_command': bool(report.get('role_point_command')),
+                'actual_source_target_and_visible_pointer': len(browser) >= 3 and all(c.get('pass') for c in browser),
+                'browser_without_page_errors': bool(inspector) and all(not r.get('pageErrors') for r in inspector),
+                'native_spoken_confirmation_text': bool(report.get('native_reply', '').strip()),
+                'device_loopback_loud': (report.get('loopback') or {}).get('loud_chunks', 0) > 0,
+                'session_finished_normally': not report.get('failure') and not report.get('turn_timeout'),
+            }
+            report['acceptance'] = {'checks': checks, 'result': 'PASS_FIXED_INPUT_DEVICE_ROUTE' if all(checks.values()) else 'FAIL_OR_PARTIAL',
+                                    'human_experience': 'PENDING', 'complete_utterance_and_brief_ack': 'requires trace review; not inferred from audio presence'}
         save()
         print(json.dumps({"report": str(args.output), "failure": report.get("failure"), "reply": report.get("reply"),
                           "audio_bytes": report.get("socket_audio_bytes"), "loopback_loud": (report.get("loopback") or {}).get("loud_chunks"),
-                          "spent": report["after"]["spent"]}, ensure_ascii=False), flush=True)
+                          "spent": report["after"]["spent"], "acceptance": report.get('acceptance')}, ensure_ascii=False), flush=True)
 
 
 if __name__ == "__main__":
@@ -257,4 +314,5 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--wav", type=Path, help="fixed PCM WAV; never opens a room microphone")
     parser.add_argument("--manual-turn-probe", action="store_true", help="one opt-in explicit-end support scene; no production VAD change")
+    parser.add_argument("--point-code", action="store_true", help="prepare authorized source selected by learner; require actual role to point")
     asyncio.run(main(parser.parse_args()))

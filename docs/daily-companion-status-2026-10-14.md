@@ -57,3 +57,21 @@ native目标现检查ready socket与真实playback能力；support3实际34个�
 固定日常store已授权同一只读Sky Scout221文件。启动与重启实际角色、Study、材料窗口通过；直接Python启动首次child编码失败已修UTF8继承和独立launcher.log。新store真实偏好slot主动搭话默认off，后续明确保存选择保留；两次成功静态启动没有新增外部调用。已创建使用说明和10–20分钟集中体验步骤 `docs/daily-companion-use-2026-10-14.md`。
 
 当前本任务host/native/browser/表面均结束，两个子Agent交付完成。主项目master HEAD保持2c541755；未stage/commit其脏树。准备从已发布1fa40f4的managed worktree按必要文件闭包发布codex/daily-learning-companion，未push前不得称已发布。下一步：刷新最终manifest、隔离审查/commit/push；继续B真正中文长句和延迟优化、D角色自主point、F真实网络失败恢复，最后集中真人验收。Goal active，不以阶段交付标完成。
+
+发布确认：48文件已commit/push为 `codex/daily-learning-companion` / `3c2bc065925f4e539ba8c18b2027a1908727001f`，唯一parent1fa40f4；远端master与教学分支SHA保持，未PR/合并/强推。独立worktree clean；主项目master/index及无关脏改動保留。发布证据见 `docs/evidence/daily-companion-publication-2026-10-14.md`（此确认及报告在push后记录，未包含于该commit）。最终manifest23/23，额度330/34/0，进程0。继续B/D/F剩余工作，先离线规划更自然单句固定输入和语音延迟/工具协同，再有依据安排有限在线scene。不要重复无效MANUAL支持测试或已过图片quiz闭环。接续仍先读取四份文件，Goal active。
+
+## 后续定向修复接续（阶段发布后，尚未发布）
+
+先读四文件的接续规则已执行。证据解释更正：原英文固定输入是三个独立句子，75/93/9三段证明连续指令拆分及尾随限制丢失，不能单独证明长句内部停顿。MANUAL场景明确null后还有两次不含turn_detection的tools更新；代理是否被后续更新重置未知，不能据此断言服务永不支持MANUAL，仍不重复无效场景。详见 `docs/evidence/daily-companion-spoken-turn-analysis-2026-10-14.md`。
+
+新的真正单条中文指令带0.900秒句内停顿，使用离线Huihui合成固定WAV，不采房间麦克风。role-point-single实际两段ASR，工具早于ASR55/33ms，被同次ASR scope推进取消；另有409，0pointer/0audio，失败保留。已做限定free app/no server-VAD/近期speech的有界待派发修复：原连接/session/foreign scope隔离保留，expected一次ASR建立scope并等callback ready；慢callback上限2秒。六项真实方法候选、五项工具生命周期、十九项打断离线回归通过。仅修本地竞态，不宣称解决上游句内分轮。工具response/terminal ID不同在已有unannounced fallback不导致collector挂起，不加singleton alias。
+
+ordering2实际设备播放明确材料拒绝句，7binary/12回环响声，但role猜CSS且漏material ID，409，无pointer。已补按原始文件行号、symbol、可选file映射到当前过滤源码metadata的source定位；七项真实callback/本机HTTP守卫通过，23/23部署hash及host audio gate匹配。source mode省略ID仅承诺当前显示证据；跨版本旧解释身份仍需显式版本/材料hint，不能把当前行匹配称原解释版本绑定。
+
+启动前实际账本338/36/0，同轮不重置。当前主Agent执行一次同WAV受影响角色source定位场景，exec session75132，输出 `daily-companion-20261014-role-point-source3.json`；有超时，假静音native设备/固定输入/回环、音量未改。结束后核账本与本任务进程清理。F隔离HTTP失败恢复量具已审查，实际SDK/DB场景尚待执行；不会连付费provider或改共享账本。真人新能力仍待“准备好了”。Goal active。
+
+后续实际结果：source3因真实CodeGraph标题带符号说明、旧parser未匹配而失败，role误说无声明；修后九项callback/HTTP及真实已有证据重放37源码target通过。header4真实role按source行指示→DOM可见→native文本/设备9响声分桶通过；仍在整句结束前先指一次，后片再指、第二CONNECT，不能标长句完整通过。确认“移动光标”不准确，最新relay已改只说高亮请求，文案未再消耗连接验证。详见 `docs/evidence/daily-companion-source-point-2026-10-14.md`。
+
+F真实插件/SDK/DB的本地HTTP503→恢复通过，8stub请求，三次故障不写新教学/题/分数，原attempt保留，恢复后同题评分一次、再讲解。`daily-companion-failure-recovery-sdk-20261014.json`与cleanup记录；globalledger SHA不变，原用户历史未读/重置，本次host/stub关闭。它不证明真实模型质量或实际网络断电。
+
+当前账本350 DeepSeek / 2000，40 app / 无累计上限，tech0；所有本任务宿主/native/表面/meter/stub已结束，两个Agent已完成。当前_tools.py新增startup fingerprint检查，与transport当前hash和双运行树一致；product23/23最终deployment匹配。准备增量审查/同codex分支发布后，继续B完整输入准入（quiet+received ASR+ready，固定owner，禁止下一scope升格）、延迟/术语与D剩余教学范围证据，集中真人体验等待“准备好了”。Goal仍active，四文件接续规则保持。

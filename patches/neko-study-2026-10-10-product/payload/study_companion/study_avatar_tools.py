@@ -435,13 +435,18 @@ class _StudyAvatarToolsMixin:
 
     @llm_tool(
         name="study_point",
-        description=("Point within the controlled learning surface only. The learner selects the "
-                     "material. Use a verified HTML selector or normalized image rectangle from "
-                     "the current material, never desktop coordinates. Omit kind to inspect the "
-                     "current material identity. This only highlights; it never edits content."),
+        description=("Point within the controlled learning surface only; the learner selects and scrolls. "
+                     "For displayed source use kind='source', the original source_line and symbol "
+                     "(and source_file if ambiguous). The tool resolves the actual original file line "
+                     "from current filtered evidence; no CSS or opaque material ID is needed. "
+                     "For diagrams inspect kind='status' first, copy a returned selector/material_id, "
+                     "or provide an evidence-based normalized image rectangle. Never invent CSS "
+                     "like .code-line:nth-child or desktop coordinates. This only highlights."),
         parameters={"type": "object", "properties": {
-            "kind": {"type": "string", "enum": ["selector", "rect", "clear", "status"], "default": "status"},
+            "kind": {"type": "string", "enum": ["source", "selector", "rect", "clear", "status"], "default": "status"},
             "material_id": {"type": "string"}, "selector": {"type": "string"},
+            "source_line": {"type": "integer", "minimum": 1}, "source_file": {"type": "string"},
+            "symbol": {"type": "string"},
             "x": {"type": "number"}, "y": {"type": "number"},
             "width": {"type": "number"}, "height": {"type": "number"},
             "label": {"type": "string"}}}, timeout=10.0,
@@ -454,12 +459,39 @@ class _StudyAvatarToolsMixin:
         # The launcher owns this loopback endpoint and per-process token.
         if not re.fullmatch(r"http://127\.0\.0\.1:\d+", base):
             return {"ok": False, "error": "invalid_learning_surface"}
+        if "source_line" in kwargs and kind in {"status", "selector"}:
+            kind = "source"
+        if kind == "source" and (type(kwargs.get("source_line")) is not int or kwargs["source_line"] < 1):
+            return {"ok": False, "error": "invalid_source_line", "next": "Use an original file line number from the shown source evidence."}
         try:
             async with httpx.AsyncClient(timeout=5, trust_env=False) as client:
                 headers = {"X-Learning-Surface-Token": token}
                 if kind == "status":
                     response = await client.get(base + "/api/state", headers=headers)
                 else:
+                    if kind == "source":
+                        snapshot = await client.get(base + "/api/state", headers=headers)
+                        snapshot.raise_for_status()
+                        state = snapshot.json()
+                        active = state.get("active_material_id")
+                        material = next((m for m in state.get("materials", []) if m.get("id") == active), None)
+                        if not material or material.get("source") != "filtered_codegraph_evidence":
+                            return {"ok": False, "error": "source_evidence_not_selected", "next": "Ask the learner to select the source evidence returned by study_code."}
+                        if material_id and material_id != active:
+                            return {"ok": False, "error": "stale_material", "next": "The learner changed material; inspect current source before pointing."}
+                        file_hint = str(kwargs.get("source_file") or "").replace("\\", "/")
+                        symbol = re.sub(r"\s+", "", str(kwargs.get("symbol") or "")).casefold()
+                        candidates = [target for target in material.get("targets_for_pointing", [])
+                                      if target.get("source_line") == kwargs["source_line"]
+                                      and (not file_hint or file_hint in {target.get("source_file"), str(target.get("source_file", "")).rsplit("/", 1)[-1]})
+                                      and (not symbol or symbol in re.sub(r"\s+", "", str(target.get("label") or "")).casefold())]
+                        if len(candidates) != 1:
+                            return {"ok": False, "error": "source_line_not_unique_or_not_shown", "next": "The locator could not resolve a unique target. This does not mean the function is absent. Verify the shown file/line/symbol; do not guess CSS or claim absent source."}
+                        material_id, kind = active, "selector"
+                        kwargs["selector"] = candidates[0]["selector"]
+                        kwargs["label"] = f'{candidates[0]["source_file"]}:{kwargs["source_line"]}'
+                    elif not material_id:
+                        return {"ok": False, "error": "missing_material_identity", "next": "For source lines use kind='source' with source_line and symbol. For diagrams first inspect kind='status' and copy its exact selector and material_id; never invent CSS."}
                     command = {"kind": kind, "material_id": material_id,
                                **{key: kwargs[key] for key in ("selector", "x", "y", "width", "height", "label") if key in kwargs}}
                     response = await client.post(base + "/api/guidance", json=command, headers=headers)
@@ -469,8 +501,11 @@ class _StudyAvatarToolsMixin:
                     payload = {"active_material_id": active,
                                "material": next((item for item in payload.get("materials", []) if item.get("id") == active), None),
                                "command": payload.get("command"), "revision": payload.get("revision")}
-                return {"ok": response.is_success, **payload,
+                result = {"ok": response.is_success, **payload,
                         "proof": "locator metadata only; guidance is queued until the open surface renders it, and is not vision evidence"}
+                if response.is_success and kind != "status":
+                    result["relay"] = "Confirm briefly that the highlight was requested. You did not move an editor cursor, scroll, edit source, or verify that it rendered; the learner scrolls."
+                return result
         except (httpx.HTTPError, ValueError):
             return {"ok": False, "error": "learning_surface_unavailable", "next": "Reopen the learning surface and inspect its current material; do not reuse old coordinates."}
 

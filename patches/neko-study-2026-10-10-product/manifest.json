@@ -1,7 +1,7 @@
 {
   "source_host_revision": "1d814cf32fba8c02b5727d2890710e4e7b8ece24",
   "base_plugin": "benchmarks/raw/neko-app/resources/bin/plugins/study_companion (preserved existing patched release tree)",
-  "deployment": "benchmarks/raw/neko-daily-acceptance-20261014/plugin-code/study_companion",
+  "deployment": "benchmarks/raw/neko-daily-companion/plugin-code/study_companion",
   "data_copied_from_base": false,
   "files": [
     {
@@ -91,7 +91,7 @@
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
-      "sha256": "703f75e124c8ec6261f5914e7d73ae2b720242d630f045bf6718743106af516e",
+      "sha256": "e9f2bb6f9a86422e480408be864d91c449c63272f654e03a3db60342dcaa6ec1",
       "deployed_matches": true
     },
     {
@@ -181,5 +181,10 @@
     "required_product_files": 20,
     "prior_goal_audit_manifest_files": 19,
     "extra_existing_runtime_file": "payload/study_companion/study_code_tools.py"
+  },
+  "daily_source_point_update": {
+    "proof": "source hash/deployment only; see role-point-header4 for separately observed role/DOM/device path",
+    "tests": "9 actual callback/local HTTP tests passed; header4 actual pointer/render/device passed but split input and cursor wording remain; latest relay wording change only offline checked",
+    "source_mapping": "original file line and symbol in current filtered evidence; learner selection and version guard retained"
   }
 }

@@ -39,9 +39,9 @@
     {
       "path": "main_logic/omni_realtime_client/_transport.py",
       "base_sha256": "2d6c058206c1beafc3e1d35a8f5111042ff509a31f398053ce7b97a825242423",
-      "patched_sha256": "6c37944568f4439cd838fd177671064bdb36c8957485d5775e8363171b4aa4d4",
-      "resealed_utc": "2026-10-13T04:00:57.021870+00:00",
-      "resealed_reason": "Bounded 0.65s native overlap eligibility from fresh actually-playing owner receipt; rate-limited decision diagnostics. No VAD or PCM replay changes.",
+      "patched_sha256": "e038037b3130d44d08ec44662a22802b1e18c94615dad122da5abfa0bb007a23",
+      "resealed_utc": "2026-10-13T14:38:47.980810+00:00",
+      "resealed_reason": "Bounded free-route late-ASR raw tool dispatch, pinned original connection/session, one expected scope advance, foreign retirement rejects; onset, PCM, response lifecycle unchanged; 6 candidate, 5 existing tool lifecycle and 19 barge guards passed; actual role/voice not yet verified.",
       "verified_by": {
         "offline": "One isolated AST regression passed: 15 cases, crossing playback end and rejection fences; real accessor, mocked recovery only. No host/config/device/provider imports.",
         "live_real_microphone": "UNVERIFIED for this boundary repair; Oct13 full human acceptance remains FAIL.",
@@ -178,6 +178,18 @@
         "offline": "JS playback regression fails before repair, passes after; 15 overlap scenarios plus 4 migration/idempotence cases PASS.",
         "live_real_microphone": "One real human trial PASS for interruption/response recovery: 166 actual owner receipts, none missing audible; old queued audio retired; user confirms stop and new reply. No loopback or cross-end human专项 proof.",
         "reproduce": "python -B scripts/test_neko_barge_in_overlap.py; node scripts/test_neko_native_barge_in_playback.js"
+      }
+    },
+    {
+      "path": "main_logic/omni_realtime_client/_tools.py",
+      "base_sha256": "51afd6f606a4c011b1bb1a88f35da2d443a458f335c0cbc177601c5a648b3514",
+      "patched_sha256": "d2ff236e00e0df179cbe33f817bde2c1136e9c1d9eb51089cd0022f4569ded78",
+      "resealed_utc": "2026-10-13T15:01:17.027004+00:00",
+      "resealed_reason": "Add current tool lifecycle to startup fingerprint gate; bounded late-ASR ordering candidate, 6 actual-method checks, 5 tool lifecycle and 19 barge guards; does not fix upstream segmentation.",
+      "verified_by": {
+        "offline": "6+5+19 current affected tests passed; draft migration and actual final-target byte idempotence checked",
+        "fixed_input_device": "ordering2/source3 relay real tool replies and play audio; source pointing still failed; see dedicated report",
+        "live_real_microphone": "PENDING for this increment; inherited normal teaching/barge-in is a separate acceptance"
       }
     }
   ],
