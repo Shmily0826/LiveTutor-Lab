@@ -183,12 +183,12 @@
     {
       "path": "main_logic/omni_realtime_client/_tools.py",
       "base_sha256": "51afd6f606a4c011b1bb1a88f35da2d443a458f335c0cbc177601c5a648b3514",
-      "patched_sha256": "d2ff236e00e0df179cbe33f817bde2c1136e9c1d9eb51089cd0022f4569ded78",
-      "resealed_utc": "2026-10-13T15:01:17.027004+00:00",
-      "resealed_reason": "Add current tool lifecycle to startup fingerprint gate; bounded late-ASR ordering candidate, 6 actual-method checks, 5 tool lifecycle and 19 barge guards; does not fix upstream segmentation.",
+      "patched_sha256": "3ca573fe366482dada517189e60621fdb92594bf6071d39a5b3adabc3f07517b",
+      "resealed_utc": "2026-10-13T17:08:53.731616+00:00",
+      "resealed_reason": "Opt-in all-Study admission, current received-ASR/quiet/ready plus at most 200ms neighboring-ASR promotion; older prefix args cannot acquire final scope. Daily default off.",
       "verified_by": {
-        "offline": "6+5+19 current affected tests passed; draft migration and actual final-target byte idempotence checked",
-        "fixed_input_device": "ordering2/source3 relay real tool replies and play audio; source pointing still failed; see dedicated report",
+        "offline": "14 Study gate, 6 ordering, 5 deployed tool lifecycle/byte roundtrip passed; onset/PCM unchanged",
+        "fixed_input_device": "adjacent6 single source-point utterance passed. Neighbor8 PARTIAL: five ASR, old prefixes refused/no early provider audio/28 native PCM/72 loud loopback, but three explain executions and Chinese rather than requested temporary English. Preferences and picture retained; final paid teaching constraints not passed.",
         "live_real_microphone": "PENDING for this increment; inherited normal teaching/barge-in is a separate acceptance"
       }
     }

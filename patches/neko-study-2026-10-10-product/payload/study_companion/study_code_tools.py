@@ -59,7 +59,7 @@ _SUBCOMMANDS = {"explore": "explore", "symbol": "node", "impact": "impact", "fin
                 # sentence about behaviour, and none of them describes the shape of a repository.
                 # The indexer already answers that - `codegraph files` prints the tree from the
                 # same index, so no traversal and no new reader.
-                "structure": "files"}
+                "structure": "files", "file": "node"}
 OURS, OUTSIDE, DENIED = "ours", "outside", "denied"
 _WITHHELD = "[path outside the authorized project, withheld]"
 _FENCED_LINE = re.compile(r"^\s*(\d+)\t")
@@ -67,6 +67,45 @@ _FENCED_LINE = re.compile(r"^\s*(\d+)\t")
 
 def _slashes(text: str) -> str:
     return str(text).replace("\\", "/")
+
+
+def _code_file_request(authorized, requested, offset, limit):
+    """Validate before CLI reads; use its existing indexed file/window mode."""
+    if type(offset) is not int or offset < 1 or type(limit) is not int or not 1 <= limit <= 120:
+        raise ValueError("Use a positive original offset and a limit of 1 to 120 lines.")
+    requested = _slashes(str(requested or "").strip())
+    prefix = authorized["prefix"]
+    if requested.casefold().startswith(prefix.casefold()):
+        requested = requested[len(prefix):]
+    if not requested or _DENIED_PATH.search(requested) or _DENIED_PATH.search(requested + "/"):
+        raise ValueError("Choose an authorized source file, not a credential path.")
+    root = Path(authorized["root"]).resolve(strict=True)
+    lexical = Path(os.path.abspath(root / requested))
+    if not lexical.is_relative_to(root):
+        raise ValueError("The file path must stay inside the authorized project.")
+    target = lexical.resolve(strict=True)
+    if not target.is_relative_to(root) or not target.is_file():
+        raise ValueError("The file must stay inside the authorized project, including symlinks.")
+    relative = target.relative_to(root).as_posix()
+    if _DENIED_PATH.search(relative) or _DENIED_PATH.search(relative + "/"):
+        raise ValueError("Credential paths are excluded.")
+    return prefix + relative
+
+
+def _code_file_window(raw, index_file, offset, limit):
+    """Only requested numbered rows; discard node's unrelated dependents/header paths."""
+    if not raw.startswith(f"**{index_file}**"):
+        return ""
+    rows = []
+    for index, line in enumerate(raw.splitlines()):
+        if index and line.lstrip().startswith(("**", "#", "```")):
+            break
+        hit = _FENCED_LINE.match(line)
+        if hit and offset <= int(hit.group(1)) < offset + limit:
+            rows.append(line)
+    if not rows:
+        return ""
+    return f"**`{index_file}`**\n```\n" + "\n".join(rows) + "\n```"
 
 
 def _shown(kept: list[str], root: str, prefix: str) -> list[dict[str, Any]]:
@@ -310,7 +349,8 @@ class _StudyCodeToolsMixin:
                 log.warning(f"study_code receipt unwritable: {type(exc).__name__}: {str(exc)[:120]}")
 
     async def _code_record(self, sub: str, query: str, authorized: dict[str, Any],
-                           shown: list[dict[str, Any]], stats: dict[str, int]) -> str:
+                           shown: list[dict[str, Any]], stats: dict[str, int],
+                           *, repo_commit: str = "") -> str:
         """Write the question into the learner's own study history.
 
         A code question used to leave no trace at all: the tool is not a gateway call, so the
@@ -328,15 +368,16 @@ class _StudyCodeToolsMixin:
         if store is None:
             return ""
         import asyncio
+        evidence_commit = repo_commit or authorized["commit"]
 
         try:
             await asyncio.to_thread(
                 store.append_interaction,
                 kind="code_question",
-                input_text=f"[{authorized['name']}@{authorized['commit']}] {query}",
-                output_text=f"Answered from the authorized project's own source: {citations}",
+                input_text=f"[{authorized['name']}@{evidence_commit}] {query}",
+                output_text=f"Returned authorized source evidence: {citations}",
                 metadata={"mode": sub, "project": authorized["name"],
-                          "commit": authorized["commit"], "shown": shown,
+                          "commit": evidence_commit, "authorized_commit": authorized["commit"], "shown": shown,
                           "evidence_chars": stats.get("chars", 0), "filtered": stats},
                 session_id=session_id,
                 history_limit=int(getattr(getattr(self, "_cfg", None), "history_limit", 50) or 50),
@@ -358,7 +399,7 @@ class _StudyCodeToolsMixin:
             seed = dict(getattr(state, "session_summary_seed", None) or {})
             seed["code_question_count"] = int(seed.get("code_question_count") or 0) + 1
             seed["last_code_project"] = authorized["name"]
-            seed["last_code_commit"] = authorized["commit"]
+            seed["last_code_commit"] = evidence_commit
             state.session_summary_seed = seed
         return session_id
 
@@ -415,6 +456,9 @@ class _StudyCodeToolsMixin:
             "answers 'what is this project' or 'how is it divided' with the file tree from the "
             "same index - use it before explore when the learner asks about the shape of the "
             "codebase, and remember a tree carries no line numbers to cite. "
+            "For a specific file or original line, use mode='file', file='server/routes/weather.js', "
+            "offset=1 and limit=40 (at most 120). It uses CodeGraph's existing file reader and "
+            "returns only those source rows, avoiding a broad natural-query miss. "
             "Sending a sentence to symbol/find returns "
             "nothing - use explore instead. mode='explore' is the default for a reason. The index "
             "is synced before it answers (see index_sync), so code the learner just wrote is "
@@ -432,13 +476,17 @@ class _StudyCodeToolsMixin:
             "properties": {
                 "mode": {"type": "string", "enum": list(_SUBCOMMANDS), "default": "explore"},
                 "query": {"type": "string",
-                          "description": "The question, or the symbol name for symbol/impact/find."},
+                          "default": "", "description": "The question or exact symbol. Omit for structure; structure ignores this field."},
+                "file": {"type": "string", "description": "For file mode: root-relative or previously returned indexed path within the authorized project."},
+                "offset": {"type": "integer", "minimum": 1, "default": 1},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 120, "default": 60},
             },
-            "required": ["query"],
+            "required": [],
         },
         timeout=180.0,
     )
-    async def study_code_tool(self, *, mode: str = "explore", query: str = "", **_):
+    async def study_code_tool(self, *, mode: str = "explore", query: str = "", file: str = "",
+                              offset: int = 1, limit: int = 60, **_):
         authorized = self._code_authorization()
         if not authorized:
             return {"ok": False, "error": "NO_AUTHORIZED_PROJECT",
@@ -454,16 +502,24 @@ class _StudyCodeToolsMixin:
         # A file tree is the one question that needs no search terms: "what is in this project"
         # is answered by the index itself. Every other mode still refuses an empty query rather
         # than guessing what the learner meant.
-        if not sub or (not text and sub != "files"):
+        if not sub or (not text and sub != "files" and not (str(mode).strip().lower() == "file" and file)):
             return {"ok": False, "error": f"unsupported mode {mode!r}" if not sub else "query is empty"}
+        index_file = ""
+        if str(mode).strip().lower() == "file":
+            try:
+                index_file = _code_file_request(authorized, file or text, offset, limit)
+                text = index_file
+            except (ValueError, OSError) as error:
+                return {"ok": False, "error": "INVALID_SOURCE_FILE_REQUEST", "detail": str(error)[:200]}
         synced = await self._code_sync(cli, authorized)
         head = await self._code_head(authorized["root"])
         command = ([*cli, sub, "--path", authorized["root"], "-j"]
-                   + (["--filter", text] if sub == "files" and text else [])
                    if sub == "files"
                    else [*cli, sub, text, "--path", authorized["root"]])
         if sub == "explore":
             command += ["--max-files", "6"]
+        if index_file:
+            command = [*cli, "node", "--file", index_file, "--offset", str(offset), "--limit", str(limit), "--path", authorized["root"]]
         try:
             done = await _run(command)
         except Exception as exc:
@@ -472,13 +528,16 @@ class _StudyCodeToolsMixin:
             return {"ok": False, "error": f"CODEGRAPH_EXIT_{done.returncode}",
                     "detail": str(done.stderr or "")[:240]}
         raw = done.stdout
+        if index_file:
+            raw = _code_file_window(raw, index_file, offset, limit)
+            if not raw:
+                return {"ok": False, "error": "SOURCE_WINDOW_UNAVAILABLE", "next": "The requested window was not returned by the index. Do not claim the file is absent; verify its indexed path or choose a shown symbol."}
         if sub == "files":
             raw = _structure_lines(done.stdout, authorized["prefix"])
             if not raw:
                 return {"ok": False, "error": "STRUCTURE_UNREADABLE",
-                        "next": "The index answered with something that is not a file list; say "
-                                "you could not read the project's shape and offer to answer a "
-                                "question about a specific file instead."}
+                        "next": "No usable authorized file entries were returned. Say the structure request failed; "
+                                "this does not prove the project or a file is absent. Offer a specific source query."}
         kept, stats = self._code_filter(raw, authorized)
         leak = self._code_leak(kept, authorized)
         log = getattr(self, "logger", None)
@@ -492,7 +551,11 @@ class _StudyCodeToolsMixin:
                             "could not safely keep; nothing was sent. Narrow the question."}
         evidence = "\n".join(kept).strip()
         shown = _shown(kept, authorized["root"], authorized["prefix"])
-        if sub != "files" and not shown and synced == "throttled":
+        if index_file:
+            numbers = sorted({int(hit.group(1)) for line in kept if (hit := _FENCED_LINE.match(line))
+                              and offset <= int(hit.group(1)) < offset + limit})
+            shown = [{"file": index_file, "lines": numbers}] if numbers else []
+        if sub != "files" and not index_file and not shown and synced == "throttled":
             # Measured: a file added seconds before a question stayed invisible behind the
             # throttle, and "not found" then reads like "does not exist". When the throttle is
             # the only thing standing between the question and an empty answer, spend one
@@ -512,7 +575,7 @@ class _StudyCodeToolsMixin:
                         evidence = "\n".join(kept).strip()
                         shown = _shown(kept, authorized["root"], authorized["prefix"])
         self._code_receipt(sub, text, authorized, stats, evidence, shown, synced, head)
-        await self._code_record(sub, text, authorized, shown, stats)
+        await self._code_record(sub, text, authorized, shown, stats, repo_commit=head or authorized["commit"])
         if log is not None:
             # The acceptance has to prove the product asked, so record the call itself.
             log.info(f"study_code mode={sub} query={text[:70]!r} root={authorized['root']} "
@@ -542,8 +605,8 @@ class _StudyCodeToolsMixin:
             barren = ""
         elif synced == "synced-after-empty":
             barren = (" The index was re-synced just for this question and still has nothing that "
-                      "matches it, so the better reading now is that it is not in the project: say "
-                      "what you checked instead of leaving it as a vague miss.")
+                      "matches this query. That is not proof a file or symbol is absent. Say which "
+                      "query failed, and narrow it to an exact name from a find result before concluding anything.")
         else:
             barren = (" This query returned no source lines at all - if you asked it "
                       "as a sentence, that shape does not work for this mode: ask "
@@ -552,6 +615,13 @@ class _StudyCodeToolsMixin:
                  f" The repository has moved since the learner authorized it "
                  f"({authorized['commit']} -> {head}): these line numbers belong to {head}, "
                  "so mention the revision when you cite a line.")
+        if sub == "query":
+            barren += (" These are search matches, not function bodies. A returned file path is an indexed "
+                       "entry, so do not claim the file is absent. Use an exact returned symbol with symbol/explore "
+                       "to read the relevant body before explaining its lines.")
+        barren += (" index_sync=throttled only means a recent index refresh was reused; source queries still run. "
+                   "It is not a service limit or a reason to wait for recovery. For missing specific file lines, "
+                   "use mode=file with the actual indexed file path and a small offset/limit.")
         surface = await _publish_code_surface(authorized["name"], head or authorized["commit"], evidence)
         return {"ok": True, "mode": sub, "project": authorized["name"], "commit": authorized["commit"],
                 "learning_surface": surface,

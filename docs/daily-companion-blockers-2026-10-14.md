@@ -28,3 +28,15 @@ Goal objective字段更新工具限制：内置update_goal只支持status；Loca
 当前真正中文单指令0.9秒句内停顿仍两段ASR，role-point-single工具先ASR的本地scope取消已通过有界ordering修复离线验证；ordering2能够播放真实拒绝句，但role猜CSS/漏ID，指示失败。按原始file/line/symbol映射当前受控证据已实现并过七项守卫，真实角色场景主线一次验证中。省略material ID的source模式指向当前显示版本，不足以绑定旧解释版本；需显式旧ID/版本hint才能拒绝该场景。局部项不挡F隔离失败恢复及其余交付。
 
 最新：真实formatter标题解析缺陷已修并九项守卫过；header4实际role/current source/DOM/device路线通过，指示失败项已局部解除。仍先于整句末尾动作，role误称“光标”；最新relay修正仅离线过，整句准入方案尚待实现。F本地503实际SDK/DB恢复通过，原题/计数保留、共享ledger未变，解除该证据缺口。额度350/40/0，本任务进程全部结束；继续B/D与集中人工验收，不作全局阻塞声明。
+
+B opt-in gate已实现、10离线守卫过，但gated5实际只改善为整句末尾后一次pointer。前片call在已ready ASR之后到达、fresh speech使其误等下一ASR，.4秒释放仍触发proxy提前声音，最终无简短确认。候选日常默认off；下一步先离线修这一实际顺序/有界等待和弃call续答隔离，不重复未改场景或MANUAL。D文字连续源码问答独立推进；source历史旧授权版本已源码修复、方法检查过，实际仓库前进DB仍待原隔离fixture必要时补证。352/42/0，同账本无重置，本场进程结束，非全局阻塞。
+
+## 最新局部状态（覆盖上述历史快照）
+
+- B adjacent6单条source point指令已实际role/DOM/设备通过，compact高亮请求措辞过；并非prefix-after-ASR或paid教学普遍通过。all-Study名称扩展包含readonly/control，日常仍off。picture-gated7五片ASR，三次prefix拒绝，末后并行explain旧参数+最终参数，之后重复两次；无提前provider audio，最终不完整英文/0PCM/0回环。失败原因保留，416/44/0，停止无修改重复场景。
+- 最新仅允许call先于预期ASR至多200ms，旧前片不在几秒后升格；14方法、6 ordering、5 lifecycle/replay过。neighbor8一场进行中，复用既有隔离课/图片/固定WAV，不重复paid图片准备，不夜间采房间麦克风。
+- 无稳定input item ID，邻接时间只是有界兼容，不保证所有长停顿/persistent control语义。日常不能仅凭point成功或请求变少而打开。prepare-picture现强制新隔离speech acceptance store，防止全局prefs污染正常daily；verify模式只读既有隔离偏好。
+- D file mode/实际revision历史/真实结构补证已交付；short-followup4行顺序纠正/漏key→NaN→400有源码模型证据，但『值写反也undefined』错误且各三句。新guidance明确值存在≠缺key、两句不加第三句，此增量未模型验收，不为文案反复paid。继续其他必要能力，不作整个Goal blocked。
+- F本地503 SDK/DB恢复已有证据，不重跑；任意桌面、密集小字、真人新能力各保留范围。剩余可自主开发/核证不少，Goal active。最终真人集中10–20分钟等明确“准备好了”。
+
+neighbor8已结束，432/45/0，旧prefix不再升格、无提前audio、实际中文28PCM/72响声；仍三次explain且英文失败，局部B未解除。确认检测漏“用两句英文”，role question丢明确English output；已加一次language参数/count/否定、4 wrapper+SQLite守卫和5失败guard/shape过，最新增量只有离线。较早缺PCM的失败由本场设备路线部分解除，不能称整个paid语音闭环过。下一步离线同一最终ASR重复工具/结果owner分析，必要时再定向完整英文；当前无活动online，本轮候选仍off，继续阶段发布与F日常连续学习。

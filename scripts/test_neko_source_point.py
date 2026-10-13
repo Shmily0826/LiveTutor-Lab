@@ -55,6 +55,8 @@ class SourcePointTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.surface.command['selector'], '[data-line="evidence-3"]')
         self.assertEqual(self.surface.command['material_id'], material)
         self.assertEqual(self.surface.command['label'], 'lib/weather_service.dart:13')
+        self.assertNotIn('material', result) # no unrelated source rows in an action acknowledgement
+        self.assertEqual(result['say_this'], '已请求高亮当前源码第13行。')
 
     async def test_duplicate_file_lines_require_disambiguation(self):
         self.select(SOURCE + '\n**`lib/other.dart`**\n```dart\n13\tFuture<Weather> fetchWeather() {}\n```')
@@ -75,6 +77,15 @@ class SourcePointTest(unittest.IsolatedAsyncioTestCase):
         self.select(SOURCE.replace('**`lib/weather_service.dart`**', '**`lib/weather_service.dart`** — fetchWeather(method), WeatherService(class)'))
         result = await self.point(kind='source', source_line=13, symbol='fetchWeather')
         self.assertTrue(result['ok'], result)
+
+    async def test_status_keeps_locator_metadata_and_confirmation_language_is_one_off(self):
+        self.select()
+        status = await self.point(kind='status')
+        self.assertEqual(status['material']['targets_for_pointing'][0]['source_line'], 13)
+        first = await self.point(kind='source', source_line=13, language='en-US')
+        self.assertEqual(first['say_this'], 'Requested a highlight on source line 13.')
+        next_reply = await self.point(kind='source', source_line=13)
+        self.assertEqual(next_reply['say_this'], '已请求高亮当前源码第13行。')
 
     async def test_non_source_or_unshown_symbol_is_refused(self):
         result = await self.point(kind='source', source_line=13)

@@ -183,8 +183,8 @@ _COURSE_LEVEL_REQUEST = re.compile(
     r"以后|今后|长期|一直|总是|每次|from now on|always|every time|permanently|going forward", re.IGNORECASE)
 
 _TURN_LANGUAGE = (
-    ("zh-CN", re.compile(r"(?:用|换成|换为|改成|改为|使用|请用)\s*(?:中文|汉语|普通话|简体)")),
-    ("en-US", re.compile(r"(?:用|换成|换为|改成|改为|使用|请用)\s*(?:英文|英语|美语)")),
+    ("zh-CN", re.compile(r"(?:用|换成|换为|改成|改为|使用|请用)\s*(?:(?:[一二两三四五六七八九十\d]+)\s*句(?:话)?\s*)?(?:中文|汉语|普通话|简体)")),
+    ("en-US", re.compile(r"(?:用|换成|换为|改成|改为|使用|请用)\s*(?:(?:[一二两三四五六七八九十\d]+)\s*句(?:话)?\s*)?(?:英文|英语|美语)")),
     ("zh-CN", re.compile(r"\bin\s+(?:chinese|mandarin)\b", re.IGNORECASE)),
     ("en-US", re.compile(r"\bin\s+(?:english|en-us)\b", re.IGNORECASE)),
     ("en-US", re.compile(r"\b(?:use|using|speak)\s+english\b|\benglish\s+(?:sentences?|answers?|explanations?)\b|\benglish\s+please\b", re.IGNORECASE)),
@@ -203,7 +203,10 @@ def _turn_language_request(*texts: Any) -> str:
     if not body.strip() or _COURSE_LEVEL_REQUEST.search(body):
         return ""
     for language, pattern in _TURN_LANGUAGE:
-        if pattern.search(body):
+        for match in pattern.finditer(body):
+            prefix = body[max(0,match.start()-40):match.start()]
+            if re.search(r"(?:不要|别|不用|不|do not|don't|not)\s*(?:(?:answer|reply|respond|teach|speak|解释|讲|回答)\s*)?(?:in\s+)?$", prefix, re.I):
+                continue
             return language
     return ""
 
@@ -447,6 +450,7 @@ class _StudyAvatarToolsMixin:
             "material_id": {"type": "string"}, "selector": {"type": "string"},
             "source_line": {"type": "integer", "minimum": 1}, "source_file": {"type": "string"},
             "symbol": {"type": "string"},
+            "language": {"type": "string", "enum": ["zh-CN", "en-US"], "description": "Language of this confirmation only; not remembered."},
             "x": {"type": "number"}, "y": {"type": "number"},
             "width": {"type": "number"}, "height": {"type": "number"},
             "label": {"type": "string"}}}, timeout=10.0,
@@ -499,12 +503,20 @@ class _StudyAvatarToolsMixin:
                 if response.is_success:
                     active = payload.get("active_material_id")
                     payload = {"active_material_id": active,
-                               "material": next((item for item in payload.get("materials", []) if item.get("id") == active), None),
+                               **({"material": next((item for item in payload.get("materials", []) if item.get("id") == active), None)} if kind == "status" else {}),
                                "command": payload.get("command"), "revision": payload.get("revision")}
                 result = {"ok": response.is_success, **payload,
                         "proof": "locator metadata only; guidance is queued until the open surface renders it, and is not vision evidence"}
                 if response.is_success and kind != "status":
-                    result["relay"] = "Confirm briefly that the highlight was requested. You did not move an editor cursor, scroll, edit source, or verify that it rendered; the learner scrolls."
+                    language = kwargs.get("language") or getattr(self, "_study_effective_language", lambda: "zh-CN")()
+                    line = kwargs.get("source_line")
+                    if kind == "clear":
+                        result["say_this"] = "Highlight cleared." if str(language).startswith("en") else "已清除高亮。"
+                    elif type(line) is int:
+                        result["say_this"] = f"Requested a highlight on source line {line}." if str(language).startswith("en") else f"已请求高亮当前源码第{line}行。"
+                    else:
+                        result["say_this"] = "Requested a highlight on that area." if str(language).startswith("en") else "已请求高亮这个区域。"
+                    result["relay"] = "Say only say_this in its language, then stop. You did not move an editor cursor, scroll, edit source, or verify that it rendered; the learner scrolls."
                 return result
         except (httpx.HTTPError, ValueError):
             return {"ok": False, "error": "learning_surface_unavailable", "next": "Reopen the learning surface and inspect its current material; do not reuse old coordinates."}
@@ -780,6 +792,7 @@ class _StudyAvatarToolsMixin:
             "study_read_window. Put the learner's own words in question, including "
             "follow-ups such as 'why?', 'simpler', 'give me a counter-example', or a "
             "language request like 'in English' - that request changes this answer only, "
+            "and the optional language argument makes that one-answer choice explicit. "
             "so do not save it with study_language unless the learner wants it to stick. "
             "For a visible diagram, text must contain the module names and directed "
             "connections you actually observed, including uncertainties, unless a "
@@ -794,12 +807,16 @@ class _StudyAvatarToolsMixin:
                              "description": "What the learner wants explained, in their words."},
                 "text": {"type": "string", "default": "",
                          "description": "Source code or notes; for diagrams include current visible modules and directed edges. Omit only to reuse captured text material."},
+                "language": {"type":"string", "enum":["zh-CN","en-US"],
+                             "description":"Explicit reply language for this explanation only. Set it for a one-time language switch; does not save or pin a course preference."},
             },
         },
         timeout=150.0,
     )
-    async def study_explain_tool(self, *, question: str = "", text: str = "", **_):
-        requested = _turn_language_request(question, text) or str((getattr(self, "_study_turn_preferences", None) or {}).get("language") or "")
+    async def study_explain_tool(self, *, question: str = "", text: str = "", language: str = "", **_):
+        if not isinstance(language, str) or language not in {"", "zh-CN", "en-US"}:
+            return {"ok":False,"error":"unsupported_one_turn_language"}
+        requested = language or _turn_language_request(question, text) or str((getattr(self, "_study_turn_preferences", None) or {}).get("language") or "")
         cached_image = str(getattr(getattr(self, "_state", None), "last_vision_image_base64", "") or "").strip()
         has_image_context = bool(getattr(getattr(self, "_cfg", None), "llm_vision_enabled", False) and cached_image)
         if (not str(text or "").strip()
@@ -811,6 +828,15 @@ class _StudyAvatarToolsMixin:
             return json.loads(_teaching(
                 tool="study_explain", degraded=True, diagnostic="visual_context_missing",
                 failure_language=requested or self._study_effective_language()))
+        # A proxy may issue overlapping explanations. Serialize their temporary
+        # cfg overrides so one cannot restore another's temporary language.
+        lock = getattr(self, "_study_explanation_language_lock", None)
+        if lock is None:
+            lock = self._study_explanation_language_lock = asyncio.Lock()
+        async with lock:
+            return await self._study_explain_for_turn(question=question, text=text, requested=requested)
+
+    async def _study_explain_for_turn(self, *, question: str, text: str, requested: str):
         # previous first: the directive below writes the remembered course preference
         # into cfg.language, and that is the value a one-off request has to go back to.
         previous = str(getattr(self._cfg, "language", "") or "")

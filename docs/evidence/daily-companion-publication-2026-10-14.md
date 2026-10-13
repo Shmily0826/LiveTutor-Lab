@@ -11,3 +11,11 @@
 最新额度同一bargein-autocheck-20261012：DeepSeek330/2000，Lanlan.app34/null，Lanlan.tech0/0。没有重置。当前无任务host/native/browser/surface或在线音频session；原录音/原始失败JSON仅留本地证据，不进入Git。
 
 剩余：B更自然中文长句/分轮协同与延迟优化，D角色自主工具→point体验，F真实服务网络失败恢复及更长连续学习；任意桌面定位和密集小字保持明确限制。人工语言/声音/打断/新能力体验集中10–20分钟待用户“准备好了”。局部代理限制不标整个Goal blocked，任何完成声明须依据实际交付及对应证明层。
+
+## 第二阶段增量发布确认（push后记录）
+
+已commit/push `465da5b410698047c73a6118438305c092f273a0`，唯一parent `3c2bc065925f4e539ba8c18b2027a1908727001f`，仍同一codex功能分支。26个明确allowlist文件：晚ASR有界兼容修复及其回归、原始源码file/line定位、真实role指示量具、本地503真实SDK/DB恢复量具、证据解释纠正和接续记录。没有配置密钥、学习数据库、测试WAV、原图、任务日志或.workbuddy；14个Python文件AST、JSON解析、diff check、密钥模式检查通过。文件hash清单仅本地 `benchmarks/raw/evidence/daily-companion-increment-publication-files-20261014.json`。
+
+定向运行证据：九项源码定位callback/HTTP守卫；六项late-ASR候选/五项原工具生命周期/十九项打断离线回归；真实角色当前fetchWeather源码第13行→受控DOM高亮→设备简短确认通过，但仍两片提前动作/“光标”措辞，最新relay只离线验。实际SDK/DB的503失败保题/不记假分、显式恢复继续通过，8次本地stub请求，不是真实模型质量证明。旧场景失败原样留本地。
+
+push后ls-remote验证feature465da5b，master仍f1e8f3f、教学分支仍1fa40f4；独立worktree clean。主项目HEAD/index和无关脏改动不变，原contract与已发布副本字节相同。DeepSeek350/2000，app40/null，tech0；已知本任务native PID和故障host/stub PID均不在，48911/48916端口空闲。阶段目标active，不标完成。本文此push后确认未包含于465da5b，后续继续记录。

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+from copy import deepcopy
 from http import HTTPStatus
 import json
 from pathlib import Path
@@ -40,6 +41,63 @@ def definitions(path, names, namespace, *, method=""):
 
 
 class TeachingFailureTest(unittest.TestCase):
+    def test_submitted_picture_survives_first_session_and_replaces_old_material(self):
+        ns = definitions(PAYLOAD / "entry_tutor_explain_entries.py", set(),
+                         {"_normalize_submitted_image_payload": lambda raw: "validated:"+raw,
+                          "_plugin_lock": lambda lock: lock}, method="study_submit_image")
+        async def scenario():
+            state = SimpleNamespace(last_vision_image_base64="old picture", last_ocr_text="old OCR", study_course_id="image-course")
+            seen = []
+            async def start_session():
+                state.last_vision_image_base64 = ""
+                state.last_ocr_text = ""
+            async def explain(**kwargs):
+                seen.append((state.last_vision_image_base64, state.last_ocr_text, kwargs))
+                return {"reply": "actual model output"}
+            plugin = SimpleNamespace(_cfg=SimpleNamespace(llm_vision_enabled=True, language="zh-CN"),
+                                     _state=state, _lock=asyncio.Lock(), _study_session_id="image-session",
+                                     _ensure_active_study_session=start_session, study_explain_text=explain)
+            await ns["study_submit_image"](plugin, image_base64="first", text="新图问题")
+            self.assertEqual(seen[-1][0:2], ("validated:first", "新图问题"))
+            ns["_image_only_explain_prompt"] = lambda _: "只解释新图"
+            await ns["study_submit_image"](plugin, image_base64="second", text="")
+            self.assertEqual(seen[-1][0:2], ("validated:second", ""))
+            self.assertEqual(seen[-1][2]["vision_image_base64"], "validated:second")
+            self.assertEqual(seen[-1][2]["_material_context"], {"course_id":"image-course","session_id":"image-session"})
+        asyncio.run(scenario())
+
+    def test_fine_diagram_details_preserve_explicit_quality_and_source_messages(self):
+        ns = definitions(PAYLOAD / "study_model_gateway.py", {"_high_detail_study_images"},
+                         {"deepcopy": deepcopy})
+        original = [{"role": "user", "content": [
+            {"type": "text", "text": "读箭头"},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,example", "detail": "auto"}},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,other", "detail": "low"}}]}]
+        before = deepcopy(original)
+        result = ns["_high_detail_study_images"](original)
+        self.assertEqual(original, before)
+        self.assertEqual(result[0]["content"][1]["image_url"]["detail"], "high")
+        self.assertEqual(result[0]["content"][2]["image_url"]["detail"], "low")
+        self.assertEqual(result[0]["content"][0], original[0]["content"][0])
+
+    def test_diagram_without_observed_relations_never_calls_text_model(self):
+        names = {"RELAY_NOTE", "_FENCE_LINE", "_FENCE_MARK", "_CODE_SPAN", "_SPEAKABLE_FIELDS",
+                 "_speakable", "_teaching_failure_wording", "_teaching"}
+        ns = definitions(PAYLOAD / "study_avatar_tools.py", names,
+                         {"json": json, "re": re, "_turn_language_request": lambda *_: ""},
+                         method="study_explain_tool")
+        async def scenario():
+            async def unexpected(**kwargs):
+                self.fail("missing diagram material reached the text model")
+            plugin = SimpleNamespace(_study_effective_language=lambda: "zh-CN",
+                                     study_explain_text=unexpected)
+            result = await ns["study_explain_tool"](plugin, question="这张架构图的箭头从哪里出发？")
+            self.assertEqual(result["diagnostic"], "visual_context_missing")
+            self.assertTrue(result["degraded"])
+            self.assertIn("模块和箭头", result["reply"])
+            self.assertNotIn("服务恢复", result["reply"])
+        asyncio.run(scenario())
+
     def test_actual_proxy_refusal_is_quota_not_provider_failure(self):
         ns = definitions(PAYLOAD / "study_model_gateway.py", {
             "_nonnegative_int", "_generic_error_details", "_diagnostic_for_generic_error"},

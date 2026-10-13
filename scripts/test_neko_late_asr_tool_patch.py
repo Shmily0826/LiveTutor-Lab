@@ -7,9 +7,12 @@ import types
 import unittest
 from pathlib import Path
 import test_neko_late_asr_tools as original
-from neko_late_asr_tool_patch import UPGRADES
+from neko_late_asr_tool_patch import UPGRADES, MIGRATIONS
 
 source=original.SOURCE.read_text(encoding='utf-8')
+for relative,before,after in MIGRATIONS:
+    if relative.endswith('_tools.py') and after not in source and source.count(before)==1:
+        source=source.replace(before,after,1)
 for before,after in UPGRADES['main_logic/omni_realtime_client/_tools.py']:
     if after in source: continue
     if source.count(before)>1: raise RuntimeError('ambiguous tool source for candidate test')

@@ -147,6 +147,10 @@ LEGACY_HELPERS = (HELPERS.replace('    _LATE_ASR_CALLBACK_WAIT_SECONDS = 2.0\n',
                  .replace(_V2_WAIT, '                except asyncio.TimeoutError:\n                    pass\n')
                  .replace(_V2_FINISH, _V1_FINISH))
 
+ORDERING_ONLY_HELPERS = HELPERS
+from neko_study_speech_gate_patch import upgrade_ordering_helpers
+HELPERS = upgrade_ordering_helpers(HELPERS)
+
 UPGRADES = {
     "main_logic/omni_realtime_client/_tools.py": (
         ('    def _start_raw_tool_call(\n', HELPERS + '    def _start_raw_tool_call_now(\n'),
@@ -169,6 +173,7 @@ UPGRADES = {
 }
 
 MIGRATIONS = (
+    ('main_logic/omni_realtime_client/_tools.py', ORDERING_ONLY_HELPERS + '    def _start_raw_tool_call_now(\n', HELPERS + '    def _start_raw_tool_call_now(\n'),
     ('main_logic/omni_realtime_client/_tools.py', LEGACY_HELPERS + '    def _start_raw_tool_call_now(\n', HELPERS + '    def _start_raw_tool_call_now(\n'),
     ('main_logic/omni_realtime_client/_transport.py',
      '                            self._late_raw_expected_asr_advance = False\n                    self._print_input_transcript = True\n',
