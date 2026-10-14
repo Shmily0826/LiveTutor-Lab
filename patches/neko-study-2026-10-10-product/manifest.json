@@ -21,7 +21,7 @@
     },
     {
       "path": "payload/study_companion/entry_tutor_question_entries.py",
-      "sha256": "e174b2ecdd1eb6a92315c609dd81449dd940038ac1fca0056436ecd10dbbb46b",
+      "sha256": "0a807cebe94516d4d6e4423deb66c3ffc766acb1da7027b17eed84da3b088b17",
       "deployed_matches": true
     },
     {
@@ -51,7 +51,7 @@
     },
     {
       "path": "payload/study_companion/prompt_templates.py",
-      "sha256": "9905fd448ef78a3826bcefce6f3fa1d94af33234d379070603ffbe92c31ca721",
+      "sha256": "722bf501618116f9244634cac871ad9dfcb83970f89419fd5eb0a655531b2777",
       "deployed_matches": true
     },
     {
@@ -94,7 +94,7 @@
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
-      "sha256": "8877b74ec22722065ffc76f6d3dac7134d3cc9eed6d42c1910a867800ecb30d6",
+      "sha256": "b43ae7e28d5ccf533652b364438a16cbe4ba5e08e34fae5ba0923822f63ca2f1",
       "deployed_matches": true
     },
     {
@@ -345,5 +345,10 @@
     "report": "docs/evidence/daily-companion-phase19-original-entry-2026-10-14.md",
     "offline": "4 actual seed-loader/SQLite checks; source review closed; repaired original CMD Ready/refresh/data/config preservation PASS; first 820 changed topic-row hashes retained FAIL/PARTIAL",
     "runtime": "original daily store, original round; bounded offline text-only; no model/device/capture/loopback; lifecycle state/session changes separated; original pending absent"
+  },
+  "daily_quiz_request": {
+    "scope": "one-turn format, subject scope and length reach current picture, topic or targeted question; no preference persistence; missing material refuses",
+    "proof": "Main actual wrapper/entry/prompt/temp SQLite4 plus existing quiz12 and memory8; independent source review; real model, Native and human request use pending",
+    "report": "docs/evidence/daily-companion-quiz-request-review-2026-10-15.md"
   }
 }

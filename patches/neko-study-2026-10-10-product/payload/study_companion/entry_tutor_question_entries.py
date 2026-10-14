@@ -776,7 +776,7 @@ class _TutorQuestionEntriesMixin:
         ],
     )
     async def study_generate_targeted_question(
-        self, selection_context_id: str = "", _material_context: dict[str, Any] | None = None, **_
+        self, selection_context_id: str = "", _material_context: dict[str, Any] | None = None, request: str = "", **_
     ):
         if self._agent is None:
             return Err(SdkError("study tutor agent is not initialized"))
@@ -822,6 +822,8 @@ class _TutorQuestionEntriesMixin:
                 f"Reason: {targeted_context.get('selection_reason')}\n"
                 f"Guidance: {(targeted_context.get('question_params') or {}).get('prompt_guidance') or ''}"
             )
+            if str(request or "").strip():
+                source_text = f"[Learner question request]\n{str(request).strip()}\n\n{source_text}"
             payload = await self._generate_question_payload(
                 source_text=source_text,
                 topic=str(targeted_context.get("selected_topic_id") or ""),

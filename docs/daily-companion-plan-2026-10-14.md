@@ -1,7 +1,7 @@
 # 日常学习伙伴执行计划（2026-10-15恢复开发）
 
 优先级：
-1. 发布阶段20已review的两phrase helper实际cwd部署修复；SourceGate/import及9离线检查通过后保留voice34失败，不冒称修后声音成功。
+1. 阶段20已推ae23b1d，SourceGate/实际两cwd+Main/候选9test过。原voice34失败保持，不重复相同已过检查。现在优先正式评分路由。
 2. 修Native口头判错不调用study_answer/无评分记录；明确区分角色选择工具与直接callback。用本次实际句子做回归，核wrong/后续纠正持久化、回读、返课重启。
 3. 修出题请求丢失：当前study_quiz只有topic/target_weak，无题型/范围参数。正在补request透传当前图片/文本/targeted，保持材料身份与无答案泄露，临时要求不存长期偏好。
 4. 修当前材料可见性与统一课程/图片绑定；拆分Main等待与实际模型/工具/音频延迟。固定输入验证无需本人朗读。
@@ -22,8 +22,12 @@
 
 音频：必要speaker用户已设约4%，不调整音量。已结束真人场的mic授权不延续；禁止room/physical/virtual mic、捕获设备初始化、回环。固定WAV内存/WS允许；仅经核输出专用入口/8API捕获保护可发声，mixed启动仍拒绝。文字开发child NEKO_TASK_SILENT=1。
 
-沿用 bargein-autocheck-20261012，核账本DeepSeek668/2000、Lanlan.app62/null、Lanlan.tech0/0。不重置/换轮/切付费供应商，不为额度耗完测试；Main独占额度/online，限流停无效重试并退避。既有两个子Agent独立窄审，无新Agent，共享代码Main负责。
+沿用 bargein-autocheck-20261012，核账本DeepSeek675/2000、Lanlan.app63/null、Lanlan.tech0/0。不重置/换轮/切付费供应商，不为额度耗完测试；Main独占额度/online，限流停无效重试并退避。既有两个子Agent独立窄审，无新Agent，共享代码Main负责。
 
 允许审查后commit/push codex/功能分支，不merge/force/覆远端；保留Root脏树和.workbuddy，Root index不stage。排除密钥、用户DB/history/raw录音/policy。Sky Scout源码/索引/已有架构图只读；复用两对比图，不另建记忆系统、不删除重置原用户历史。
 
 精简前全部原bytes已exclusive归档到 docs/evidence/daily-companion-plan-history-through-human-test-2026-10-15.md；此前phase18/16/14/12/10/8原档保留。contract未变。
+
+阶段21当前增量：源码/离线出题request透传4、材料12、memory8过；Native语音观察修复7 Main+独立过。必要单场phrase35有真实ASR→study_explain→两句English/24NativePCM、sourceEnded/queue0，无mic/capture/loopback，8APIguard。原raw35因心跳quiet/显式zhCN假设报turn_timeout/exit1/FAIL_PARTIAL，原文件不变；修后既有事件回放59.087s可结束，仅REPLAY通过，不追认整场PASS。speechEnd→ASR11.609s→首PCM21.775s，PCM→播放schedule0.512s，实际可听未验。唯一exec60014已terminal/cleanup_errors=[]，任务ports无listener。账本675/63/0，原round不重置。stage21证据 docs/evidence/daily-companion-phase21-quiz-request-and-voice-probe-2026-10-15.md。
+
+已定位尚未修复：Native显式答当前题可以自由口头判错绕过study_answer，旧qid/attempt仍pending/evaluation空；下一步需权威ASR owner+expected qid/attempt/course/session准入和防重、结果前自由评分抑制/失败诚实，保护ordinary打断。不能只增强prompt或从口头结果倒写DB。然后材料可见/graded多轮及全A–F继续。两个Agent最终窄审冻结，Main准备stage21 exact发布；应用Goal仍paused，请界面恢复现有Goal以自动续跑，当前明确授权本轮继续。

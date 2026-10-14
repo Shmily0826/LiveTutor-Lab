@@ -85,7 +85,7 @@ class QuizMaterialGuard(unittest.IsolatedAsyncioTestCase):
         self.temp.cleanup()
 
     async def prepare(self):
-        h = Harness(self.store)
+        h = getattr(self, 'harness', Harness)(self.store)
         materials.save_material(self.store, 'course-A', 'image-A', 'source-A: arrows A to B')
         await h._restart_study_session(course_id='course-A')
         h._cfg.llm_vision_enabled = True

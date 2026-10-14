@@ -1026,6 +1026,8 @@ class _StudyAvatarToolsMixin:
             "Give the learner a practice question. With topic set it targets that topic; "
             "with topic empty it uses the current submitted Study picture when available; "
             "otherwise it can target their weakest tracked topic in the current course. "
+            "Pass the learner's question format, scope and length instructions in request, "
+            "including binary choices or asking only about arrow direction. "
             "Ask the question and then stop and wait for their answer."
         ),
         parameters={
@@ -1033,30 +1035,37 @@ class _StudyAvatarToolsMixin:
             "properties": {
                 "topic": {"type": "string", "default": ""},
                 "target_weak": {"type": "boolean", "default": True},
+                "request": {"type": "string", "default": "", "description": "The learner's exact instructions for this question; not a saved preference."},
             },
         },
         timeout=150.0,
     )
-    async def study_quiz_tool(self, *, topic: str = "", target_weak: bool = True, **_):
+    async def study_quiz_tool(self, *, topic: str = "", target_weak: bool = True, request: str = "", **_):
         self._study_effective_language()
         topic = str(topic or "").strip()
+        request = str(request or "").strip()
         from .study_materials import material_output_target
         target = material_output_target(self, _)
         picture_quiz = bool(not topic and self._cfg.llm_vision_enabled
                             and getattr(self._state, "last_vision_image_base64", ""))
-        snapshot = await self._study_native_material_snapshot(include_material=picture_quiz)
+        snapshot = await self._study_native_material_snapshot(include_material=picture_quiz or bool(request and not topic and not target_weak))
         if snapshot is None:
             return self._study_changed_native_material_result()
         context = snapshot["context"]
+        if request and not topic and not target_weak and not picture_quiz and not snapshot["text"].strip():
+            return {"ok": False, "code": "MISSING_TEXT", "error": "请先提供学习材料或指定出题主题。 Please provide study material or a topic first."}
+        def requested_text(source: str) -> str:
+            return (f"[Learner question request]\n{request}\n\n[Study material]\n{source}"
+                    if request else source)
         if picture_quiz:
-            raw = await self.study_generate_question(text=snapshot["text"], vision_image_base64=snapshot["image"],
+            raw = await self.study_generate_question(text=requested_text(snapshot["text"]), vision_image_base64=snapshot["image"],
                                                      _material_context=context)
         elif topic or not target_weak:
             raw = await self.study_generate_question(
-                text=self._study_language_directive("", topic) if topic else "",
+                text=requested_text(self._study_language_directive("", topic) if topic else snapshot["text"] if request else ""),
                 topic=topic, _material_context=context)
         else:
-            raw = await self.study_generate_targeted_question(_material_context=context)
+            raw = await self.study_generate_targeted_question(request=request, _material_context=context)
         payload = _envelope(raw)
         question = _first_text(payload, "question", "prompt", "reply")
         if not question:

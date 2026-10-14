@@ -29,6 +29,28 @@ from neko_tutor_start import plugin_server_ready, cleanup_resources, process_cre
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def native_response_progress(snapshot, previous=None):
+    """Response activity, excluding periodic heartbeat/playback receipts."""
+    trace = snapshot.get('trace') or {}
+    prior_frames, prior_wall = previous or (0, 0.0)
+    walls = [event['wall'] for event in trace.get('events', [])
+             if event.get('type') not in ('pong', 'native_speech_playback_state', 'speech_playback_state')
+             and isinstance(event.get('wall'), (int, float))]
+    # The bounded trace can evict old response events as heartbeats arrive.
+    return (max(prior_frames, trace.get('binaryFrames', 0)), max([prior_wall, *walls]))
+
+
+def teaching_defaults_unchanged(report):
+    before = report.get('preferences_before_voice', {}).get('output', {})
+    after = report.get('preferences_after_voice', {}).get('output', {})
+    before_language = report.get('study_before_voice', {}).get('data', {}).get('config', {}).get('language')
+    after_language = report.get('study_after_voice', {}).get('data', {}).get('config', {}).get('language')
+    return (before.get('ok') is True and after.get('ok') is True
+            and isinstance(before.get('preferences'), dict) and isinstance(after.get('preferences'), dict)
+            and before.get('preferences') == after.get('preferences')
+            and bool(before_language) and before_language == after_language)
+
+
 def teaching_capture_seconds(paths):
     duration = 0.0
     for path in paths:
@@ -330,7 +352,7 @@ async def main(args):
                 native_changed = time.monotonic()
                 async def observe_native():
                     nonlocal native_changed
-                    count = 0
+                    progress = None
                     while True:
                         snapshot = await observer.snapshot()
                         report["native_final"] = snapshot
@@ -343,8 +365,9 @@ async def main(args):
                         if output_only and any(e.get('code') in ('VOICE_INPUT_CONTROL_REJECTED','VOICE_INPUT_LEASE_RESYNC_REQUIRED','ASR_INPUT_DELIVERY_FAILED') for e in events):
                             report['fixed_input_rejected']=[e for e in events if e.get('code')]
                             failed.set();ended.set()
-                        if len(events) != count:
-                            count = len(events); native_changed = time.monotonic()
+                        current_progress = native_response_progress(snapshot, progress)
+                        if current_progress != progress:
+                            progress = current_progress; native_changed = time.monotonic()
                         if any(e.get("type") == "system" and e.get("data") == "turn end" and
                                e["wall"] >= report.get("input_wall", float("inf")) for e in events):
                             ended.set()
@@ -584,7 +607,7 @@ async def main(args):
                 'one_teaching_tool_execution':len(calls)==1,
                 'no_early_provider_audio':bool(speech_end) and bool(audio) and min(audio)>=speech_end,
                 'same_current_picture':bool(before_m.get('material_id')) and before_m.get('material_id')==after_m.get('material_id'),
-                'temporary_english_does_not_change_preferences':before_p==after_p and after_p.get('language')=='zh-CN',
+                'temporary_english_does_not_change_preferences':teaching_defaults_unchanged(report),
                 'native_pcm_frames':report.get('native_final',{}).get('trace',{}).get('binaryFrames',0)>0,
                 'device_loopback_loud':report.get('loopback',{}).get('loud_chunks',0)>0,
                 'english_reply_shape':bool(re.search('[A-Za-z]',wording)) and not re.search('[\u4e00-\u9fff]',wording),
