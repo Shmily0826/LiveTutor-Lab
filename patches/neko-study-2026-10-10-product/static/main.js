@@ -647,6 +647,11 @@ async function compressImageForStudy(blob, signal) {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, width, height);
     ctx.drawImage(image, 0, 0, width, height);
+    // Keep diagram text lossless when it fits the existing upload budget.
+    if (blob.type === 'image/png') {
+      const png = canvas.toDataURL('image/png');
+      if (png.length <= TARGET_DATA_URL_LENGTH) return png;
+    }
     let url = canvas.toDataURL('image/jpeg', 0.82);
     if (url.length > TARGET_DATA_URL_LENGTH) {
       url = canvas.toDataURL('image/jpeg', 0.56);

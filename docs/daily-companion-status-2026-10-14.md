@@ -1,4 +1,4 @@
-# 日常学习伙伴状态（阶段39 / 场50已结束PARTIAL，2026-10-15）
+# 日常学习伙伴状态（阶段41已交付 / 40草稿隔离，2026-10-15）
 
 完整原任务：[contract](daily-companion-contract-2026-10-14.md)，原169行/SHA256 FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33；完整A–F/预算权限/验收不以当前记录摘要替代，不修改contract。现有Goal 01a13531-0341-7611-afc2-5c472a7ccf50 active，GPT-6.1 Sol High不擅改，不重建/缩scope/假完成。
 
@@ -42,3 +42,15 @@ Main当前actual queue fixture无需改变host turn就复现never-announcing自�
 
 
 阶段39发布核验：源码采集修与完整50报告/两独立复审/3原bytes归档共12精确allowlist已commit/push a1a431d004923fa2af2f1aa6e9e4173079ff251c到codex/daily-learning-companion；remote同SHA、publisher clean、master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb，Root index空。contract原SHA不变，无raw/DB/录音/密钥/备份发布。当前SourceGate再次PASS；原账本810/2000、app76/null、tech0/0，无live exec/host/自有端口。下一40先本地native自动响应/真实输入归属，不实施hostguard前挪边界的旧猜；其他A–F继续，Goal保持active，不将本阶段或原49/50 PARTIAL当完成。
+
+
+阶段40开始本地开发：上一轮39有真实50/15离线/发布是progress。已完整读四记录，实际ledger810/76/0，Root index空/publisher clean/无live场。Main范围：显式automatic-audio arbiter模式复用原单lane/current/owner/ticket/seenID/cancel，不假conversation.item/不额外response.create；sealed phrase第一write前持owner，整批actual write后才sent，真实ID-bearing content+terminal闭环。producer依actual ticket.done和同epoch/authority/seq退役waiting，Core UI/普通打断guard不挪；多ASR可多response，不冒一对一语义全过。先临时patched actual module+queue fixture，再独立review/精确部署，未审不在线。默认AUTO/phrase日常开关不改。
+
+
+阶段40草稿：显式native automatic_audio已实现，20新+20原phrase actual-module/queue-socket离线40 PASS(13.365s)；first-write前owner/不可变原seq/完整写+成功ticket.done才输入boundary，失败statusless/idless/partial/failopen/newPCM/旧conn与busy无关owner保护。只关联首响应，多ASR/后续response与追问语义仍PARTIAL。详evidence/daily-companion-phase40-native-auto-input-2026-10-15.md。独立实现review pending；6实际宿主目标尚未动，changed helper令SourceGate如期拒绝，禁止在草稿不一致状态启动。仅本地测试，无声音/mic/capture/loopback/在线场，原ledger实核810/76/0不变，Goal active。下一审查后精确备份部署/manifest/Gate与相关回归，不盲开模型场。
+
+
+阶段40安全终态：独立40 PASS但额外actual工具返回路径P2互等，故未部署；原producer/接线bytes隔离scripts/drafts，生产精确恢复58bf/ad82，SourceGate实际重新PASS，宿主/manifest未动。隔离适配40 PASS12.937s；known-blocker定向测试确认仍阻断，不当修复通过。恢复需真实tooltask→原sealedslot资格与同lane join，不放宽ID/不造currentseq；详phase40与implementation-review。原50仍PARTIAL，ledger810/76/0无live场，Goal active。现转41图片PNG编码：原PNG统一JPEG损失，拟在原像素/1M预算内先保留无损PNG，超预算沿原JPEG路径；静音共享browser/原三图本地验证，无新材料/模型/设备。
+
+
+阶段41实质交付：main.js在原尺寸/1M字符预算内保留PNG，超预算原JPEG三档不变；7纯encoder cases+实际共享browser桌面flow13/races7/mobileflow13/encoding3共36checks通过，原三图bytes不变。encoding首fixture CSP fetch(data:)失败原件保留，仅test解码改atob→Blob后定向3过，不改CSP。独立Node7/成功raw复核，无P1/P2；default仅static精确oldSHA备份部署acde…3b25，product manifest49bfb…8eb7，SourceGate PASS、host manifest不变。详phase41-lossless-png与png-review；不冒dense-text模型/声音/human通过。原ledger810/76/0、contract原SHA、Root脏树/空index/用户历史保持，无live场。40草稿仍隔离/工具续接P2留恢复条件，下一先发布本轮安全allowlist再推进A–F集成，不盲重连。

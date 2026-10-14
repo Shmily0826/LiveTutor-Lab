@@ -112,6 +112,10 @@ class PhraseTransport(unittest.IsolatedAsyncioTestCase):
         with patch.object(phrase_transport.time, 'time', return_value=self.at):
             await self.phrase()
             await self.finish_writer()
+            self.socket.feed({'type': 'response.audio_transcript.delta', 'response_id': 'burst-one', 'delta': 'ok'})
+            self.socket.feed({'type': 'response.done', 'response': {'id': 'burst-one', 'status': 'completed'}})
+            await asyncio.sleep(.02)
+            await self.client._response_arbiter.wait_until_idle(.5)
             self.client._note_voice_handoff_input_boundary(
                 expected_sequence=self.client._voice_handoff_input_sequence)
             await self.phrase()

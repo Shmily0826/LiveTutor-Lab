@@ -43,7 +43,7 @@ await wait(()=>$('statusLine').textContent&&!/Starting|启动/.test($('statusLin
 await wait(()=>typeof currentPracticeScope!=='undefined');
 if(which!=='readiness')await wait(()=>lastStatusPayload.study_course_id==='course-a','initial status');
 if(which==='flow'){
-  const first=await selected(0);check('actual PNG file produces visible JPEG preview',!$('studyInputImagePreview').hidden&&first.startsWith('data:image/jpeg;base64,'));
+  const first=await selected(0);check('actual PNG diagram keeps visible lossless PNG preview',!$('studyInputImagePreview').hidden&&first.startsWith('data:image/png;base64,'));
   await explained('first picture');let s=await state();let sent=s.calls.filter(c=>c.entry_id==='study_submit_image').at(-1);
   check('file submits correct current image and expected course to Study entry',sent&&sent.args.image_base64===first&&sent.args.text==='first picture'&&sent.args.expected_course_id==='course-a');
   check('successful explanation enables followup',!$('usePreviousExplanation').disabled);
@@ -90,6 +90,19 @@ if(which==='preview'){
   await selected(2);await wait(()=>$('studyInputImage').naturalWidth>0,'preview decoded');
   check('real Sky Scout preview is visible with constrained dimensions', !$('studyInputImagePreview').hidden&&$('studyInputImage').naturalWidth<=2048&&$('studyInputImage').getBoundingClientRect().width>0);
   $('explainPanel').scrollIntoView({block:'start',behavior:'instant'});
+}
+if(which==='encoding'){
+  const data=await selected(0);const source=await oldLoad(await blob(0));
+  const bytes=Uint8Array.from(atob(data.split(',')[1]),character=>character.charCodeAt(0));
+  const encoded=await oldLoad(new Blob([bytes],{type:'image/png'}));
+  const scale=Math.min(1,llmVisionMaxImagePx/Math.max(source.naturalWidth,source.naturalHeight));
+  const width=Math.max(1,Math.round(source.naturalWidth*scale)),height=Math.max(1,Math.round(source.naturalHeight*scale));
+  const pixels=image=>{const c=document.createElement('canvas');c.width=width;c.height=height;const x=c.getContext('2d');x.fillStyle='#ffffff';x.fillRect(0,0,width,height);x.drawImage(image,0,0,width,height);return x.getImageData(0,0,width,height).data};
+  const reference=pixels(source),actual=pixels(encoded);
+  check('bounded PNG roundtrip preserves every rendered pixel',data.startsWith('data:image/png;base64,')&&data.length<=TARGET_DATA_URL_LENGTH&&reference.length===actual.length&&reference.every((value,i)=>value===actual[i]));
+  check('encoding preserves configured dimensions without enlargement',encoded.naturalWidth===width&&encoded.naturalHeight===height&&Math.max(width,height)<=llmVisionMaxImagePx);
+  await explained('encoding check');const s=await state();
+  check('exact pixel-verified PNG reaches existing Study submission',s.calls.filter(c=>c.entry_id==='study_submit_image').at(-1)?.args.image_base64===data);
 }
 if(which==='onboarding'){
   check('first launch keeps stage modal closed', !$('learningProfileModal')||$('learningProfileModal').hidden);
@@ -288,7 +301,7 @@ class DailyImageUI(unittest.TestCase):
         thread.start()
         outcomes = []
         try:
-            cases = [("flow", "--desktop"), ("races", "--desktop"), ("readiness", "--desktop"), ("flow", "--mobile"), ("preview", "--desktop"), ("preview", "--mobile"), ("onboarding", "--desktop"), ("onboarding", "--mobile"), ("course-submit", "--desktop")]
+            cases = [("flow", "--desktop"), ("races", "--desktop"), ("readiness", "--desktop"), ("flow", "--mobile"), ("preview", "--desktop"), ("preview", "--mobile"), ("onboarding", "--desktop"), ("onboarding", "--mobile"), ("course-submit", "--desktop"), ("encoding", "--desktop")]
             selected_cases = os.environ.get("NEKO_IMAGE_UI_CASES", "").split(",")
             if selected_cases != [""]:
                 cases = [(case, viewport) for case, viewport in cases if case in selected_cases]

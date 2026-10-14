@@ -104,8 +104,10 @@
     },
     {
       "path": "static/main.js",
-      "sha256": "38cb30d8622fdf539b2754911b2a8663b4ff9e9d502672561a3434ff434e6185",
-      "deployed_matches": true
+      "sha256": "acde4db25cdcd7195853a1a2a477bb28ae4f99d2e1d8f1e6a1b0ce5c45953b25",
+      "deployed_matches": true,
+      "phase41_prior_sha256": "38cb30d8622fdf539b2754911b2a8663b4ff9e9d502672561a3434ff434e6185",
+      "phase41_verification": "Reviewed source/offline Node7 and actual local browser36 checks (PNG pixels/dimensions/exact fixture submission; desktop/mobile replacement/races). No model/device/human or dense-small-text understanding acceptance."
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
