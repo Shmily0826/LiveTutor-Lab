@@ -1,32 +1,6 @@
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import vm from 'node:vm';
 import {test} from 'node:test';
-
-const capture=readFileSync(new URL('../benchmarks/raw/neko-product-host/static/app/app-audio-capture.js',import.meta.url),'utf8');
-const policy=readFileSync(new URL('./neko_capture_policy.js',import.meta.url),'utf8');
-function fixture(install=true) {
-  const sent=[], handlers=new Map();let captured=0;
-  const socket={readyState:1,send(raw){sent.push(JSON.parse(raw));}};
-  const denied=()=>{captured++;throw new Error('Device initialization forbidden');};
-  const S={socket,isRecording:false,isMicMuted:false,gameVoiceSttGateActive:false};
-  const context=vm.createContext({appState:S,appConst:{},appUtils:{isMobile:()=>false},
-    navigator:{mediaDevices:{getUserMedia:denied,getDisplayMedia:denied,enumerateDevices:denied}},
-    DOMException,SpeechRecognition:denied,webkitSpeechRecognition:denied,AudioContext:denied,Audio:denied,
-    WebSocket:{OPEN:1},document:{documentElement:{setAttribute(){}},getElementById(){return null;},
-      addEventListener(){},querySelectorAll(){return [];}},
-    CustomEvent:class{constructor(type,options){this.type=type;this.detail=options?.detail;}},
-    addEventListener(name,callback){if(!handlers.has(name))handlers.set(name,[]);handlers.get(name).push(callback);},
-    dispatchEvent(event){for(const handler of handlers.get(event.type)||[])handler(event);},
-    setTimeout(){return 1;},clearTimeout(){},setInterval(){return 1;},clearInterval(){},console});
-  vm.runInContext('window=globalThis;',context);
-  vm.runInContext(policy,context);
-  if(install)vm.runInContext('NekoCapturePolicy.installOutputOnly({enabled:true})',context);
-  vm.runInContext(capture,context);
-  const api=context.appAudioCapture;
-  context.dispatchEvent({type:'voice-input-socket-open',detail:{socket}});
-  return {api,S,context,sent,captured:()=>captured};
-}
+import {fixture} from './neko_fixed_input_fixture.mjs';
 
 test('actual module sends monotonic core lease and PCM without a capture flag or device',()=>{
   const f=fixture();const idle=f.sent.at(-1);
@@ -46,6 +20,25 @@ test('unguarded ordinary mode refuses a fixed source and preserves its ordinary 
   const f=fixture(false);assert.throws(()=>f.api.beginFixedInput());
   f.S.isRecording=true;assert.equal(f.api.refreshMicLease(),'core');
   assert.equal(f.sent.at(-1).owner,'core');assert.equal(f.captured(),0);
+});
+test('duplicate guarded open deduplicates unchanged state; ordinary open behavior is retained',()=>{
+  for(const guarded of [true,false]){
+    const f=fixture(guarded);
+    if(guarded)f.api.beginFixedInput();else{f.S.isRecording=true;f.api.refreshMicLease();}
+    const before=f.sent.at(-1).lease_generation;
+    f.context.dispatchEvent({type:'voice-input-socket-open',detail:{socket:f.S.socket}});
+    assert.equal(f.sent.at(-1).lease_generation,guarded?before:1);
+    assert.equal(f.captured(),0);
+  }
+});
+test('changed guarded state still publishes a newer snapshot during duplicate notification',()=>{
+  const f=fixture(),ticket=f.api.beginFixedInput(),before=f.sent.at(-1).lease_generation;
+  f.S.isMicMuted=true;
+  f.context.dispatchEvent({type:'voice-input-socket-open',detail:{socket:f.S.socket}});
+  assert.equal(f.sent.at(-1).lease_generation,before+1);
+  assert.equal(f.sent.at(-1).hard_muted,true);
+  assert.equal(f.api.sendFixedInputFrame(ticket.id,[1]),false);
+  assert.equal(f.captured(),0);
 });
 for(const [name,change] of [
   ['mute',S=>S.isMicMuted=true],['focus',S=>{S.focusModeEnabled=true;S.isPlaying=true;}],

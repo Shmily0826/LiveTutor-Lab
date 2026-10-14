@@ -4,6 +4,8 @@ import json
 import subprocess
 import unittest
 from neko_native_telemetry import NativeTelemetry, INSTALL, SNAPSHOT
+from unittest.mock import AsyncMock,patch
+from types import SimpleNamespace
 
 
 class FakeDevTools:
@@ -22,6 +24,60 @@ class FakeDevTools:
 
 
 class NativeTelemetryTest(unittest.IsolatedAsyncioTestCase):
+    async def test_unique_ready_pet_is_selected_and_setup_failure_closes_it(self):
+        targets=[{'type':'page','url':'http://localhost:48911/chat_full','webSocketDebuggerUrl':'ws://task/chat'},
+                 {'type':'page','url':'http://localhost:48911/','webSocketDebuggerUrl':'ws://task/pet'}]
+        class Response:
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def read(self):return json.dumps(targets).encode()
+        for fail in (False,True):
+            socket=SimpleNamespace(close=AsyncMock())
+            evaluate=AsyncMock(side_effect=[{'socketReady':1,'audioPlaybackAvailable':True},RuntimeError('install failed') if fail else {'installed':True}])
+            connect=AsyncMock(return_value=socket)
+            with patch('neko_native_telemetry.urllib.request.build_opener',return_value=SimpleNamespace(open=lambda *a,**k:Response())),\
+                 patch('neko_native_telemetry.websockets.connect',connect),patch.object(NativeTelemetry,'evaluate',evaluate):
+                if fail:
+                    with self.assertRaisesRegex(RuntimeError,'install failed'):await NativeTelemetry.attach(9231)
+                    socket.close.assert_awaited_once()
+                else:
+                    observer=await NativeTelemetry.attach(9231)
+                    self.assertIs(observer.socket,socket);socket.close.assert_not_awaited()
+            self.assertEqual(connect.await_args.args[0],'ws://task/pet')
+
+    async def test_absent_ambiguous_or_foreign_pet_is_refused_before_connect(self):
+        for urls in (['http://localhost:48911/chat_full'],['http://localhost:48911/','http://127.0.0.1:48911/'],['http://foreign:48911/','http://localhost:9231/']):
+            targets=[{'type':'page','url':url,'webSocketDebuggerUrl':'ws://task/unselected'} for url in urls]
+            class Response:
+                def __enter__(self):return self
+                def __exit__(self,*args):pass
+                def read(self):return json.dumps(targets).encode()
+            with patch('neko_native_telemetry.urllib.request.build_opener',return_value=SimpleNamespace(open=lambda *a,**k:Response())),\
+                 patch('neko_native_telemetry.websockets.connect',AsyncMock()) as connect:
+                with self.assertRaisesRegex(RuntimeError,'identity unresolved'):await NativeTelemetry.attach(9231)
+            connect.assert_not_awaited()
+
+    async def test_not_ready_pet_never_falls_back_to_ready_chat(self):
+        targets=[{'type':'page','url':'http://localhost:48911/','webSocketDebuggerUrl':'ws://task/pet'},
+                 {'type':'page','url':'http://localhost:48911/chat_full','webSocketDebuggerUrl':'ws://task/chat'}]
+        class Response:
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def read(self):return json.dumps(targets).encode()
+        pet=SimpleNamespace(close=AsyncMock(),kind='pet')
+        chat=SimpleNamespace(close=AsyncMock(),kind='chat')
+        async def evaluate(observer,expression):
+            if expression==INSTALL:return {'installed':True}
+            return {'socketReady':0 if observer.socket is pet else 1,'audioPlaybackAvailable':True}
+        connect=AsyncMock(side_effect=[pet,chat])
+        with patch('neko_native_telemetry.urllib.request.build_opener',return_value=SimpleNamespace(open=lambda *a,**k:Response())),\
+             patch('neko_native_telemetry.websockets.connect',connect),\
+             patch.object(NativeTelemetry,'evaluate',evaluate):
+            with self.assertRaisesRegex(RuntimeError,'pet.*not ready'):
+                await NativeTelemetry.attach(9231)
+        self.assertEqual(connect.await_count,1)
+        pet.close.assert_awaited_once();chat.close.assert_not_awaited()
+
     async def test_fixed_control_delegates_only_to_registered_source_and_refuses_denial(self):
         observer=NativeTelemetry(None)
         for payload in ({'action':'start_session','input_type':'audio'}, {'action':'stream_data','input_type':'audio','data':[1]}, {'action':'end_session'}):

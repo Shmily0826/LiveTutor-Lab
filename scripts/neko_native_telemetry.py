@@ -80,19 +80,23 @@ class NativeTelemetry:
         targets = [t for t in targets if t.get("type") == "page" and
                    urllib.parse.urlsplit(t.get("url", "")).hostname in {"127.0.0.1", "localhost"} and
                    urllib.parse.urlsplit(t.get("url", "")).port == 48911]
-        # Electron's pet renderer owns PCM; chat windows proxy text only.
-        targets.sort(key=lambda t: ("chat" in t["url"], t["url"]))
-        if not targets:
-            raise RuntimeError("task native renderer not available on the allocated debug port")
-        for target in targets:
-            socket = await websockets.connect(target["webSocketDebuggerUrl"], proxy=None, max_size=8*1024*1024)
-            observer = cls(socket)
+        # Both chat templates load the audio modules. Presence/readiness cannot
+        # identify the PCM owner; only the task's known root pet page can.
+        pets = [t for t in targets if urllib.parse.urlsplit(t['url']).path == '/']
+        if len(pets) != 1:
+            raise RuntimeError(f'task native pet renderer identity unresolved: {len(pets)} root pages')
+        socket = await websockets.connect(pets[0]["webSocketDebuggerUrl"], proxy=None, max_size=8*1024*1024)
+        observer = cls(socket)
+        try:
             probe = await observer.evaluate("({socketReady:window.appState?.socket?.readyState,audioPlaybackAvailable:!!window.appAudioPlayback})")
-            if probe and probe.get("socketReady") == 1 and probe.get("audioPlaybackAvailable"):
-                await observer.evaluate(INSTALL)
-                return observer
+            if not probe or probe.get("socketReady") != 1 or not probe.get("audioPlaybackAvailable"):
+                diagnostic = {key: (probe or {}).get(key) for key in ('socketReady', 'audioPlaybackAvailable')}
+                raise RuntimeError('task native pet renderer not ready: '+json.dumps(diagnostic))
+            await observer.evaluate(INSTALL)
+            return observer
+        except BaseException:
             await socket.close()
-        raise RuntimeError("task native audio renderer has no ready playback socket")
+            raise
 
     async def command(self, method, params=None):
         async with self.lock:

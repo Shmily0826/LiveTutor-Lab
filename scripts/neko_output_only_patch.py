@@ -99,6 +99,14 @@ FIXED_INPUT_HELPERS += FIXED_CONTROL_HELPERS
 FIXED_EXPORTS_OLD = '    mod.beginFixedInput = beginFixedInput;\n    mod.fixedInputState = fixedInputState;\n    mod.sendFixedInputFrame = sendFixedInputFrame;\n    mod.endFixedInput = endFixedInput;\n'
 FIXED_EXPORTS = FIXED_EXPORTS_OLD + '    mod.sendFixedInputControl = sendFixedInputControl;\n'
 CAPTURE_ANCHORS = (
+    ("    let lastVoiceLeaseFingerprint = '';\n", '    let voiceLeaseSocket = null;\n'),
+    ('    function syncVoiceInputControlState(socket) {\n        if (socket && socket !== S.socket) return false;\n        if (!S.socket || S.socket.readyState !== WebSocket.OPEN) return false;\n',
+     '''        // A duplicate open notification must not rewind a guarded input lease.
+        if (globalThis.__NEKO_OUTPUT_ONLY_CAPTURE_BLOCKED__ === true && voiceLeaseSocket === S.socket) {
+            return sendVoiceInputControlState(false);
+        }
+        voiceLeaseSocket = S.socket;
+'''),
     ('    async function startMicCapture() {\n',
      '        if (globalThis.__NEKO_OUTPUT_ONLY_CAPTURE_BLOCKED__ === true) return false;\n'),
     ('    async function ensureMicrophonePermission() {\n',
@@ -114,6 +122,11 @@ CAPTURE_ANCHORS = (
 
 
 def patched_capture(text):
+    # Exact unpublished duplicate-open draft: force-sync would abort queued PCM.
+    sync_anchor, sync_addition = CAPTURE_ANCHORS[1]
+    force_sync_draft = sync_addition.replace('return sendVoiceInputControlState(false);',
+                                            'return sendVoiceInputControlState(true);')
+    text = text.replace(sync_anchor + force_sync_draft, sync_anchor + sync_addition)
     # Exact replay of the sole local draft, retaining fail-closed base validation.
     pre_exception_helpers = FIXED_INPUT_HELPERS.replace(
         '        if (fixedInputSource) {\n            let blocked = true;\n            try { blocked = fixedInputBlocked(fixedInputSource.socket); } catch (_) {}\n            if (blocked) fixedInputSource = null;\n        }',
