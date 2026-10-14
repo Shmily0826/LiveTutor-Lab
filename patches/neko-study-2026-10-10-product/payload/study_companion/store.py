@@ -1501,6 +1501,7 @@ from .store_knowledge_contribution import (
     upsert_anonymous_knowledge_stat,
 )
 from .store_qa import (
+    concept_label_candidates,
     add_qa_record,
     add_wrong_question,
     close_open_sessions,
@@ -1575,6 +1576,7 @@ StudyStore.list_sessions = list_sessions  # type: ignore[method-assign]
 StudyStore.add_qa_record = add_qa_record  # type: ignore[method-assign]
 StudyStore.list_qa_records = list_qa_records  # type: ignore[method-assign]
 StudyStore.list_qa_topic_ids = list_qa_topic_ids  # type: ignore[method-assign]
+StudyStore.concept_label_candidates = concept_label_candidates  # type: ignore[method-assign]
 StudyStore.question_topic_candidates = question_topic_candidates  # type: ignore[method-assign]
 StudyStore.list_qa_records_for_topic = list_qa_records_for_topic  # type: ignore[method-assign]
 StudyStore.add_wrong_question = add_wrong_question  # type: ignore[method-assign]

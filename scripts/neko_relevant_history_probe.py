@@ -24,6 +24,7 @@ from neko_tutor_start import (plugin_server_ready, process_creation_time,
                              owned_browser_pids, stop_owned_tree)
 
 ROOT = Path(__file__).resolve().parents[1]
+SCENE = 52
 STORE = ROOT / 'benchmarks/raw/neko-daily-relevant-history-20261015-52'
 COURSE = 'relevant-history-fixture52'
 DB = STORE / 'N.E.K.O/plugins/study_companion/data/study_companion.db'
@@ -32,6 +33,19 @@ OUTPUT = ROOT / 'benchmarks/raw/evidence/daily-companion-relevant-history52.json
 PROMPT = ('继续讲解软件架构图的箭头方向。根据我保存的更早答题记录，'
           '我具体误读过哪一步，后来有没有纠正？没有记录就说不知道。'
           '只用两句简短中文，不出题，不补没有证据的模块职责。')
+
+
+def configure_scene(scene):
+    """52 is the preserved baseline; 53 checks the changed bounded-history prompt."""
+    global SCENE, STORE, COURSE, DB, RECEIPT, OUTPUT
+    if scene not in (52, 53):
+        raise ValueError('only the two planned scenes are supported')
+    SCENE = scene
+    STORE = ROOT / ('benchmarks/raw/neko-daily-relevant-history-20261015-' + str(scene))
+    COURSE = 'relevant-history-fixture' + str(scene)
+    DB = STORE / 'N.E.K.O/plugins/study_companion/data/study_companion.db'
+    RECEIPT = STORE / 'actual-explain-messages.jsonl'
+    OUTPUT = ROOT / ('benchmarks/raw/evidence/daily-companion-relevant-history' + str(scene) + '.json')
 
 
 def sha(path):
@@ -141,7 +155,7 @@ def main():
     manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
     for item in manifest['files']:
         assert sha(manifest_path.parent / item['path']) == item['sha256']
-    report = {'store': str(STORE), 'fixture': 'synthetic saved QA; real model reply, not human answers',
+    report = {'scene': SCENE, 'store': str(STORE), 'fixture': 'synthetic saved QA; real model reply, not human answers',
         'before': before, 'manifest_sha256': sha(manifest_path), 'prompt': PROMPT,
         'audio': False, 'capture': False, 'microphone': False, 'loopback': False, 'avatar': False,
         'semantic_review': 'PENDING; nonempty reply and prompt checks are structural evidence only'}
@@ -161,7 +175,7 @@ def main():
         save()
         with OUTPUT.with_suffix('.host.log').open('xb') as log:
             process = subprocess.Popen([str(host.SOURCE_PYTHON), '-X', 'utf8', '-B',
-                str(Path(__file__).resolve()), '--worker'], cwd=ROOT,
+                str(Path(__file__).resolve()), '--worker', '--scene', str(SCENE)], cwd=ROOT,
                 env={**os.environ, 'NEKO_TASK_SILENT': '1', 'PYTHONIOENCODING': 'utf-8'},
                 stdout=log, stderr=subprocess.STDOUT)
             report['launcher_pid'] = process.pid
@@ -215,4 +229,8 @@ def main():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--worker', action='store_true', help=argparse.SUPPRESS)
-    raise SystemExit(worker() if parser.parse_args().worker else main())
+    parser.add_argument('--scene', type=int, choices=(52, 53), default=52,
+                        help='unique baseline52 or changed-prompt53; existing results are preserved')
+    args = parser.parse_args()
+    configure_scene(args.scene)
+    raise SystemExit(worker() if args.worker else main())

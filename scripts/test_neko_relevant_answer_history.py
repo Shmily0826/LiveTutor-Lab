@@ -181,10 +181,20 @@ class RelevantHistory(unittest.IsolatedAsyncioTestCase):
             'topic_id': poison, 'question_id': poison, 'user_answer': poison,
             'eval_result': {'verdict': poison, 'feedback': poison, 'score': True}}]
         self.assertNotIn('PRIVATE_NONTEXT', self.prompt(context))
+
         context['previous_answer_records'] = [{'question': {'question': poison},
             'topic_id': poison, 'question_id': poison, 'user_answer': poison,
             'evaluation': {'verdict': poison, 'feedback': poison, 'score': float('nan')}}]
         self.assertNotIn('PRIVATE_NONTEXT', self.prompt(context))
+
+    async def test_history_prompt_marks_coverage_and_forbids_exhaustive_negative_claims(self):
+        self.answer('EARLY_WRONG', verdict='wrong')
+        for selected in (self.topic, ''):
+            context = await self.context(selected_topic_id=selected)
+            block = memory.prompts.build_concept_recent_context(context)
+            self.assertIn('selected_bounded_records_not_complete_history', block)
+            self.assertIn('Missing records do not prove an event never happened', block)
+            self.assertIn('Do not claim there were no other or earlier mistakes', block)
 
 
 if __name__ == '__main__':

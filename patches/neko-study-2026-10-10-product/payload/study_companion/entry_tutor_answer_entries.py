@@ -47,6 +47,10 @@ class _TutorAnswerEntriesMixin:
             provenance["session"] = expected_material["session_id"]
         key = hashlib.sha256(json.dumps(provenance, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
         previous = private.get("learning_topic_binding")
+        valid_previous = (isinstance(previous, dict) and type(previous.get("v")) is int and previous["v"] == 1
+                          and previous.get("key") == key and str(previous.get("topic_id") or "").startswith(prefix))
+        label_hint = question_payload.get("topic")
+        label_hint = label_hint.strip() if isinstance(label_hint, str) else ""
         status = "explicit"
         if selected_topic_id:
             known = await asyncio.to_thread(self._store.get_topic, selected_topic_id)
@@ -55,8 +59,11 @@ class _TutorAnswerEntriesMixin:
                              and known.get("course_family") in (None, "", course))):
                 raise MaterialContextChanged("selected topic belongs to another course")
             topic = selected_topic_id if selected_topic_id.startswith(prefix) else prefix + selected_topic_id
-        elif (isinstance(previous, dict) and type(previous.get("v")) is int and previous["v"] == 1
-              and previous.get("key") == key and str(previous.get("topic_id") or "").startswith(prefix)):
+            if valid_previous:
+                if previous["topic_id"] != topic:
+                    raise MaterialContextChanged("selected topic conflicts with the held question binding")
+                return dict(previous)
+        elif valid_previous:
             return dict(previous)
         else:
             candidates = await asyncio.to_thread(
@@ -67,10 +74,18 @@ class _TutorAnswerEntriesMixin:
             if len(candidates) == 1:
                 topic, status = candidates[0], "unique_history"
             else:
-                topic = prefix + "question_" + key[:24]
-                status = "ambiguous_history" if candidates else "new_question"
+                labels = [] if candidates else await asyncio.to_thread(
+                    self._store.concept_label_candidates, course_id=course, label=label_hint)
+                if len(labels) == 1:
+                    topic, status = labels[0], "unique_concept_label"
+                else:
+                    topic = prefix + "question_" + key[:24]
+                    status = ("ambiguous_history" if candidates else
+                              "ambiguous_concept_label" if labels else "new_question")
             known = await asyncio.to_thread(self._store.get_topic, topic)
-        label = str((known or {}).get("name") or question_payload.get("topic") or question)[:160]
+            if not known and status == "unique_concept_label":
+                known = await asyncio.to_thread(self._store.get_topic, topic.removeprefix(prefix))
+        label = str((known or {}).get("name") or label_hint or question)[:160]
         return {"v": 1, "key": key, "topic_id": topic, "label": label,
                 "scope": "question" if topic == prefix + "question_" + key[:24] and status != "explicit" else "concept",
                 "source": status}
@@ -326,7 +341,6 @@ class _TutorAnswerEntriesMixin:
         question_topic_id = str(
             question_payload.get("selected_topic_id")
             or question_payload.get("topic_id")
-            or question_payload.get("topic")
             or ""
         ).strip()
         if (

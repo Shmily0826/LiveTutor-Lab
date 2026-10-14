@@ -9,6 +9,41 @@ from .store_common import (
 )
 
 
+def concept_label_candidates(self, *, course_id: str, label: str) -> list[str]:
+    """At most two canonical IDs, from exact known names/aliases with provenance.
+
+    A question-scoped identity must not become a concept just because its display
+    label happens to match. No fuzzy translation or whole QA bodies are read.
+    """
+    if not isinstance(label, str) or not label.strip() or not course_id:
+        return []
+    course = str(course_id).strip()
+    prefix = course + "::"
+    rows = self._require_read_conn().execute(
+        """
+        SELECT DISTINCT CASE WHEN substr(t.id, 1, length(?)) = ?
+                             THEN t.id ELSE ? || t.id END AS topic_id
+        FROM topics t
+        WHERE (t.name = ? COLLATE BINARY OR EXISTS (
+            SELECT 1 FROM json_each(CASE WHEN json_valid(t.aliases)
+                THEN CASE WHEN json_type(t.aliases) = 'array' THEN t.aliases ELSE '[]' END
+                ELSE '[]' END) a WHERE a.type = 'text' AND a.value = ? COLLATE BINARY
+        )) AND (
+            (substr(t.id, 1, length(?)) = ? AND EXISTS (
+                SELECT 1 FROM qa_records q JOIN sessions s ON s.id = q.session_id
+                WHERE q.topic_id = t.id AND s.course_id = ?
+                AND json_extract(CASE WHEN json_valid(q.question) THEN q.question ELSE '{}' END,
+                    '$.internal_private_payload.learning_topic_binding.scope') = 'concept'
+            )) OR (t.source = 'seed' AND COALESCE(t.course_family, '') IN ('', ?)
+                AND (instr(t.id, '::') = 0
+                     OR substr(t.id, 1, length(t.subject || '::')) = t.subject || '::'))
+        ) ORDER BY topic_id LIMIT 2
+        """,
+        (prefix, prefix, prefix, label.strip(), label.strip(), prefix, prefix, course, course),
+    ).fetchall()
+    return [str(row['topic_id']) for row in rows]
+
+
 def ensure_session(self, *, session_id: str, mode: str, course_id: str = "") -> None:
     session_key = str(session_id or "default")
     with self._lock:

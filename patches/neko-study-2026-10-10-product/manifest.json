@@ -51,10 +51,12 @@
     },
     {
       "path": "payload/study_companion/llm_prompts.py",
-      "sha256": "36267f1fca0d7a8168890a2d6994f8da4f91c37db199e022bbe2d1343b1bd36d",
+      "sha256": "a661183faadc54838c408e54917c6c555d6299de4f29e6cfee0ef77ca687ad34",
       "deployed_matches": true,
       "phase44_prior_sha256": "2f0d9a2113032f1c77f3d1d665031d11c6ebf6db116dd149f5297e6efcda2e24",
-      "phase44_verification": "Independent source/offline relevant history12 and related course8/binding12/material14; exact default SHA and deployed imports12. Silent real SDK52 with114 labelled synthetic QA: semantic route and actual explain prompt selected old mistake plus same-binding correction, model acknowledged both, QA unchanged. Reply also made unsupported exhaustive-history negative: semantic scope PARTIAL. No Native/device/human proof; free-label identity and5000 metadata bound remain."
+      "phase44_verification": "Independent source/offline relevant history12 and related course8/binding12/material14; exact default SHA and deployed imports12. Silent real SDK52 with114 labelled synthetic QA: semantic route and actual explain prompt selected old mistake plus same-binding correction, model acknowledged both, QA unchanged. Reply also made unsupported exhaustive-history negative: semantic scope PARTIAL. No Native/device/human proof; free-label identity and5000 metadata bound remain.",
+      "phase45_prior_sha256": "36267f1fca0d7a8168890a2d6994f8da4f91c37db199e022bbe2d1343b1bd36d",
+      "phase45_verification": "Independent source/offline concept label10, binding12/history13 and Main material14; default exact deployment/import23. Existing bindings/history precede unique eligible exact catalog aliases; unknown question scope not promoted, no old-ID merge. Silent real SDK53 actual prompt coverage plus two-sentence old-mistake/correction reply without exhaustive negative,114 synthetic QA unchanged. Cross-question grading alias identity is SOURCE/OFFLINE only; no Native/device/human proof or universal semantic guarantee."
     },
     {
       "path": "payload/study_companion/models.py",
@@ -76,21 +78,25 @@
     },
     {
       "path": "payload/study_companion/store.py",
-      "sha256": "d3b54be66ff5106ebf0dd5427de69151dc5f12924589a97c57623fee9119a79b",
+      "sha256": "9cbbd1f3edbf16b0adf461ce85d40a28ffcb87737f7f62e4dc3661142bc1d43a",
       "deployed_matches": true,
       "phase31_prior_sha256": "838f73ab768a6adcf4f3caef75e6e3ed03680c349fdcdfc4b2b34549ea3868ad",
       "phase31_verification": "Reviewed source/offline same-question identity12 and related grading guards; actual silent SDK45 two grades across host restart retained old5QA/mastery/formal/FSRS and one new question identity. No old-topic merge or cross-question/Native/device/human acceptance; direct-entry language still PARTIAL.",
       "phase44_prior_sha256": "4c6a7cb0e87619200f79d5dc7c42d22782eaafac794772b9c16ffc0db5f982a3",
-      "phase44_verification": "Independent source/offline relevant history12 and related course8/binding12/material14; exact default SHA and deployed imports12. Silent real SDK52 with114 labelled synthetic QA: semantic route and actual explain prompt selected old mistake plus same-binding correction, model acknowledged both, QA unchanged. Reply also made unsupported exhaustive-history negative: semantic scope PARTIAL. No Native/device/human proof; free-label identity and5000 metadata bound remain."
+      "phase44_verification": "Independent source/offline relevant history12 and related course8/binding12/material14; exact default SHA and deployed imports12. Silent real SDK52 with114 labelled synthetic QA: semantic route and actual explain prompt selected old mistake plus same-binding correction, model acknowledged both, QA unchanged. Reply also made unsupported exhaustive-history negative: semantic scope PARTIAL. No Native/device/human proof; free-label identity and5000 metadata bound remain.",
+      "phase45_prior_sha256": "d3b54be66ff5106ebf0dd5427de69151dc5f12924589a97c57623fee9119a79b",
+      "phase45_verification": "Independent source/offline concept label10, binding12/history13 and Main material14; default exact deployment/import23. Existing bindings/history precede unique eligible exact catalog aliases; unknown question scope not promoted, no old-ID merge. Silent real SDK53 actual prompt coverage plus two-sentence old-mistake/correction reply without exhaustive negative,114 synthetic QA unchanged. Cross-question grading alias identity is SOURCE/OFFLINE only; no Native/device/human proof or universal semantic guarantee."
     },
     {
       "path": "payload/study_companion/store_qa.py",
-      "sha256": "c9723f62a4d8e8ec326d3ba0dd610da4bddc64d6f62a3d6c9067f420fab298dc",
+      "sha256": "007bce671e4096414343c23a6d6449b03c2afdc505776fbe3b767ceea78d689d",
       "deployed_matches": true,
       "phase31_prior_sha256": "56af14506f84064a6d4f45ef2a5095de50fdc4541704e5bb65da8705ba86d56d",
       "phase31_verification": "Reviewed source/offline same-question identity12 and related grading guards; actual silent SDK45 two grades across host restart retained old5QA/mastery/formal/FSRS and one new question identity. No old-topic merge or cross-question/Native/device/human acceptance; direct-entry language still PARTIAL.",
       "phase44_prior_sha256": "554bd62f3304ee0833ce925b222c0118ae41895eb7ea57f52a795301fa65740f",
-      "phase44_verification": "Independent source/offline relevant history12 and related course8/binding12/material14; exact default SHA and deployed imports12. Silent real SDK52 with114 labelled synthetic QA: semantic route and actual explain prompt selected old mistake plus same-binding correction, model acknowledged both, QA unchanged. Reply also made unsupported exhaustive-history negative: semantic scope PARTIAL. No Native/device/human proof; free-label identity and5000 metadata bound remain."
+      "phase44_verification": "Independent source/offline relevant history12 and related course8/binding12/material14; exact default SHA and deployed imports12. Silent real SDK52 with114 labelled synthetic QA: semantic route and actual explain prompt selected old mistake plus same-binding correction, model acknowledged both, QA unchanged. Reply also made unsupported exhaustive-history negative: semantic scope PARTIAL. No Native/device/human proof; free-label identity and5000 metadata bound remain.",
+      "phase45_prior_sha256": "c9723f62a4d8e8ec326d3ba0dd610da4bddc64d6f62a3d6c9067f420fab298dc",
+      "phase45_verification": "Independent source/offline concept label10, binding12/history13 and Main material14; default exact deployment/import23. Existing bindings/history precede unique eligible exact catalog aliases; unknown question scope not promoted, no old-ID merge. Silent real SDK53 actual prompt coverage plus two-sentence old-mistake/correction reply without exhaustive negative,114 synthetic QA unchanged. Cross-question grading alias identity is SOURCE/OFFLINE only; no Native/device/human proof or universal semantic guarantee."
     },
     {
       "path": "payload/study_companion/store_schema.py",
@@ -156,10 +162,12 @@
     },
     {
       "path": "payload/study_companion/entry_tutor_answer_entries.py",
-      "sha256": "af7a95d3ed11295651bd42e0e63e7be613f2169f15675c5a4d0a891feede64ce",
+      "sha256": "ac10218159083c75dd9b7410fa5d35f14fdae163cc8330a4699aa173b927226e",
       "deployed_matches": true,
       "phase31_prior_sha256": "e7f55f4d67680ba289f0ff69a70f668f2ea743c3ba8b6898e9f2d546e2944573",
-      "phase31_verification": "Reviewed source/offline same-question identity12 and related grading guards; actual silent SDK45 two grades across host restart retained old5QA/mastery/formal/FSRS and one new question identity. No old-topic merge or cross-question/Native/device/human acceptance; direct-entry language still PARTIAL."
+      "phase31_verification": "Reviewed source/offline same-question identity12 and related grading guards; actual silent SDK45 two grades across host restart retained old5QA/mastery/formal/FSRS and one new question identity. No old-topic merge or cross-question/Native/device/human acceptance; direct-entry language still PARTIAL.",
+      "phase45_prior_sha256": "af7a95d3ed11295651bd42e0e63e7be613f2169f15675c5a4d0a891feede64ce",
+      "phase45_verification": "Independent source/offline concept label10, binding12/history13 and Main material14; default exact deployment/import23. Existing bindings/history precede unique eligible exact catalog aliases; unknown question scope not promoted, no old-ID merge. Silent real SDK53 actual prompt coverage plus two-sentence old-mistake/correction reply without exhaustive negative,114 synthetic QA unchanged. Cross-question grading alias identity is SOURCE/OFFLINE only; no Native/device/human proof or universal semantic guarantee."
     },
     {
       "path": "payload/study_companion/entry_communication_tutor_events.py",

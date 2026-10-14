@@ -66,6 +66,8 @@ class QuestionTopicBinding(unittest.IsolatedAsyncioTestCase):
 
     async def test_existing_held_topic_and_explicit_seed_remain_authoritative(self):
         h=await self.prepare();self.model(h)
+        # An explicit held ID is authoritative; the free display label alone is not.
+        h._state.current_question['selected_topic_id']='arrows'
         await h.study_answer_tool(answer='REZ');await self.retry(h);h._cfg.language='en-US'
         await h.study_answer_tool(answer='REZ')
         self.assertEqual({r['topic_id'] for r in self.store.list_qa_records()},{'course-A::arrows'})
