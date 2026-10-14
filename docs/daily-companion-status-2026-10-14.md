@@ -1,6 +1,6 @@
 # 日常学习伙伴当前状态（2026-10-15）
 
-当前：阶段25真实ASR正式评分及Native子链取得证据，原量具FAIL保留、修后只读19项复核通过；尚未发布本轮增量。最新已发布源码阶段24 d520252、记录408b5bb。Root master脏树及index保留，远端master未改；日常自动评分默认仍OFF，物理声音与真人待验。
+当前：阶段25真实ASR正式评分及Native子链取得证据，原量具FAIL保留、修后只读19项复核通过；本轮已发布 35abae0edd11e9e5569e3e220113969d8460cace。最新源码/证据均为阶段25；继承阶段24。Root master脏树及index保留，远端master未改；日常自动评分默认仍OFF，物理声音与真人待验。
 
 阶段19实际原Start-Daily-Tutor.cmd文字入口Ready/refresh、课程设置历史保留通过；首次820topic行变FAIL保留，seed相同内容不UPDATE补丁4test及修后原21interaction/820topic/all nonkv rowhash数量不变。原daily当时pending/QA为空，不冒充错题重启证明；C33独立真实模型pending返课重启继承。diag11/actual-method4的localQueueSocket proof不证明provider ACK/full intake。
 
@@ -45,3 +45,5 @@
 场36已terminal/exit1/cleanup_errors=[]，无Native连接/播放。真实quiz已成功保存pending题；observer错误要求rich study_quiz没有的ok字段而提前报FAIL，原raw保留SHA 8ce4ed6f033630c53c3521042c86b965f9e095c224974104554da89b8ad1f048。修为实际tool/非error/非degraded/题干双ID非空、补真实receipt第6前检，Main6PASS。只此新题DS+1至678，app63/tech0不变；旧QA2仍在。下一场37明确不prepare-grade-quiz，复用已保存qid/aid，启动前只读pin同36结果/未评分已核，不重出题、不重置历史，不重复未修服务场。当前无host listener，政策不变。
 
 阶段25实际集成：36为quiz receipt量具FAIL保留，37原FAIL/exit1仅QA question JSON形态比较假阴性，修13项Main/独立测试后只读复算19checks全True，原raw SHA不变。真实Native ASR→正式wrong0/同题同attempt/QA2→3、旧两QA完整hash保持，原生同时study_answer实际合并一grade；一次无PCM受控重连、新token11PCM/playback schedule/source_ended通过。Main对实际submitted图SHA同已有forward图并视觉核WEX→NUD，正式反馈/Native两句正确。无mic/capture/loopback/volumechange；physical/human待。总DS685/2000、app65/null、tech0/0同round，原Coreprovider恢复deepseek，学习偏好/语言不变；25285 terminal exit1/cleanup[]，48911/48916/9234无listener。AUTO_GRADE日常默认仍OFF。下一步复用本wrong题验证Native明确纠正新attempt/原错答保留，先扩适配correction量具再必要单场；旧short/legacy/replay/自然停顿/全A–F继续。证据phase25及grade-observer-review，Goal active，不整体complete。
+
+阶段25源码/证据已精确review/commit/push 35abae0edd11e9e5569e3e220113969d8460cace，13 allowlist文件，staged helper LF指纹通过；remote同SHA/candidate clean/master f1e8f3f未改，Root index未stage。发布后SourceGate再次通过，账本685/65/0，当前48911/48916/9234无listener，已无running exec需要轮询。现有Goal active。本轮是progress（真实自动正式grade+Native与记录发布）；下一轮仍先完整读contract/plan/status/blockers。C32当前真实wrong题及attempt仍在且evaluated=True已只读核，下一次不可再拿pending-answer脚本或重出题；先加correction模式和对应新attempt/旧wrong保留量具，再必要一次明确纠正固定WAV（无mic/capture/loopback），或转其余A–F。日常AUTO_GRADE默认OFF，不冒称全部交付。

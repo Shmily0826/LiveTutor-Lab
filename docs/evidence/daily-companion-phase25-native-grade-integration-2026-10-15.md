@@ -39,3 +39,5 @@ Main语义核查：本任务A课实际submitted_image解码SHA256 057d5bac5ae440
 ## 继续方向
 
 接下来优先同题Native明确纠正：复用此wrong题和原错答，不重新出题；核新attempt/正确成绩/旧wrong行不变，再看默认入口启用范围。当前validator仅普通pending回答，不直接拿它套correction假通过。legacy speech_active=None/PCM replay/歧义input pin仍failclosed；自然短答、连续追问/转课、语言术语/响应前段优化及其余A–F继续。SOURCE/OFFLINE、真实模型/SQLite、Native PCM和schedule分别有以上证据；物理可听、真人体验仍PENDING。Goal active，不局部complete。
+
+阶段25源码/证据已精确review/commit/push 35abae0edd11e9e5569e3e220113969d8460cace，13 allowlist文件，staged helper LF指纹通过；remote同SHA/candidate clean/master f1e8f3f未改，Root index未stage。发布后SourceGate再次通过，账本685/65/0，当前48911/48916/9234无listener，已无running exec需要轮询。现有Goal active。本轮是progress（真实自动正式grade+Native与记录发布）；下一轮仍先完整读contract/plan/status/blockers。C32当前真实wrong题及attempt仍在且evaluated=True已只读核，下一次不可再拿pending-answer脚本或重出题；先加correction模式和对应新attempt/旧wrong保留量具，再必要一次明确纠正固定WAV（无mic/capture/loopback），或转其余A–F。日常AUTO_GRADE默认OFF，不冒称全部交付。
