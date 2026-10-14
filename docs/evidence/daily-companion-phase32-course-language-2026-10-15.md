@@ -28,3 +28,6 @@ ledger原round DS723→724/2000，app70/null、tech0/0不变；不重置/换供�
 独立46终审：原SHA核符、8checks逐底层重算、English自然字段及wrong0入出边语义复核通过。精确计数formal7→8/all interactions12→13，原行与其他FSRS卡保持，目标卡正常更新；没有新provider重试/改raw或DB。详独占course-language-review。
 
 为压缩/自动续跑降低旧状态混淆，当前plan/status/blockers已精简为最新执行入口；各原bytes独占归档且独立哈希核验，contract169行原SHA不变。新档plan `1c63459f4b54f84929453c1fd13ae4b02448141bd254212a1f37478c39789e17`，status `d4ca2bb746ee92a7bafb334fc0880397de76c1b088a403438c46708eb69a2f71`，blockers `9ce00a88d1e7b687d2e76d5b922ced69934ba4096ed3c324648538570a98dce6`；原失败/预算/工作方向历史保留，新的当前表不把旧里程碑当全Goal完成。音频capture禁用明指音频输入，contract对指定学习窗口/受控页面截图授权保留，不捕获其他窗口。
+
+
+阶段32发布确认：14精确allowlist文件（2产品source/1manifest、3隔离测试脚本、3当前记录、2证据、3原bytes历史档）已review/commit/push `f42386db3b5d63e9e9784f7e71b22b49414aa9a5` 到codex/daily-learning-companion，remote同SHA/candidate clean/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。Root index空/脏树/.workbuddy/原历史保留，无DB/raw/录音/密钥提交，contract169行原SHA不变。源码/离线、默认部署、实际静音direct SDK46 English及旧7QA/正式成绩保持窄链已验，DS724/2000/app70/null/tech0/0原round。exec66133已terminal0/host主动终止1/无cleanup_error，无live场需轮询。本轮progress；Goal active/all A–F完整继续，下一先四文件再按plan Native grade/intent/acceptance日常整合，不为延长运行反复付费测同题。共享cfg其他并发/语音/设备/human不冒PASS。

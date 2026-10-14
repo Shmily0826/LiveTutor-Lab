@@ -31,3 +31,6 @@
 31代码92ec265a3773a4cabf5c7e5c88925e4fbf633302/记录c2157e1901c589b6785f33bf46f7d6e89c84633a已发布。32两default代码oldSHAguard/独占phase32-before backup、29 manifest/默认期望SHA及SourceGate通过；本轮精确codex分支发布SHA见末段。Root脏树/空index/.workbuddy/原历史保留，未合master/强推，无DB/raw/录音/密钥入Git。
 
 本次精简前全文按原bytes独占归档 [历史](evidence/daily-companion-status-history-through-phase31-and-phase32-start-2026-10-15.md)，SHA256 `d4ca2bb746ee92a7bafb334fc0880397de76c1b088a403438c46708eb69a2f71`；更早历史/失败/原报告沿归档链保留，contract原文未变。
+
+
+阶段32发布确认：14精确allowlist文件（2产品source/1manifest、3隔离测试脚本、3当前记录、2证据、3原bytes历史档）已review/commit/push `f42386db3b5d63e9e9784f7e71b22b49414aa9a5` 到codex/daily-learning-companion，remote同SHA/candidate clean/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。Root index空/脏树/.workbuddy/原历史保留，无DB/raw/录音/密钥提交，contract169行原SHA不变。源码/离线、默认部署、实际静音direct SDK46 English及旧7QA/正式成绩保持窄链已验，DS724/2000/app70/null/tech0/0原round。exec66133已terminal0/host主动终止1/无cleanup_error，无live场需轮询。本轮progress；Goal active/all A–F完整继续，下一先四文件再按plan Native grade/intent/acceptance日常整合，不为延长运行反复付费测同题。共享cfg其他并发/语音/设备/human不冒PASS。
