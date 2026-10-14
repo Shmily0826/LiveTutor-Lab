@@ -25,6 +25,7 @@ is never printed, and is refused if it ever appears in an output artefact.
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 import os
@@ -282,6 +283,27 @@ def prepare_product_plugin(store: Path, *, study_vision: bool = False) -> None:
     manifest = manifest.replace('os_signals_enabled = true', 'os_signals_enabled = false')
     manifest = manifest.replace('[study.supervision]\nenabled = true', '[study.supervision]\nenabled = false')
     (target / "plugin.toml").write_text(manifest, encoding="utf-8")
+
+
+def prepare_summary_prompt_audit(store: Path) -> dict:
+    """Instrument only an owned acceptance store; credentials never enter messages."""
+    if not store.name.startswith('neko-daily-speech-acceptance-'):
+        raise RuntimeError('summary prompt audit requires a task-owned acceptance store')
+    relative='study_model_gateway.py'
+    source=PRODUCT/'payload/study_companion'/relative
+    target=store/'plugin-code/study_companion'/relative
+    original=source.read_bytes()
+    if target.read_bytes()!=original:
+        raise RuntimeError('unknown gateway source; preserve it')
+    text=original.decode('utf-8')
+    anchor='        audit("started")\n'
+    if text.count(anchor)!=1:raise RuntimeError('summary audit anchor changed')
+    patched=text.replace(anchor,'        audit("started", **({"messages": messages} if operation == "summarize_session" else {}))\n',1)
+    ast.parse(patched)
+    target.write_text(patched,encoding='utf-8',newline='\n')
+    return {'canonical_sha256':hashlib.sha256(original).hexdigest(),
+            'instrumented_sha256':hashlib.sha256(target.read_bytes()).hexdigest(),
+            'scope':'task-only summary messages; no headers/runtime/credentials'}
 
 
 def ensure_react_chat_bundle() -> None:
@@ -565,9 +587,10 @@ class Sink(threading.Thread):
     """Allow-listed CONNECT/HTTP relay that records every denial."""
 
     def __init__(self, max_paid: int | None = None, extra: dict[str, int | None] | None = None,
-                 cap_file: Path | None = None, round_id: str | None = None) -> None:
+                 cap_file: Path | None = None, round_id: str | None = None, offline: bool = False) -> None:
         super().__init__(daemon=True)
         self.decisions: list[dict[str, object]] = []
+        self.offline = offline
         self._lock = threading.Lock()
         # Every paid request to the model host is one tunnel, from the character's
         # own chat as well as from Study. Counting here caps both at once; the
@@ -592,6 +615,8 @@ class Sink(threading.Thread):
         if cap_file is not None:
             self._load_ledger()
             if not self.resumed:
+                if self.offline:
+                    raise RuntimeError('offline relay requires an existing valid same-round ledger; it will not create or reset one')
                 self._persist()
         self._server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -718,6 +743,12 @@ class Sink(threading.Thread):
             first = head.split(b"\r\n")[0].decode("latin-1", "replace")
             parts = first.split()
             target = ""
+            if self.offline:
+                if len(parts)>1:
+                    target=(parts[1] if parts[0].upper()=='CONNECT' else re.sub(r'^https?://','',parts[1]).split('/')[0])
+                self._record(target.split(':')[0].lower() or 'unknown', 'offline_denied')
+                conn.sendall(b'HTTP/1.1 403 NEKO_EGRESS_OFFLINE\r\nContent-Length: 0\r\nConnection: close\r\n\r\n')
+                return
             if parts and parts[0].upper() == "CONNECT":
                 target = parts[1] if len(parts) > 1 else ""
                 host = target.split(":")[0].lower()
@@ -879,10 +910,16 @@ def main() -> int:
                              "development mute; external TTS stays refused")
     parser.add_argument("--output-only", action="store_true",
                         help="source host only: block all browser capture APIs; fixed input over WS, speaker output only")
+    parser.add_argument('--offline-egress', action='store_true',
+                        help='deny this relay external requests before spending; keep the existing shared ledger')
+    parser.add_argument('--summary-prompt-audit',action='store_true',
+                        help='task acceptance store only: record actual summary messages in private API audit')
     args = parser.parse_args()
 
     if args.output_only and not args.source:
         parser.error("--output-only requires the verified source host")
+    if args.summary_prompt_audit and not args.source:
+        parser.error('--summary-prompt-audit requires the verified source host')
     if not args.stop and args.output_only:
         require_task_speaker_output_allowed("output-only source host")
     elif not args.stop and args.voice:
@@ -925,6 +962,8 @@ def main() -> int:
     store = prepare_store(key, store, args.core_provider)
     if args.source:
         prepare_product_plugin(store, study_vision=args.study_vision)
+        if args.summary_prompt_audit:
+            print(json.dumps({'summary_prompt_audit':prepare_summary_prompt_audit(store)}))
         runtime_root = store / "N.E.K.O"
         print(prepare_tutor_conversation_defaults(runtime_root))
         print(json.dumps({"tutor_onboarding": prepare_tutor_onboarding(runtime_root)}, ensure_ascii=False))
@@ -946,7 +985,7 @@ def main() -> int:
             raise SystemExit(f"--allow-host wants HOST:LIMIT, got {entry!r}")
         extra_hosts[host.lower()] = None if limit == "unlimited" else int(limit)
     round_id = args.budget_round or datetime.now(timezone.utc).strftime("round-%Y-%m-%d")
-    sink = Sink(args.egress_budget, extra=extra_hosts, cap_file=cap_file, round_id=round_id)
+    sink = Sink(args.egress_budget, extra=extra_hosts, cap_file=cap_file, round_id=round_id, offline=args.offline_egress)
     sink.start()
     # Host and plugin share this process environment, so minting it once here is how
     # the plugin gets a first-party CSRF credential. A caller may pin its own value
