@@ -6,7 +6,7 @@
   "files": [
     {
       "path": "payload/study_companion/__init__.py",
-      "sha256": "a21504a43cfeb0900d9a6d0d2d0f5405e375cceb7dd6529b8584025d6d07c6fa",
+      "sha256": "a140babdd0879c4b89c29d7f7a675772fd3db98541f184e056eb38f685fbfb8b",
       "deployed_matches": true
     },
     {
@@ -355,5 +355,10 @@
     "scope": "private exact four-field grade pin; explicit correction_of opens a new attempt at same actual wrong/partial question; existing Store/state/progress preserved",
     "proof": "offline actual SDK callback pin4; retry10; avatar correction3; automatic Native ASR grading/voice relay pending",
     "report": "docs/evidence/daily-companion-answer-correction-attempt-2026-10-15.md"
+  },
+  "daily_graded_restart": {
+    "scope": "startup and idle keep newest persisted current-course question and grade, including evaluated correction; explicit fresh remains fresh",
+    "proof": "source/offline graded_restart3 Main/independent, course8, answer14; actual corrected host course-return/status/restart preserved original real-model two QA after documented task-only checkpoint recovery; Native auto grade/audio pending",
+    "report": "docs/evidence/daily-companion-phase23-graded-restart-2026-10-15.md"
   }
 }

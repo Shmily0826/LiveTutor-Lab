@@ -56,7 +56,7 @@ prompts = importlib.import_module("product_study.llm_prompts")
 # desktop host and its audio/config initialization.
 tree = ast.parse((SOURCE / "__init__.py").read_text(encoding="utf-8"))
 plugin_class = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "StudyCompanionPlugin")
-names = {"_start_study_session_locked", "_end_study_session_locked", "_restart_study_session", "_ensure_active_study_session"}
+names = {"_start_study_session", "_start_study_session_locked", "_end_study_session_locked", "_restart_study_session", "_ensure_active_study_session"}
 methods = ast.Module(body=[node for node in plugin_class.body if isinstance(node, ast.AsyncFunctionDef) and node.name in names], type_ignores=[])
 namespace = {"asyncio": asyncio, "uuid": uuid, "time": time,
              "load_material": importlib.import_module("product_study.study_materials").load_material}

@@ -22,7 +22,7 @@
 
 音频：必要speaker用户已设约4%，不调整音量。已结束真人场的mic授权不延续；禁止room/physical/virtual mic、捕获设备初始化、回环。固定WAV内存/WS允许；仅经核输出专用入口/8API捕获保护可发声，mixed启动仍拒绝。文字开发child NEKO_TASK_SILENT=1。
 
-沿用 bargein-autocheck-20261012，核账本DeepSeek675/2000、Lanlan.app63/null、Lanlan.tech0/0。不重置/换轮/切付费供应商，不为额度耗完测试；Main独占额度/online，限流停无效重试并退避。既有两个子Agent独立窄审，无新Agent，共享代码Main负责。
+沿用 bargein-autocheck-20261012，核账本DeepSeek677/2000、Lanlan.app63/null、Lanlan.tech0/0。不重置/换轮/切付费供应商，不为额度耗完测试；Main独占额度/online，限流停无效重试并退避。既有两个子Agent独立窄审，无新Agent，共享代码Main负责。
 
 允许审查后commit/push codex/功能分支，不merge/force/覆远端；保留Root脏树和.workbuddy，Root index不stage。排除密钥、用户DB/history/raw录音/policy。Sky Scout源码/索引/已有架构图只读；复用两对比图，不另建记忆系统、不删除重置原用户历史。
 
@@ -35,3 +35,5 @@
 阶段22接续的具体边界：Core已注册study_answer，Native明确答题仍可零tool自由回复；只改prompt/转换已存在study_explain不覆盖零调用。必须固定真实pending identity与本轮ASR owner，使用原正式entry、防重复/换题；处理自由回复抑制与正式工具结果发声，不能伪造普通打断onset、复活退休scope或直接发虚构function_call_output。已核实际_tools.py要求Free返回真实call_id匹配server function_call，不能把一个local fabricated ToolCall当合法provider调用。Core turn.handle_input_transcript有既有plugin bus/缓存/显示，没有评分fallback；bus事件本身也没有当前完整voice owner，不能只按有pending题就消费每句对不对。先确定实际协议和权威快照/输出路径，再定向离线Core+SQLite测；不在不明时绕权限开mic/循环CONNECT。其它材料可见/记忆源码/受控指示继续，局部阻塞不暂停全部Goal。
 
 阶段22已交付当前Study图片默认跟随/旧指示退役、私有四身份pin、同题wrong/partial更正新attempt保留原错答、Windows保护下日常provider设置恢复。Main/独立离线与真实SDK/SQLite通过；最终原daily入口Ready/refresh/current-image DOM与原27interaction/820topic/QA0/all学习行hash、原pending题和配置偏好均保留，exit0，预算不变。初次coreApi变化失败及恢复初版竞态P2证据保留，最终锁定版7测试及实际入口通过。source/offline不冒称Native自动评分已修；完整A–F继续。证据 docs/evidence/daily-companion-phase22-material-and-correction-2026-10-15.md。scene60427已terminal，48911/48916/9234/55804无listener。六空目录清理automatic approval blocked by policy，保留且不绕。原账本675/63/0不重置，speaker用户4%仅必要output-only可用，禁止mic/capture/loopback。下一步Native真实ASR→原题正式grade→受owner保护的结果输出，再连续集成、剩余A–F和集中human。
+
+阶段23真实HTTP/SDK/DeepSeek同题wrong→correct两QA、原wrong行保持且同topic_id；+2 DS至677，app63/tech0不变。原ACK量具FAIL及实际graded startup丢题FAIL保持；修startup/idle按最新同课state四字段续接，新3/Main独立、course8/answer14过。只任务C32四字段按真实提交后冻结原件恢复，历史/QA原行不动，非原用户数据恢复；修后完整宿主返课/重启状态与两QA通过，不重复模型评分。scene9824已terminal，两owned host强制exit1/cleanup_errors[]，48911/48916无listener。原daily仅新init bytes受旧SHA防护部署，未再启动或改历史。证据 docs/evidence/daily-companion-phase23-graded-restart-2026-10-15.md。最新已发布代码阶段22 7ffb334be6bba957ab316e677a765dd1fcfc229b，阶段23审查完成待本次精确发布。下一阶段Native accepted ASR后台正式grade、原题/owner pin、自由输出hold与逐send保护，缺terminal不猜音频归属；详见native-grade-fallback-design。完整A–F持续，不局部标整个完成。

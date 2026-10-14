@@ -374,10 +374,11 @@ class StudyCompanionPlugin(
                     }
                 )
             self._study_session_id = ""
-            # A process restart is not the learner abandoning an unanswered quiz.
+            # A process restart preserves the latest held question and grade,
+            # including corrections committed after an older course checkpoint.
             self._state.current_question.pop("attempt_evaluation_pending", None)
             self._state.current_question.pop("attempt_evaluation_owner", None)
-            await self._start_study_session(self._state.active_mode, resume_pending_question=True)
+            await self._start_study_session(self._state.active_mode, resume_current_progress=True)
             self._start_study_idle_task()
             self._ocr_pipeline = StudyOcrPipeline(logger=self.logger, config=self._cfg)
             # Build the OCR runtime here, once, while nothing is asking the plugin for anything,
@@ -795,11 +796,12 @@ class StudyCompanionPlugin(
             if self._review_due_payload_future is future:
                 self._review_due_payload_future = None
 
-    async def _start_study_session(self, mode: str | None = None, *, resume_pending_question: bool = False) -> str:
+    async def _start_study_session(self, mode: str | None = None, *, resume_pending_question: bool = False, resume_current_progress: bool = False) -> str:
         async with self._study_session_lock:
-            return await self._start_study_session_locked(mode, resume_pending_question=resume_pending_question)
+            return await self._start_study_session_locked(mode, resume_pending_question=resume_pending_question,
+                                                         resume_current_progress=resume_current_progress)
 
-    async def _start_study_session_locked(self, mode: str | None = None, course_id: str = "", *, resume_pending_question: bool = False, resume_course_progress: bool = False) -> str:
+    async def _start_study_session_locked(self, mode: str | None = None, course_id: str = "", *, resume_pending_question: bool = False, resume_course_progress: bool = False, resume_current_progress: bool = False) -> str:
         session_id = f"study-{uuid.uuid4().hex}"
         selected_mode = str(mode or self._state.active_mode or self._cfg.mode)
         selected_course = str(course_id or self._state.study_course_id or "general").strip()
@@ -812,6 +814,13 @@ class StudyCompanionPlugin(
                     if resume_course_progress else {})
         async with self._lock:
             before_material = material_context(self)
+            if resume_current_progress and self._state.study_course_id == selected_course:
+                # Persisted live state is newer than a retry/course checkpoint.
+                # Empty live state is authoritative too: do not revive a quiz
+                # the learner explicitly retired with a fresh session.
+                progress = {name: getattr(self._state, name) for name in (
+                    "current_question", "last_answer_evaluation",
+                    "last_question_at", "last_answer_evaluated_at")}
             pending_question = dict(self._state.current_question)
             if not (resume_pending_question and self._state.study_course_id == selected_course
                     and pending_question.get("question_id") and pending_question.get("attempt_id")
@@ -898,7 +907,7 @@ class StudyCompanionPlugin(
             ):
                 await self._end_study_session_locked()
             if not self._study_session_id:
-                return await self._start_study_session_locked(resume_pending_question=True)
+                return await self._start_study_session_locked(resume_current_progress=True)
             self._study_session_last_activity = now
             return self._study_session_id
 
