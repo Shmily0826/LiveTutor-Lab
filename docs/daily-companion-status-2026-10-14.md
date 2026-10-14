@@ -14,6 +14,9 @@
 
 ## 最新实际进展
 
+- 37完整观测修复已发布62dfc8a：Main58离线通过，独立发现并关闭末段observer异常可吞P2；真实环形窗口累计、丢序拒绝、正常结束与后来cleanup分开。量具通过不追认49整体PASS。
+- 38无正文反馈诊断已发布60f4c1fb8c7c3fb5b0a868538b9faff0f50a5d83并部署：Main50离线/独立7通过，8目标各自oldSHA核对备份、canonical/AST/幂等、manifest与SourceGate通过。全链长度/hash用于下一必要场定位；本阶段无在线/设备，根因仍UNKNOWN。
+
 - 33源码/离线并部署：healthy empty与读失败分开，旧sealed ASR+真实boundary+下一新positive及不同sealed batch才重获pending；撤回/非最终/不提交拒绝，provider无claim不能误grade。Main/独立route36、intent19PASS+1权限skip。发布ae248a14c23048150294c710fec147f0069c6416。
 - 34量具：3WAV连续模式复用原单grade严格receipt，各轮ASR/正PCM/turnend/sourceended和完整delivery；Main/独立preflight9/acceptance25。真实47整体FAIL：首轮实际quiz，第二完整自然ASR但0QA/markers，3轮NativePCM0；ttsTrue前置拒pin/claim，另实际clear会poison健康空槽。原raw SHA4e83c318b0f06cff06abca24b59266db5cf23259205cc2db06ec9e82660d4824。发布56b64a9ea5774b52f32799aeb8b36e8dc6c0644b。
 - 35修fresh voice：启动前官方默认卡exclusive生成→yui native→模型asset/guidance；既有用户guidance保留，malformed拒改。clear仅严格已退休healthyempty且AUTO1保留原槽，其他继续poison/保护pendingPCM。Main/独立fresh3/route38；两host_audio oldSHA备份/canonical幂等/manifest/SourceGate PASS，_audio SHAcee4583d4d2513ae07d65a3ea1758cd823c1b5cd53a8bd1f154e2429683872d1。发布b16c6caa08c5d2c1714a0bf5a9cc75613fb91714。
@@ -22,9 +25,9 @@
 
 ## 现在与发布
 
-阶段36prompt源码475d60ff...dee280，fresh3/独立窄审通过；exec30272场49已terminal，唯一formal correct100/同conn成立，但Native完整性PARTIAL；ledger785/74/0，无live进程。所有余项见plan/blockers。
+当前阶段38诊断已部署，源码与SourceGate通过；exec30272场49原唯一formal correct100/同conn成立，但Native完整性仍PARTIAL。下一阶段39采一次有改进观测的必要固定WAV场，诊断22→7文本变短的具体边界。ledger785/74/0，无live进程或48911/48916/9234 listener。所有A–F余项见plan/blockers。
 
-publisher C:/Users/Shmily/.codex/worktrees/daily-companion/LiveTutor-Lab，branch codex/daily-learning-companion，最新已push 2fef51a；remote master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb，Root空index/原脏树/.workbuddy/用户历史保留。phase36源码/48–49元数据和本次原bytes归档已随2fef51a发布。完整contract原SHA不变。
+publisher C:/Users/Shmily/.codex/worktrees/daily-companion/LiveTutor-Lab，branch codex/daily-learning-companion，阶段38源码已push 60f4c1fb8c7c3fb5b0a868538b9faff0f50a5d83并核remote同SHA/publisher clean；remote master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb，Root空index/原脏树/.workbuddy/用户历史保留。仅审查allowlist发布，无raw/DB/录音/密钥/备份入Git。完整contract原SHA不变。
 
 本次精简前全文按原bytes独占归档[历史](evidence/daily-companion-status-history-through-phase35-and-phase36-start-2026-10-15.md)，SHA256 ef813e866736f76846572be113228d95e3192ec1dd78f34c635484c94ce280bd；通过原归档链保留全部更早报告/权限/失败，contract未变。
 
@@ -74,3 +77,6 @@ Native terminal判据保留旧final sourceended；只有新增完整seq/counters
 阶段38完成SOURCE/OFFLINE+精确部署：Main7诊断+38grade route+5spoken共50PASS，独立7PASS/无新增具体P1/P2。已有RealtimeWireTrace扩展无正文length/UTF8hash，provider每delta节流前/完整done、formal grade reply、actual serialized relay成功write（bare/envelope分开，非ACK）、5Omni callback、Core entry/queue/WS；Core identity首await前冻结；64有身份流累计，缺失/容量不造prefix。logger异常不会改变路由，缺关键记录仍UNKNOWN。
 8个两host各自oldSHA核对/exclusive备份→canonical patch/AST/幂等；candidate与Source旧Core turn差异保留。manifest同步4Source+原grade helper+新trace patch helper；SourceGate源码及实际cwd helper导入PASS，草稿hash不符阻塞已关闭。完整证据evidence/daily-companion-phase38-feedback-trace-2026-10-15.md、feedback-trace-review。无host/Native/API/设备调用，原账本DS785/2000、app74/null、tech0/0；原49/raw/PARTIAL不改，短反馈根因仍UNKNOWN。
 下一39：仅一场必要的改进观测固定WAV连续场，用新增真实边界区分模型原始短句与转发丢失，沿原对比材料/47WAV、不预造题，先SourceGate/ledger/自有空端口核对，output-only+8API保护、不mic/capture/loopback，speaker仅用户设4%不调整。失败具体记录并转其他A–F，不无效重连。Goal active/完整contract不变；核心成熟再集中human，不要求逐句配合。
+
+
+阶段38发布/安全节点核验：10精确allowlist commit/push 60f4c1fb8c7c3fb5b0a868538b9faff0f50a5d83，remote同SHA/publisher clean/master未变，Root index空；SourceGate PASS。无raw/DB/录音/备份/密钥发布；contract原169行SHA不变。未新增在线/设备，ledger785/74/0；48911/48916/9234无listener。Goal当前接口再核active，未暂停/重建/标完成。下一39必要诊断场后按结果继续，局部问题不结束全A–F。

@@ -74,3 +74,6 @@ Native terminal判据保留旧final sourceended；只有新增完整seq/counters
 阶段38完成SOURCE/OFFLINE+精确部署：Main7诊断+38grade route+5spoken共50PASS，独立7PASS/无新增具体P1/P2。已有RealtimeWireTrace扩展无正文length/UTF8hash，provider每delta节流前/完整done、formal grade reply、actual serialized relay成功write（bare/envelope分开，非ACK）、5Omni callback、Core entry/queue/WS；Core identity首await前冻结；64有身份流累计，缺失/容量不造prefix。logger异常不会改变路由，缺关键记录仍UNKNOWN。
 8个两host各自oldSHA核对/exclusive备份→canonical patch/AST/幂等；candidate与Source旧Core turn差异保留。manifest同步4Source+原grade helper+新trace patch helper；SourceGate源码及实际cwd helper导入PASS，草稿hash不符阻塞已关闭。完整证据evidence/daily-companion-phase38-feedback-trace-2026-10-15.md、feedback-trace-review。无host/Native/API/设备调用，原账本DS785/2000、app74/null、tech0/0；原49/raw/PARTIAL不改，短反馈根因仍UNKNOWN。
 下一39：仅一场必要的改进观测固定WAV连续场，用新增真实边界区分模型原始短句与转发丢失，沿原对比材料/47WAV、不预造题，先SourceGate/ledger/自有空端口核对，output-only+8API保护、不mic/capture/loopback，speaker仅用户设4%不调整。失败具体记录并转其他A–F，不无效重连。Goal active/完整contract不变；核心成熟再集中human，不要求逐句配合。
+
+
+阶段38发布/安全节点核验：10精确allowlist commit/push 60f4c1fb8c7c3fb5b0a868538b9faff0f50a5d83，remote同SHA/publisher clean/master未变，Root index空；SourceGate PASS。无raw/DB/录音/备份/密钥发布；contract原169行SHA不变。未新增在线/设备，ledger785/74/0；48911/48916/9234无listener。Goal当前接口再核active，未暂停/重建/标完成。下一39必要诊断场后按结果继续，局部问题不结束全A–F。
