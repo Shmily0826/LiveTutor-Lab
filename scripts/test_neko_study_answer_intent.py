@@ -12,6 +12,27 @@ from neko_study_answer_intent import answer_intent, read_question_pin, grade_req
 
 
 class AnswerIntentTests(unittest.TestCase):
+    def test_pending_own_declarations_need_literal_trusted_permission(self):
+        for text in ('我的答案是 WEX 指向 NUD。','我的回答为 return "one"。','我选 B。','当前题，我选二。',
+                     'My answer is B.','My response to the current question is REZ.','I choose B.'):
+            with self.subTest(text=text):
+                self.assertIsNone(answer_intent(text))
+                self.assertIsNone(answer_intent(text,allow_declared_answer=1))
+                self.assertEqual(answer_intent(text,allow_declared_answer=True),'answer')
+        for text in ('B','REZ','我认为是B','I think B','我的答案是什么？','My answer is what should I do',
+                     '我选择用英文解释。','I choose to change course.'):
+            self.assertIsNone(answer_intent(text,allow_declared_answer=True))
+
+    def test_withdrawal_uncertainty_and_no_submit_win_over_explicit_grading(self):
+        for text in ('当前题，我的答案是B。撤回刚才的答案。','当前题，我的答案是B，请评分，我还没确定。',
+                     '当前题，我选B，请评分，不要提交。','我的答案是B，先别记录。','我的答案是B。我再想想。',
+                     'My answer to the current question is B. Please grade it. Do not submit it.',
+                     'My answer is B. I withdraw my answer.',"My answer is B. I'm not sure.",
+                     'I choose B. I have not decided.'):
+            with self.subTest(text=text):
+                self.assertIsNone(answer_intent(text))
+                self.assertIsNone(answer_intent(text,allow_declared_answer=True))
+
     def test_real_short_declaration_needs_explicit_pending_caller_permission(self):
         for text in ('当 前 题 , 我 的 答 案 是 WEX 指 向 NUD 。',
                      '当前这道题，我的回答为 return "one"。'):
@@ -23,6 +44,18 @@ class AnswerIntentTests(unittest.TestCase):
                      '当前题，我觉得WEX。', '上一题，我的答案是WEX。',
                      '解释当前题，我的答案是WEX。', '当前题，我的答案是WEX，请再出一题。'):
             with self.subTest(text=text):
+                self.assertIsNone(answer_intent(text, allow_declared_answer=True))
+
+    def test_explicit_non_submission_and_non_final_declarations_are_refused(self):
+        for text in ('我的答案是B，但这不是我的最终答案。',
+                     '我的答案是B，只是举个例子，不要当成作答。',
+                     '我选B，这只是示例，不是我的答案。',
+                     '我的答案是B，但尚未提交。',
+                     'My answer is B, but this is not my final answer.',
+                     'I choose B as an example, not my answer.',
+                     'My answer is B; I have not submitted it yet.'):
+            with self.subTest(text=text):
+                self.assertIsNone(answer_intent(text))
                 self.assertIsNone(answer_intent(text, allow_declared_answer=True))
 
     def test_tail_policy_is_exact_request_only_without_authority_or_text_merging(self):
@@ -162,6 +195,18 @@ class QuestionPinTests(unittest.TestCase):
         self.assertIs(pin['attempt_evaluated'], True)
         self.assertEqual(pin['course_id'], 'course-B')
         self.assertEqual(pin['question_id'], 'q-B')
+
+    def test_only_explicit_healthy_empty_object_can_report_no_question(self):
+        self.state['current_question']={};self.save(self.state);before=self.db.read_bytes()
+        self.assertIsNone(read_question_pin(self.root))
+        self.assertEqual(read_question_pin(self.root,include_empty=True),
+                         {'_question_empty':True,'course_id':'course-A','session_id':'session-A'})
+        self.assertEqual(before,self.db.read_bytes())
+        for value in (None,'{}',[],{'question':'legacy no identities'},{'attempt_evaluated':False}):
+            self.state['current_question']=value;self.save(self.state)
+            self.assertIsNone(read_question_pin(self.root,include_empty=True))
+        self.state.pop('current_question');self.save(self.state)
+        self.assertIsNone(read_question_pin(self.root,include_empty=True))
 
     def test_invalid_state_or_id_or_boolean_refused(self):
         invalid = ['broken', '[]', '{}']

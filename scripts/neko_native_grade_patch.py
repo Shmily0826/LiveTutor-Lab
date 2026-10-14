@@ -548,13 +548,94 @@ TAIL_UPGRADES = {
 }
 
 
+EMPTY_QUESTION_HELPER = '''    def _rearm_empty_study_question_pin(self, saved):
+        # Called only by a new positive, non-replayed frame, before admission.
+        # A failed read, replay, overlap or scope poison never reaches this path.
+        if (not saved.get("empty_question") or saved.get("invalid")
+                or saved.get("scoped") is not True
+                or saved.get("connection") != self._connection_generation
+                or saved.get("provider") is not self.ws
+                or saved.get("token") != getattr(self, "_native_output_connection_token", None)
+                or saved.get("scope") != getattr(self, "_tool_scope_generation", 0)):
+            return False
+        reader = getattr(self, "get_study_input_authority", None)
+        authority = reader() if callable(reader) else None
+        if authority is None or authority != saved.get("authority"):
+            return False
+        sealed = saved.get("empty_phrase")
+        current = self._current_study_grade_phrase()
+        return bool(isinstance(sealed, tuple) and len(sealed) == 3 and current is not None
+            and sealed[0] is current[0] and sealed[1] is current[1] and sealed[2] == current[2]
+            and current[0].waiting is None)
+
+'''
+
+DAILY_UPGRADES = {
+ 'main_logic/omni_realtime_client/_transport.py': (
+    ('    def _capture_study_grade_pin(self, speech, arrival, *, replay=False):',
+     EMPTY_QUESTION_HELPER+'    def _capture_study_grade_pin(self, speech, arrival, *, replay=False):'),
+    ('        saved = getattr(self, "_study_grade_pin", None)\n        if saved is not None:',
+     '        saved = getattr(self, "_study_grade_pin", None)\n'
+     '        previous_empty_phrase = None\n'
+     '        if saved is not None and self._rearm_empty_study_question_pin(saved):\n'
+     '            previous_empty_phrase = saved["empty_phrase"]\n'
+     '            self._study_grade_pin = saved = None\n'
+     '        if saved is not None:'),
+    ('        pin = reader()\n        self._study_grade_pin = {"connection": self._connection_generation,\n'
+     '            "question": pin, "last_speech": arrival, "invalid": pin is None or authority is None,',
+     '        pin = reader()\n'
+     '        empty = bool(isinstance(pin, dict) and pin.get("_question_empty") is True\n'
+     '            and set(pin) == {"_question_empty", "course_id", "session_id"}\n'
+     '            and all(isinstance(pin[key], str) and pin[key].strip() for key in ("course_id", "session_id")))\n'
+     '        self._study_grade_pin = {"connection": self._connection_generation,\n'
+     '            "question": None if empty else pin, "empty_question": empty,\n'
+     '            "previous_empty_phrase": previous_empty_phrase,\n'
+     '            "last_speech": arrival, "invalid": pin is None or authority is None,'),
+    ('        if saved is not None and not saved.get("invalid"):\n',
+     '        if saved is not None and saved.get("previous_empty_phrase") is not None:\n'
+     '            previous = saved["previous_empty_phrase"]\n'
+     '            current = self._current_study_grade_phrase(require_waiting=True)\n'
+     '            if (current is None or current[0] is not previous[0]\n'
+     '                    or current[1] is previous[1] or current[2] != previous[2]\n'
+     '                    or current[1]["input_sequence"] <= previous[1]["input_sequence"]):\n'
+     '                saved["invalid"] = True # Old/early ASR cannot adopt the new question.\n'
+     '        if saved is not None and not saved.get("invalid") and not saved.get("empty_question"):\n'),
+    ('        if (not saved or saved.get("invalid") or saved["connection"] != generation\n',
+     '        if binding_current and not saved.get("invalid") and saved.get("empty_question"):\n'
+     '            saved["empty_phrase"] = self._current_study_grade_phrase(require_waiting=True)\n'
+     '        if (not saved or saved.get("invalid") or saved["connection"] != generation\n'),
+ ),
+ 'main_logic/core/tool_calling.py': (
+    ('        return read_question_pin(runtime) if runtime else None',
+     '        return read_question_pin(runtime, include_empty=True) if runtime else None'),
+    ('            return ToolResult(call_id=call.call_id, name=call.name, output=claim["result"])\n'
+     '        material_owner = self._capture_study_material_tool_owner(call, invoking_session)',
+     '            return ToolResult(call_id=call.call_id, name=call.name, output=claim["result"])\n'
+     '        if (os.environ.get("NEKO_STUDY_AUTO_GRADE") == "1" and call.name == "study_answer"\n'
+     '                and invoking_session is self.session and getattr(invoking_session, "_is_free_proxy", False)\n'
+     '                and (study_input_owner is None or not claim or claim["client"] is not invoking_session\n'
+     '                     or claim["owner"] != study_input_owner or not self._study_grade_claim_current(claim))):\n'
+     '            return ToolResult(call_id=call.call_id, name=call.name,\n'
+     '                output={"ok":False,"error":"explicit_study_answer_required"}, is_error=True)\n'
+     '        material_owner = self._capture_study_material_tool_owner(call, invoking_session)'),
+ ),
+}
+
+
 def upgrade_targets(targets):
     targets, replay = _upgrade_targets(targets, UPGRADES, [])
     targets, trace_replay = _upgrade_targets(targets, TRACE_UPGRADES, [])
     targets, tail_replay = _upgrade_targets(targets, TAIL_UPGRADES, [])
+    targets, daily_replay = _upgrade_targets(targets, DAILY_UPGRADES, [])
     final=[]
+    for relative, old, new in tail_replay:
+        for before, after in DAILY_UPGRADES.get(relative, ()):
+            new=new.replace(before, after)
+        final.append((relative,old,new))
     for relative, old, new in trace_replay:
         for before, after in TAIL_UPGRADES.get(relative, ()):
+            new=new.replace(before, after)
+        for before, after in DAILY_UPGRADES.get(relative, ()):
             new=new.replace(before, after)
         final.append((relative,old,new))
     for relative, old, new in replay:
@@ -562,5 +643,7 @@ def upgrade_targets(targets):
             new=new.replace(before, after)
         for before, after in TAIL_UPGRADES.get(relative, ()):
             new=new.replace(before, after)
+        for before, after in DAILY_UPGRADES.get(relative, ()):
+            new=new.replace(before, after)
         final.append((relative,old,new))
-    return targets, tail_replay+tuple(final)
+    return targets, daily_replay+tuple(final)

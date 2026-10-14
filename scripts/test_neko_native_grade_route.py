@@ -65,7 +65,7 @@ tool_names={'_capture_tool_task_owner','_tool_task_owner_is_current','_tool_task
     '_tool_batch_entries_by_task','_tool_batch_by_collector_task','_advance_tool_scope','note_user_turn_started','_drop_line'}
 transport_tree=replay('main_logic/omni_realtime_client/_transport.py')
 client_nodes=methods(tools_tree,tool_names)+methods(transport_tree,
-    {'_capture_study_grade_pin','_take_study_grade_asr','_advance_study_grade_ingress_scope',
+    {'_capture_study_grade_pin','_take_study_grade_asr','_advance_study_grade_ingress_scope','_rearm_empty_study_question_pin',
      '_current_study_grade_phrase','_consume_study_grade_tail','_raw_transcript_was_already_scoped',
      '_note_voice_handoff_input_open'})
 ClientBase=compile_class('ClientMethods',client_nodes,tools_ns)
@@ -274,6 +274,126 @@ class NativeGradeRoute(unittest.IsolatedAsyncioTestCase):
     async def settle(self):
         await asyncio.gather(*tuple(getattr(self.client,'_tool_tasks',())),return_exceptions=True)
         await asyncio.gather(*tuple(self.core._bg_tasks),return_exceptions=True)
+
+    async def empty_question_phrase(self):
+        from copy import deepcopy
+        from neko_phrase_input_transport import NativePhraseUplink
+        question=deepcopy(self.h._state.current_question)
+        self.h._state.current_question={};await self.h._persist_state()
+        self.client.get_native_phrase_input_authority=lambda:('fixture-input',
+            (self.core.activation,self.core.websocket),self.client._connection_generation)
+        driver=NativePhraseUplink(self.client);driver.snapshot=driver.read_snapshot()
+        driver.waiting=(time.monotonic(),self.client._voice_handoff_input_sequence)
+        self.client._native_phrase_uplink=driver
+        self.client._native_phrase_last_delivery={'connection_generation':1,'input_sequence':10,
+            'output_samples':1000,'written_samples':1000,'completed_wall':time.time(),
+            'result':'written_waiting_provider_boundary'}
+        self.client._capture_study_grade_pin(True,10)
+        self.assertTrue(self.client._study_grade_pin['empty_question'])
+        self.assertFalse(self.client.receive_scope_prefix({'transcript':'给我出一道题。'}))
+        receipt=self.client._take_study_grade_asr(self.client.ws,1)
+        self.assertIsNone(receipt['pin']);self.assertIsNotNone(self.client._study_grade_pin['empty_phrase'])
+        self.assertFalse(self.core._start_study_grade_claim('给我出一道题。',self.client,receipt,self.core.activation))
+        self.h._state.current_question=question;await self.h._persist_state()
+        return driver,self.client._study_grade_pin
+
+    async def test_no_question_request_then_new_answer_uses_same_connection_and_new_owned_pin(self):
+        driver,empty=await self.empty_question_phrase()
+        # A completed provider boundary is not itself a new user input.
+        driver.note_boundary(10)
+        self.assertIs(self.client._study_grade_pin,empty)
+        self.client._capture_study_grade_pin(True,13)
+        self.assertFalse(self.client._study_grade_pin['invalid'])
+        self.assertEqual(self.client._study_grade_pin['question']['question_id'],'question-owned')
+        self.assertEqual(self.client._connection_generation,1)
+        self.client._note_voice_handoff_input_open()
+        driver.waiting=(time.monotonic(),self.client._voice_handoff_input_sequence)
+        self.client._native_phrase_last_delivery={**self.client._native_phrase_last_delivery,'input_sequence':11}
+        self.assertFalse(self.client.receive_scope_prefix({'transcript':'我的答案是 REZ。'}))
+        receipt=self.client._take_study_grade_asr(self.client.ws,1)
+        self.assertTrue(self.core._start_study_grade_claim('我的答案是 REZ。',self.client,receipt,self.core.activation))
+        await self.settle()
+        rows=self.store.list_qa_records();self.assertEqual(len(rows),1);self.assertEqual(rows[0]['user_answer'],'我的答案是 REZ。')
+        self.assertEqual(self.h._agent.answer_evaluate.await_count,1)
+
+    async def test_empty_slot_requires_sealed_asr_boundary_identity_and_current_authority(self):
+        driver,empty=await self.empty_question_phrase()
+        reader=Mock(wraps=self.client.get_study_question_pin);self.client.get_study_question_pin=reader
+        # While the provider is still responding, another positive frame cannot
+        # obtain the newly generated question from the old utterance.
+        self.client._capture_study_grade_pin(True,10.1);reader.assert_not_called()
+        driver.note_boundary(10)
+        for field,value in (('empty_phrase',None),('invalid',True),('scoped',False),('authority',('foreign',)),
+                            ('provider',object()),('scope',-1),('token','foreign')):
+            original=empty.get(field);empty[field]=value
+            self.client._capture_study_grade_pin(True,10.2);reader.assert_not_called()
+            empty[field]=original
+        old_epoch=driver.epoch;driver.epoch+=1
+        self.client._capture_study_grade_pin(True,10.3);reader.assert_not_called();driver.epoch=old_epoch
+        original=self.client._native_phrase_last_delivery
+        self.client._native_phrase_last_delivery=dict(original)
+        self.client._capture_study_grade_pin(True,10.4);reader.assert_not_called()
+        self.client._native_phrase_last_delivery=original
+        self.assertIs(self.client._study_grade_pin,empty)
+
+    async def test_new_positive_frame_alone_does_not_bind_old_or_early_asr_to_new_question(self):
+        driver,empty=await self.empty_question_phrase();driver.note_boundary(10)
+        self.client._capture_study_grade_pin(True,13)
+        fresh=self.client._study_grade_pin;self.assertEqual(fresh['question']['question_id'],'question-owned')
+        # No different locally sealed batch was actually submitted yet.
+        receipt=self.client._take_study_grade_asr(self.client.ws,1)
+        self.assertIsNone(receipt['pin']);self.assertTrue(fresh['invalid'])
+        self.client._note_voice_handoff_input_open()
+        driver.waiting=(time.monotonic(),self.client._voice_handoff_input_sequence)
+        self.client._native_phrase_last_delivery={**self.client._native_phrase_last_delivery,'input_sequence':11}
+        self.client._capture_study_grade_pin(True,13.1)
+        self.assertIs(self.client._study_grade_pin,fresh);self.assertTrue(fresh['invalid'])
+
+    async def test_replay_poison_never_rearms_as_empty(self):
+        driver,empty=await self.empty_question_phrase();driver.note_boundary(10)
+        self.client._capture_study_grade_pin(True,10.1,replay=True)
+        poisoned=self.client._study_grade_pin
+        self.client._capture_study_grade_pin(True,10.2)
+        self.assertIs(self.client._study_grade_pin,poisoned);self.assertTrue(poisoned['invalid'])
+        self.assertNotIn('empty_question',poisoned)
+        self.h._agent.answer_evaluate.assert_not_awaited()
+
+    async def test_failed_question_read_none_cannot_be_treated_as_healthy_empty(self):
+        self.h._state.current_question={'question':'unidentified legacy question'};await self.h._persist_state()
+        self.client._capture_study_grade_pin(True,10);poisoned=self.client._study_grade_pin
+        self.assertTrue(poisoned['invalid']);self.assertFalse(poisoned['empty_question'])
+        await grade.AnswerMaterial.prepare(self)
+        reader=Mock(wraps=self.client.get_study_question_pin);self.client.get_study_question_pin=reader
+        self.client._capture_study_grade_pin(True,11);reader.assert_not_called()
+        self.assertIs(self.client._study_grade_pin,poisoned);self.assertTrue(poisoned['invalid'])
+
+    async def test_empty_slot_with_scope_or_overlap_ambiguity_stays_poisoned(self):
+        driver,empty=await self.empty_question_phrase()
+        self.client._advance_study_grade_ingress_scope()
+        self.assertTrue(empty['invalid']);driver.note_boundary(10)
+        self.client._capture_study_grade_pin(True,13)
+        self.assertIs(self.client._study_grade_pin,empty);self.assertTrue(empty['invalid'])
+
+    async def test_empty_slot_overlap_before_boundary_stays_poisoned(self):
+        driver,empty=await self.empty_question_phrase()
+        self.client._capture_study_grade_pin(True,13)
+        self.assertTrue(empty['invalid']);driver.note_boundary(10)
+        self.client._capture_study_grade_pin(True,14)
+        self.assertIs(self.client._study_grade_pin,empty);self.assertTrue(empty['invalid'])
+
+    async def test_unclaimed_provider_grade_cannot_turn_questions_or_withdrawal_into_a_grade(self):
+        for text in ('为什么这个答案错了？','当前题我的答案是B，请评分。不要提交。','My answer is REZ.'):
+            result=await self.core._on_tool_call(ToolCall(name='study_answer',arguments={'answer':text}),
+                                               invoking_session=self.client)
+            self.assertTrue(result.is_error);self.assertEqual(result.output['error'],'explicit_study_answer_required')
+        owner=self.client._capture_tool_task_owner(self.client.ws)
+        result=await self.core._on_tool_call(ToolCall(name='study_answer',arguments={'answer':'REZ'}),
+                                           invoking_session=self.client,study_input_owner=owner)
+        self.assertTrue(result.is_error)
+        self.h._agent.answer_evaluate.assert_not_awaited();self.assertEqual(self.store.list_qa_records(),[])
+        # The learner's explicit UI/SDK grading action remains available.
+        result=await self.h.study_answer_tool(answer='REZ')
+        self.assertEqual(result['verdict'],'wrong');self.assertEqual(len(self.store.list_qa_records()),1)
     async def test_zero_provider_call_runs_one_actual_sdk_grade_and_owned_plain_relay(self):
         receipt=self.capture()
         normal=self.client._capture_tool_task_owner(self.client.ws)
