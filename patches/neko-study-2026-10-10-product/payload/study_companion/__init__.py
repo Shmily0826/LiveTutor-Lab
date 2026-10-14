@@ -305,6 +305,7 @@ class StudyCompanionPlugin(
             )
             await asyncio.to_thread(self._store.open)
             self._cfg = await asyncio.to_thread(self._store.load_config, self._cfg)
+            self._study_config_default_language = str(self._cfg.language or "")
             self._knowledge_tracker = KnowledgeTracker(
                 self._store,
                 retention_target=self._cfg.fsrs_retention_target,
@@ -842,6 +843,7 @@ class StudyCompanionPlugin(
             self._study_session_last_activity = time.time()
             self._state.study_session_id = session_id
             self._state.study_course_id = selected_course
+            self._study_effective_language()
             self._state.session_summary_seed = {}
             self._state.recent_learning_events = []
             self._state.current_question = pending_question

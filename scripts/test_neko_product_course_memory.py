@@ -56,7 +56,7 @@ prompts = importlib.import_module("product_study.llm_prompts")
 # desktop host and its audio/config initialization.
 tree = ast.parse((SOURCE / "__init__.py").read_text(encoding="utf-8"))
 plugin_class = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "StudyCompanionPlugin")
-names = {"_start_study_session", "_start_study_session_locked", "_end_study_session_locked", "_restart_study_session", "_ensure_active_study_session"}
+names = {"_start_study_session", "_start_study_session_locked", "_end_study_session_locked", "_restart_study_session", "_ensure_active_study_session", "_persist_state"}
 methods = ast.Module(body=[node for node in plugin_class.body if isinstance(node, ast.AsyncFunctionDef) and node.name in names], type_ignores=[])
 namespace = {"asyncio": asyncio, "uuid": uuid, "time": time,
              "load_material": importlib.import_module("product_study.study_materials").load_material}
@@ -97,9 +97,6 @@ class ProductHarness(context_module._TutorContextSupportMixin):
     def _state_snapshot(self):
         return self._state.to_dict()
 
-    async def _persist_state(self):
-        self._store.save_state(self._state)
-
     async def _build_knowledge_guidance_context(self, *args, **kwargs):
         return {}, {}
 
@@ -121,11 +118,15 @@ avatar_class = next(node for node in avatar_tree.body if isinstance(node, ast.Cl
 session_tool = next(node for node in avatar_class.body if getattr(node, "name", "") == "study_session_tool")
 session_tool.decorator_list = []
 avatar_namespace = {"asyncio": asyncio, "Any": Any, "RELAY_NOTE": "relay",
+                    "__name__": "product_study.course_language_test", "__package__": "product_study",
                     "public_current_question_payload": models.public_current_question_payload}
 exec(compile(ast.fix_missing_locations(ast.Module(body=[*avatar_defs, session_tool], type_ignores=[])),
              str(SOURCE / "study_avatar_tools.py"), "exec"), avatar_namespace)
 ProductHarness.study_session_tool = avatar_namespace["study_session_tool"]
-ProductHarness._study_effective_language = lambda self: "zh-CN"
+language_method = next(node for node in avatar_class.body if getattr(node, "name", "") == "_study_effective_language")
+exec(compile(ast.fix_missing_locations(ast.Module(body=[language_method], type_ignores=[])),
+             str(SOURCE / "study_avatar_tools.py"), "exec"), avatar_namespace)
+ProductHarness._study_effective_language = avatar_namespace["_study_effective_language"]
 
 async def raw_status(self):
     return {"study_course_id": self._state.study_course_id, "active_mode": "teaching"}

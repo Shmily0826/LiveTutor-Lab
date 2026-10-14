@@ -338,9 +338,9 @@ class _StudyAvatarToolsMixin:
     def _study_effective_language(self) -> str:
         """Course preference, then the learner's global default, then plugin config.
 
-        Applying it here as well is what makes a remembered "teach this course in
-        English" reach the quiz, grading and summary paths, not just explanation -
-        the plugin reads ``cfg.language`` when it builds any of those prompts.
+        Session startup and course changes use this same rule before direct SDK
+        calls build their prompts. Keep the configured default separate from the
+        effective language of the previous course.
         """
         state = getattr(self, "_state", None)
         by_course = getattr(state, "teaching_language_by_course", None) or {}
@@ -353,7 +353,8 @@ class _StudyAvatarToolsMixin:
                 self._study_config_default_language = str(getattr(self._cfg, "language", "") or "")
         language = (by_course.get(course) or preferences.get("language")
                     or getattr(state, "teaching_language", "")
-                    or str(getattr(self._cfg, "language", "") or ""))
+                    or getattr(self, "_study_config_default_language",
+                               str(getattr(self._cfg, "language", "") or "")))
         if language and language != str(getattr(self._cfg, "language", "") or ""):
             self._cfg.language = language
         return language
@@ -992,6 +993,9 @@ class _StudyAvatarToolsMixin:
         finally:
             if requested:
                 self._cfg.language = previous
+                # The learner may have changed this course's persistent choice
+                # while the temporary answer was waiting, without changing course.
+                self._study_effective_language()
 
 
     def _study_changed_native_material_result(self):

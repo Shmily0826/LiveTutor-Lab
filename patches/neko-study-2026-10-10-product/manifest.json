@@ -6,8 +6,10 @@
   "files": [
     {
       "path": "payload/study_companion/__init__.py",
-      "sha256": "a140babdd0879c4b89c29d7f7a675772fd3db98541f184e056eb38f685fbfb8b",
-      "deployed_matches": true
+      "sha256": "11d5b41556425793d1af4b9b19f7475d316907ae2d031172f0d9a10a6d100a44",
+      "deployed_matches": true,
+      "phase32_prior_sha256": "a140babdd0879c4b89c29d7f7a675772fd3db98541f184e056eb38f685fbfb8b",
+      "phase32_verification": "Reviewed source/offline course language9 plus course8/temporary6/preferences6 with actual persistence; actual silent direct SDK46 after startup, no avatar/language/course priming, English feedback and old7QA preserved. No broad concurrency/voice/device/human acceptance."
     },
     {
       "path": "payload/study_companion/entry_ocr_entries.py",
@@ -107,12 +109,14 @@
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
-      "sha256": "01a145791e184ccfa9fcf172d37f463b9fcc29853263dabb143ba5b4d0cfe432",
+      "sha256": "45e6bed56a136d067f832ceb9952aa941331be7507b81eb093df6e8280743f50",
       "deployed_matches": true,
       "phase29_delta_prior_sha256": "afb52dbbc047fd3cf20eab2c536fcdde9d1cba36fe4056a489bda27fe6123af9",
       "phase29_verification": "Specific errors41 / correct100 and restart42 / Chinese then English43 observed; final reminder-negative narrowing source+6 offline only; all historical failures retained.",
       "phase29_language_prior_sha256": "848abd960be3db3834575429a295e2efcb68e13e25d7f7847bc21aea994f4db0",
-      "phase29_final_prior_sha256": "f6f67af73e9bd468bf23623d33d064acf79889ebff9f965c35b4bc14bd8e4154"
+      "phase29_final_prior_sha256": "f6f67af73e9bd468bf23623d33d064acf79889ebff9f965c35b4bc14bd8e4154",
+      "phase32_prior_sha256": "01a145791e184ccfa9fcf172d37f463b9fcc29853263dabb143ba5b4d0cfe432",
+      "phase32_verification": "Reviewed source/offline course language9 plus course8/temporary6/preferences6 with actual persistence; actual silent direct SDK46 after startup, no avatar/language/course priming, English feedback and old7QA preserved. No broad concurrency/voice/device/human acceptance."
     },
     {
       "path": "payload/study_companion/study_ocr_pipeline.py",
