@@ -1,6 +1,6 @@
-# 日常学习伙伴执行计划（阶段46验证完成 / 整体未完成）
+# 日常学习伙伴执行计划（阶段47入口交付 / 整体未完成）
 
-阶段46已交付独立Study/材料app窗口与同图加载失败恢复；桌/手机各5真实DOM检查通过，21个不同离线case通过。原54只有1窗，55两主窗外仍有翻译popup，原false保留；最终56仅2预期主窗、无aux，当前课程/原PNG重启恢复通过。56 exit0/cleanup[]、owned/Native及48911/48916/9234/59748均清理，原ledger835/78/0，无模型/音频/真人新验收。
+47当前交付：Study顶部主动“显示学习材料”恢复入口，严格本次loopback无tokenURL，首异步await前配置。13 Python离线+Node URL边界通过，独立Node/window4复核；桌手机真实共享fixture加载原图→实际window.closed→再点重开、无参computed隐藏。57正式受保护早期入口可见/同课同PNG，但2主窗外Translate popup复现，原false保留，完整async Ready与物理task Chrome点击未冒通过。57 exit0/cleanup[]/自有进程端口全清，ledger835/78/0。源码/default部署与精确发布已核；下一48翻译popup任务profile可靠性，全部A–F/Goal active。
 
 完整任务以[原始contract](daily-companion-contract-2026-10-14.md)全文为准，169行/SHA256 FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33，禁止摘要替代或修改。现有Goal 01a13531-0341-7611-afc2-5c472a7ccf50 active，全部A–F持续推进，不重建/缩范围/阶段假完成；GPT-6.1 Sol High不擅改。
 
@@ -53,3 +53,6 @@
 
 
 阶段47终态：57 exec86035 Enter正常exit0/cleanup[]，全部owned与Native16508死、48911/48916/9234/53515无listener，原ledger835/78/0；raw57 SHA0e023b5284ae8de32349d32e54e8bfe5d0b364e9d032d1ad6e09aa9538d56892。actual owned Chrome Study命令含本场surface query，current课/PNG保持；正式受保护Study在共享浏览器的早期initializer入口可见/无page-console error，但快照仍Refreshing，未冒其余async Ready/真实taskChrome已点击。2主窗外Translate popup再现，two_expected_windows=false保留，46的56单场通过不外推稳定抑制。重开点击/实际window.closed/再PNGready窄证仅真实共享fixture；模型/设备/human无新验收。最终product manifest db8d169e6519a53ed29af99f59c8e8212d2d6e29aa8d3ce0fe8ec57978092820，post57 SourceGate PASS，双static源码/default精确部署不改用户DB；下一48任务profile翻译pref窄修/本地验证，再继续B/D/F。独立57复核/发布pending，Goal active。
+
+
+阶段47已独立57原件复核冻结，链接窄交付、整体窗口UX仍PARTIAL。13精确allowlist已commit/push c66196f695fc19bc09f739a863aec02504b1f5e7 到codex/daily-learning-companion；remote exact/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb/publisher clean/Root index空/contract原SHA/原ledger835-78-0均核。没有raw/DB/WAV/密钥/备份发布。最终product manifest db8d169e6519a53ed29af99f59c8e8212d2d6e29aa8d3ce0fe8ec57978092820，source/default与post57 Gate PASS，无live测试宿主。下一48先读取Chromium prefs正式源码核任务profile翻译关闭键，最小保留式配置/坏JSON拒改/必要实际检查；不因局部问题停全Goal，不重复未变模型/音频场。
