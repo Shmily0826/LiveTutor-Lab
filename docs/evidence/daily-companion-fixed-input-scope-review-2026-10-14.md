@@ -167,3 +167,31 @@ Main随后提供对应时间段实际server RNNoise诊断：同pipeline约每2�
 持续约100fps DSP由单audio worker依次await下游；一个长期阻塞turn-admission lock通常会停止后续DSP并形成backlog，所以本场优先无声return/未activation，锁仍仅为待排条件。probability_peak1只有在实际到unfiltered后才推出speech_active true，不能跨过中间门槛直接认领phrase已收语音。
 
 当前报告的timing_log导出只保留固定工具/native timing等marker（probe源564–565），不含voice-rnnoise或native phrase delivery；**缺这些导出日志不证明从未调用**。建议采上述窄计数再明确恢复条件；34保持turn_timeout/未通过，DS610/app59/tech0与cleanup由Main记录，不以本审查改账本或重连。本轮仅追加本scope报告，最终冻结。
+
+## 阶段十九：默认OFF计数helper源码/离线交付
+
+按Main独立开发授权，仅新增 `scripts/neko_native_delivery_diagnostics.py` 和对应test，并追加本报告；未修改实际runtime/host/patchinstaller/manifest或其他记录，未启动服务/API/设备/DB/账本。helper只用stdlib，import不加载N.E.K.O、音频或设备模块，没有新队列/数据库/记忆系统。
+
+交接接口：`install_native_delivery_diagnostics(asr_class, phrase_class=None, transport_class=None, *, enabled=None, logger=None)`。默认仅当 `NEKO_NATIVE_DELIVERY_DIAGNOSTICS == '1'` 才安装；OFF返回None且class/method身份不变，ON幂等并返回DeliveryCounters供Main报告读取snapshot。Main独占把文件部署到actual import路径及安装actual classes，建议传实际AsrRuntimeMixin、NativePhraseUplink、Omni transport mixin；本 Agent不接宿主。纯 `safe_native_snapshot(owner)` 可由Main的actual AST夹具直接调用，输出只含8类bool/None：active、route_native、owner_core、activation_degraded/required、factory_present/enforced、noise_contract_match。
+
+固定7个方法边界：Core process/route/unfiltered、phrase accept/flush、Native stream_audio、provider send_event中的input_audio_buffer.append。其它provider event仍原样调用且不计audio stage；不读取/记录PCM、text、paths、keys或identity token，不打印异常文本/类型内容。包装器原方法恰调用一次、原参数和返回对象不变；async只await原协程一次，不创建task或改变owner/registry/guard。返回True/False/None/other、raised/cancelled只记有限枚举。投影属性异常变unknown；诊断/log错误不能替代业务返回/异常/取消。
+
+所有stage/event/投影字段固定，数值计数饱和到最多1000000，日志最短间隔2秒且仅输出累计计数/安全布尔分布，无timer/worker；每个task runtime安装对象拥有自己的aggregate，不写全局账本。它证明方法入口/出口层级，**不能准确区分一个方法内部哪个return分支，也不是provider ACK或ASR成功**；LOCAL_ACCEPTED/None不能用计数改成TRANSPORT_WRITTEN。必要更窄branch reason仍由Main实际AST fixture/允许的runtime接点另做，不伪造34根因。
+
+执行证据 **SOURCE/纯OFFLINE11 PASS**：`python -B scripts/test_neko_native_delivery_diagnostics.py`（.075秒）。覆盖OFF身份、显式env启用、单次参数/返回身份、ON幂等、非audio event不计、异常及真实Task cancellation透明、同步phrase异常、日志失败不损业务、未知event type不触发不可信比较、无敏感序列化、计数饱和/限频/独立snapshot与安装预验证无部分变更。首次使用module unittest入口因scripts不在module查找路径而ImportError；未改生产，换实际script入口后9通过，再补env与同步异常必要负例得到11通过。不是宿主/actual methods/模型/设备/human验收。
+
+helper与test现冻结，Main后续实际接入、完整pipeline验证及必要场另记；不会为本诊断online重连或重播WAV。
+
+## Main actual-method fixture独立只读复审
+
+Main报告helper11及新增 `test_neko_native_delivery_actual_routes.py` 4项通过。本 Agent只读该测试、冻结helper/test及必要已有native fixture的AST提取/构造精确片段；helper/test SHA未变。本轮不执行测试、服务/API/设备/DB，未接production hook或manifest，唯一追加本报告。
+
+ActualCore的process/route/unfiltered确来自runtime `main_logic/core/asr_runtime.py` AST方法：提取只去decorator/annotation，保业务方法体，在明确隔离namespace运行。OmniRealtimeClient、_TransportMixin、NativePhraseUplink实际方法用于本地QueueSocket，非伪造audio.append记录。positive场46帧对应DSP seam调用46、Core/native/phrase accept entry各46、flush一次，QueueSocket确有input_audio_buffer.append且原mic accounting增加。结合helper原方法单次调用源码及11项纯测试，这支持该fixture的 **stage计数/本地返回透明性与真实方法到本地append路径**，不是外部传输成功。
+
+三个负例运行实际方法的指定分支：required无factory在Core route返回True/consume且不到unfiltered；noise contract不匹配在route停且安全投影false；inactive在DSP seam已调用后process返回None、不进route。未通过修改guard/owner值默认允许来制造这些负例；各case明确设置条件后核原分支仍failclosed。它们支持这些条件可由counts区分到方法层级，不唯一指出34真实原因。
+
+严格边界：DSP是pass-through double并提供.9/.1、rnnoise_available true，没有实际RNNoise/48k处理；preview隔离、ingress/token/lifecycle、registry acceptance与Core construction仍是OfflineManager seam。测试直接调用process，不含router/enqueue/真实lease registry准入；尤其production required无factory可能在enqueue就更早drop，不能把fixture经DSP→route路径说成完整production intake。QueueSocket不连接provider，local audio.append及accounting不代表server ACK、ASR、模型或声音设备。
+
+ConfigManager依赖import前先设置临时NEKO_STORAGE_*和LOCALAPPDATA，按script入口finally恢复env/清临时目录；hook方法在每case后restore，driver/task按fixture退出。只确认该脚本直接执行的隔离设计，不把它泛化为任意test discovery/global runtime生命周期。日志是固定计数/安全布尔，fixture的fake身份和内容未升级成教学证据。
+
+结论 **限定SOURCE REVIEW无新具体P1/P2；Main提供ACTUAL-METHOD OFFLINE4**。production helper import/hook、default-OFF重放、完整原始pipeline及voice34现场定位仍待Main后续，不因这4项标已部署或provider根因已解决。本报告最终冻结，其他文件未动。

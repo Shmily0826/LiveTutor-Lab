@@ -1,12 +1,12 @@
 # 一次15分钟的学习伙伴体验
 
-Main阶段十八补记：voice34已结束并清理，固定输入与后端DSP有实际证据，但没有识别文本或回复PCM，声音仍未通过，不进入本次默认体验。下面“对角色说/问”均指在聊天框键盘输入；麦克风继续关闭。原daily最新版实际入口仍待Main核实。详情见 [阶段十八证据](evidence/daily-companion-phase18-voice-readiness-2026-10-14.md)。
+Main阶段十九补记：原daily最新版实际文字入口、Study就绪/刷新及原学习数据保留已在有界离线场核实，修复了相同预置知识点重复写入。原daily本场没有待答题，未将此场当续题验收。voice34固定输入与后端DSP有实际证据，但没有识别或回复PCM，声音仍未通过。下面“对角色说/问”均指键盘输入；麦克风继续关闭。详情见 [阶段十九证据](evidence/daily-companion-phase19-original-entry-2026-10-14.md)和[阶段十八声音证据](evidence/daily-companion-phase18-voice-readiness-2026-10-14.md)。
 
 2026-10-14准备版，预计10–20分钟。**尚未进行本人的集中体验，以下步骤不是PASS记录。** 默认文字输入、静音、不用麦克风。你说“准备好了”后，主Agent一次组织完整流程，不频繁要求重测；麦克风仍需后续明确授权，不因开始文字体验或允许扬声器而自动打开。
 
 ## 开始前与启动
 
-当前已发布阶段十七`eadc69255fb0f79532a8e8b01dd5bc3be8a35dfe`。新版课程/待答题/刷新操作已在独立task的真实SDK、SQLite和浏览器验证；其中解释/延迟评分故障响应明确是synthetic。原`neko-daily-companion`的这版日常启动仍待主Agent确认，不能把task fixture算成你已用过。主Agent先确认新版同步、原daily记录保留，以及正在执行的阶段十八声音场已结束并清理；你不需要处理端口或旧进程。
+阶段十八已发布`1bc11f210937dddfe6499b2b6ff6736843d79f46`，阶段十九修复及发布SHA见状态记录。新版课程/待答题/刷新操作已有独立task的真实SDK、SQLite和浏览器证据，其中解释/延迟评分故障响应明确是synthetic；原`neko-daily-companion`最新版实际文字入口及原记录保留也已核实。两者均不算你本人体验过。此前声音场和本次原入口检查的自有进程已清理，你不需要处理旧进程。
 
 已核实的默认启动命令，在PowerShell复制：
 
@@ -15,7 +15,7 @@ Set-Location -LiteralPath 'D:\CODE\project\LiveTutor-Lab'
 & '.\Start-Daily-Tutor.cmd' --minutes 20
 ```
 
-也可双击`D:\CODE\project\LiveTutor-Lab\Start-Daily-Tutor.cmd`。`--minutes`是现有launcher参数；20分钟只限制本次进程，不清学习数据。该入口固定`--text-only --study-ui --learning-surface --code-root keep`，复用`benchmarks/raw/neko-daily-companion`和原账本轮次；不换store、不复制/清空旧DB、不撤销既有源码授权。原生文字userdata和浏览器text-profile继续保存在同一store。由主Agent记录实际启动/部署结果，本文只核源码，未执行命令。
+也可双击`D:\CODE\project\LiveTutor-Lab\Start-Daily-Tutor.cmd`。`--minutes`是现有launcher参数；20分钟只限制本次进程，不清学习数据。该入口固定`--text-only --study-ui --learning-surface --code-root keep`，复用`benchmarks/raw/neko-daily-companion`和原账本轮次；不换store、不复制/清空旧DB、不撤销既有源码授权。原生文字userdata和浏览器text-profile继续保存在同一store。Main阶段十九实跑使用同一CMD，额外--offline-egress与task调试端口；上面的日常命令允许既有服务教学，不把离线只就绪检查当线上多轮已通过。
 
 它打开角色聊天、Study和受控学习材料窗口。等Study显示真实课程和状态，展开需要的练习区；仅看到HTTP200、Starting或Refreshing不算Ready。若报Not ready/Error，先停在这里让主Agent定位，不连续点讲解。用完在启动控制台按Enter；Ctrl+C也可结束本次自有宿主/窗口，不关闭你的其他Chrome。
 
@@ -58,4 +58,4 @@ Set-Location -LiteralPath 'D:\CODE\project\LiveTutor-Lab'
 
 主Agent结束时只记录已实际做过的步骤与一处具体失败：原题/材料是否接续、回答是否准确简短、出错是否可恢复、指示是否可用；若使用声音，再单独记录收到PCM、实际播放和你的听感。源码/离线、真实模型、设备播放、真人体验分层写PASS/PARTIAL/FAIL/PENDING。没有体验的项目继续待验，不因为15分钟结束或小阶段完成就将整个Goal标完成。
 
-本文只新增这一份交付文档；没有启动程序、服务/API/设备，未读或改用户数据库、账本、其他文档或代码。启动参数由当前launcher源码核实；原daily最新版实际部署和阶段十八声音结果由Main补充确认。文档冻结。
+本文是集中体验步骤，不是人工PASS记录。Main阶段十九已补充实际入口结果及范围；后续更新按当前状态和明确用户权限接续，不把准备步骤或离线检查写成人工体验通过。
