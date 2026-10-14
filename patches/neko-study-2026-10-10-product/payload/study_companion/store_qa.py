@@ -165,8 +165,19 @@ def list_qa_records(self, limit: int = 100, *, course_id: str = "") -> list[dict
     ]
 
 
+def list_qa_topic_ids(self, *, course_id: str) -> list[str]:
+    rows = self._require_read_conn().execute(
+        """SELECT DISTINCT topic_id FROM qa_records
+           WHERE session_id IN (SELECT id FROM sessions WHERE course_id = ?)
+             AND topic_id IS NOT NULL AND topic_id <> '' ORDER BY topic_id LIMIT 5000""",
+        (str(course_id or "").strip(),),
+    ).fetchall()
+    return [str(row[0]) for row in rows]
+
+
 def list_qa_records_for_topic(
-    self, topic_id: str, limit: int = 10
+    self, topic_id: str, limit: int = 10, *, course_id: str = "", mistakes_only: bool = False,
+    question_id: str = "", binding_key: str = "",
 ) -> list[dict[str, Any]]:
     topic_key = str(topic_id or "").strip()
     safe_limit = max(1, int(limit))
@@ -188,6 +199,20 @@ def list_qa_records_for_topic(
             LIMIT ?
             """
         params = (safe_limit,)
+    conditions, extra = [], []
+    if str(course_id or "").strip():
+        conditions.append("session_id IN (SELECT id FROM sessions WHERE course_id = ?)")
+        extra.append(str(course_id).strip())
+    if mistakes_only:
+        conditions.append("json_extract(CASE WHEN json_valid(eval_result) THEN eval_result ELSE '{}' END, '$.verdict') IN ('wrong', 'partial', 'dont_know')")
+    for key, value in (("question_id", question_id),
+                       ("internal_private_payload.learning_topic_binding.key", binding_key)):
+        if value:
+            conditions.append("json_extract(CASE WHEN json_valid(question) THEN question ELSE '{}' END, '$." + key + "') = ?")
+            extra.append(str(value))
+    if conditions:
+        query = query.replace("ORDER BY id DESC", "AND " + " AND ".join(conditions) + " ORDER BY id DESC")
+        params = (*params[:-1], *extra, params[-1])
     rows = self._require_read_conn().execute(query, params).fetchall()
     return [
         item

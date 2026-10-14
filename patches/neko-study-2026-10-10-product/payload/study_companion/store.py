@@ -644,19 +644,7 @@ class StudyStore:
                         ),
                     )
                     next_interaction_count = self._interaction_count + 1
-                    trim_history = next_interaction_count >= int(
-                        self._INTERACTION_TRIM_INTERVAL
-                    )
-                    if trim_history:
-                        conn.execute(
-                            """
-                            DELETE FROM interactions
-                            WHERE id NOT IN (
-                                SELECT id FROM interactions ORDER BY id DESC LIMIT ?
-                            )
-                            """,
-                            (max(1, int(history_limit)),),
-                        )
+                    # history_limit bounds reads/prompts, never saved learning evidence.
                     if commit_started_event is not None:
                         commit_started_event.set()
                     if cancel_event is not None and cancel_event.is_set():
@@ -669,7 +657,7 @@ class StudyStore:
                     except Exception:
                         pass
                     raise
-                self._interaction_count = 0 if trim_history else next_interaction_count
+                self._interaction_count = next_interaction_count
                 if committed_event is not None:
                     committed_event.set()
                 return True
@@ -1334,7 +1322,7 @@ class StudyStore:
             ),
         )
 
-    def list_interactions(self, limit: int = 20, *, session_id: str = "", course_id: str = "") -> list[dict[str, Any]]:
+    def list_interactions(self, limit: int = 20, *, session_id: str = "", course_id: str = "", exclude_session_id: str = "") -> list[dict[str, Any]]:
         session_key = str(session_id or "").strip()
         query = "SELECT id, kind, input_text, output_text, metadata, created_at, session_id FROM interactions"
         params: tuple[Any, ...] = ()
@@ -1344,6 +1332,9 @@ class StudyStore:
         elif str(course_id or "").strip():
             query += " WHERE session_id IN (SELECT id FROM sessions WHERE course_id = ?)"
             params = (str(course_id).strip(),)
+        if str(exclude_session_id or "").strip():
+            query += (" AND " if params else " WHERE ") + "COALESCE(session_id, '') <> ?"
+            params += (str(exclude_session_id).strip(),)
         query += " ORDER BY id DESC LIMIT ?"
         params += (max(1, int(limit)),)
         rows = (
@@ -1478,7 +1469,6 @@ from .store_schema import (
     _ensure_column,
     _init_db,
     _load_seed_if_empty,
-    _trim_append_only_rows,
 )
 from .store_topics import (
     average_latest_mastery,
@@ -1518,6 +1508,7 @@ from .store_qa import (
     ensure_session,
     get_retry_wrong_question,
     list_qa_records,
+    list_qa_topic_ids,
     question_topic_candidates,
     list_qa_records_for_topic,
     list_sessions,
@@ -1540,7 +1531,16 @@ from .store_maintenance import json_loads, purge_all, transaction
 
 StudyStore._init_db = _init_db  # type: ignore[method-assign]
 StudyStore._ensure_column = _ensure_column  # type: ignore[method-assign]
-StudyStore._trim_append_only_rows = _trim_append_only_rows  # type: ignore[method-assign]
+def _retain_learning_history(conn, *, table, group_column, group_value, history_limit, order_by="id DESC"):
+    """Validate the existing hook without automatically deleting saved evidence."""
+    from .store_schema import _validate_sql_identifier, _validate_sql_order_by
+    _validate_sql_identifier(table, "table")
+    _validate_sql_identifier(group_column, "group_column")
+    _validate_sql_order_by(order_by)
+    int(history_limit)
+
+
+StudyStore._trim_append_only_rows = staticmethod(_retain_learning_history)  # type: ignore[method-assign]
 StudyStore._load_seed_if_empty = _load_seed_if_empty  # type: ignore[method-assign]
 StudyStore.load_knowledge_seed = load_knowledge_seed  # type: ignore[method-assign]
 StudyStore.upsert_topic = upsert_topic  # type: ignore[method-assign]
@@ -1574,6 +1574,7 @@ StudyStore.close_open_sessions = close_open_sessions  # type: ignore[method-assi
 StudyStore.list_sessions = list_sessions  # type: ignore[method-assign]
 StudyStore.add_qa_record = add_qa_record  # type: ignore[method-assign]
 StudyStore.list_qa_records = list_qa_records  # type: ignore[method-assign]
+StudyStore.list_qa_topic_ids = list_qa_topic_ids  # type: ignore[method-assign]
 StudyStore.question_topic_candidates = question_topic_candidates  # type: ignore[method-assign]
 StudyStore.list_qa_records_for_topic = list_qa_records_for_topic  # type: ignore[method-assign]
 StudyStore.add_wrong_question = add_wrong_question  # type: ignore[method-assign]

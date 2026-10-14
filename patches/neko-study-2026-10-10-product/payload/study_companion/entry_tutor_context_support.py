@@ -289,7 +289,7 @@ def _load_explicit_guidance_topics(
 class _TutorContextSupportMixin:
     def _course_learning_state(self, course_id: str) -> dict[str, Any]:
         records = self._store.list_qa_records(100, course_id=course_id)
-        topic_ids = sorted({str(row.get("topic_id") or "") for row in records} - {""})
+        topic_ids = self._store.list_qa_topic_ids(course_id=course_id)
         return {
             "course_id": course_id,
             "topic_ids": topic_ids,
@@ -303,6 +303,67 @@ class _TutorContextSupportMixin:
         cache = getattr(self, "_knowledge_guidance_topics_cache", None)
         if isinstance(cache, dict):
             cache.clear()
+
+    async def _relevant_answer_records(self, context, guidance):
+        """Read a confirmed concept's attempts; never create or merge identities."""
+        course = str(context.get("course_id") or "").strip()
+        topic = str(context.get("selected_topic_id") or
+                    ((guidance.get("topic") or {}).get("id")
+                     if guidance.get("summary", {}).get("matched") else "") or "").strip()
+        if not course or not topic:
+            return []
+        prefix = course + "::"
+        if not topic.startswith(prefix):
+            if "::" in topic:
+                return []
+            # Seed IDs are shared, but their answer evidence is course scoped.
+            topic = prefix + topic
+        recent = await asyncio.to_thread(self._store.list_qa_records_for_topic,
+            topic, 4, course_id=course)
+        wrong = await asyncio.to_thread(self._store.list_qa_records_for_topic,
+            topic, 1, course_id=course, mistakes_only=True)
+        selected = list(wrong)
+        anchor = {}
+        binding = {}
+        if wrong:
+            question = wrong[0].get("question") or {}
+            anchor = question
+            binding = (question.get("internal_private_payload") or {}).get("learning_topic_binding") or {}
+            if question.get("question_id") and binding.get("key"):
+                latest = await asyncio.to_thread(self._store.list_qa_records_for_topic,
+                    topic, 1, course_id=course, question_id=question["question_id"],
+                    binding_key=binding["key"])
+                selected.extend(latest)
+        selected.extend(reversed(recent))
+        by_id = {}
+        for row in selected:
+            candidate = row.get("question") or {}
+            candidate_binding = (candidate.get("internal_private_payload") or {}).get("learning_topic_binding") or {}
+            if (anchor.get("question_id") and binding.get("key")
+                    and candidate.get("question_id") == anchor["question_id"]
+                    and candidate_binding.get("key") != binding["key"]):
+                continue  # A reused ID with different provenance is not this correction.
+            by_id.setdefault(row["id"], row)
+            if len(by_id) == 4:
+                break
+        public = []
+        def bounded(value, limit):
+            # Old or malformed JSON is not prose; never stringify nested data.
+            return value.strip()[:limit] if isinstance(value, str) else ""
+        for row in sorted(by_id.values(), key=lambda item: item["id"]):
+            question = row.get("question") or {}
+            evaluation = row.get("eval_result") or {}
+            public.append({
+                "record_id": row["id"], "session_id": row.get("session_id"),
+                "topic_id": topic, "question_id": bounded(question.get("question_id"), 120),
+                "question": bounded(question.get("question"), 160),
+                "user_answer": bounded(row.get("user_answer"), 120),
+                "evaluation": {"verdict": bounded(evaluation.get("verdict"), 20),
+                               "feedback": bounded(evaluation.get("feedback"), 200),
+                               "score": evaluation.get("score") if type(evaluation.get("score")) in (int, float)
+                                   and 0 <= evaluation["score"] <= 100 else None},
+            })
+        return public
 
     async def _build_knowledge_guidance_context(
         self,
@@ -654,7 +715,7 @@ class _TutorContextSupportMixin:
             self._store.list_interactions, history_limit, session_id=session_id
         )
         previous_history = await asyncio.to_thread(
-            self._store.list_interactions, 30, course_id=course_id
+            self._store.list_interactions, 8, course_id=course_id, exclude_session_id=session_id
         )
         previous_history = [row for row in previous_history if row.get("session_id") != session_id][:8]
         course_learning_state = await asyncio.to_thread(self._course_learning_state, course_id)
@@ -807,12 +868,21 @@ class _TutorContextSupportMixin:
                     }
         if extra:
             context.update(extra)
+        # Request extras cannot choose a foreign history scope.
+        context["course_id"] = course_id
+        context["session_id"] = session_id
         guidance, guidance_outcome = await self._build_knowledge_guidance_context(
             operation,
             input_text=input_text,
             context=context,
         )
         context.update(guidance_outcome)
+        if operation == LLM_OPERATION_CONCEPT_EXPLAIN:
+            try:
+                context["previous_answer_records"] = await self._relevant_answer_records(context, guidance)
+            except Exception:
+                context["previous_answer_records"] = []
+                _warn(getattr(self, "logger", None), "relevant answer history unavailable")
         trusted_question = str(
             (context.get("current_question") or {}).get("question")
             if isinstance(context.get("current_question"), dict)
