@@ -23,3 +23,5 @@ scripts/neko_desktop_tutor_host.py SHA7848ae61dde6ec349b9594906d48a2078fe00e558e
 实现不改变模型ID/provider或Codex模型；不是新增付费线路。当前cue支持中英、列举源码扩展名和明确解释/影响/校验等动词，不等于完整自然语言理解；其它emotion/自定义weights/硬顶仍可能影响进入。全局/用户关闭在AST实际gate离线验证，未新增UI设置操作。
 
 接续边界：53的即时Focus只改实际source离线文字brain路径，不能据此认领free Native Realtime的源码口语同样改善。D语音仍需复用已有Study教师/授权CodeGraph与朗读桥接后验证；不能把文字路径当最终日常语音交付。54先处理角色风格与F UI入口/夹具，随后继续此集成，不因62核心窄PASS收缩A–F。
+
+阶段53九文件精确发布已核：commit/push c7dcec4341d81715ddb0188b19d29aba571d8185 到codex/daily-learning-companion，remote exact/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb/publisher clean/Root index空/contract原SHA；不发raw/DB/密钥/音频/备份。当前868/78/0、无live宿主/自有端口，全部A–F/Goal active。下一自动续跑先读四记录及phase53 report；54修简短风格并推进F UI Ready/夹具，再续D Native教师桥接，不能将文字窄证当语音交付，不重跑62数值场。
