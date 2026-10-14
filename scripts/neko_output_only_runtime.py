@@ -11,21 +11,37 @@ POLICY_HEADERS = {
 }
 
 
-def protected_html(html: str, library: str) -> str:
+def protected_html(html: str, library: str, *, text_only: bool = False) -> str:
     if '</script' in library.lower():
         raise ValueError('capture policy script must not close its HTML container')
     payload = json.dumps(html, ensure_ascii=True).replace('<', '\\u003c').replace('>', '\\u003e')
     # The original app only exists as inert string data until the installer succeeds.
     # Throwing from a separate script before normal app tags would not stop those tags.
-    return '''<!doctype html><html><head><meta charset="utf-8"><title>N.E.K.O output-only</title>
+    mode_setup = '''
+    Object.defineProperty(globalThis, '__NEKO_TEXT_ONLY__', {value:true, writable:false, configurable:false});
+''' if text_only else ''
+    mode_finish = '''
+    const suffix = ' · 文字模式（麦克风已关闭）';
+    function showTextMode() {
+        if (!document.title.endsWith(suffix)) document.title += suffix;
+        for (const node of document.querySelectorAll('#micButton,#live2d-btn-mic,#vrm-btn-mic,#mmd-btn-mic')) node.hidden = true;
+    }
+    showTextMode();
+    // React can create controls or replace the title after the bootstrap. Hidden
+    // attributes work with the product CSP; injecting inline CSS does not.
+    new MutationObserver(showTextMode).observe(document.documentElement, {childList:true, subtree:true, characterData:true});
+    document.documentElement.dataset.nekoTextOnly = 'true';
+''' if text_only else ''
+    return '''<!doctype html><html><head><meta charset="utf-8"><title>N.E.K.O protected</title>
 <script>''' + library + '''</script><script>
 try {
     const receipt = globalThis.NekoCapturePolicy.installOutputOnly({enabled:true});
     if (receipt.status !== 'installed' || receipt.captureBlocked !== true ||
         globalThis.NekoCapturePolicy.getResult() !== receipt ||
         globalThis.__NEKO_OUTPUT_ONLY_CAPTURE_BLOCKED__ !== true) throw new Error('Capture policy unavailable');
-    document.open(); document.write(''' + payload + '''); document.close();
+''' + mode_setup + '''    document.open(); document.write(''' + payload + '''); document.close();
     document.documentElement.dataset.nekoCapturePolicy = 'output-only-installed';
+''' + mode_finish + '''
 } catch (error) {
     document.title = 'N.E.K.O capture protection refused';
     const node = document.createElement('p');
@@ -40,18 +56,20 @@ try {
 
 
 def install_output_only(app):
-    if os.environ.get('NEKO_OUTPUT_ONLY') != '1':
+    text_only = os.environ.get('NEKO_TEXT_ONLY') == '1'
+    if os.environ.get('NEKO_OUTPUT_ONLY') != '1' and not text_only:
         return
     from starlette.responses import Response
     asset = Path(__file__).resolve().parents[1] / 'static/app/neko-capture-policy.js'
     blob = asset.read_bytes()
     library = blob.decode('utf-8')
     fingerprint = hashlib.sha256(blob).hexdigest()
+    policy_headers = {**POLICY_HEADERS, 'X-LiveTutor-Audio-Mode': 'text-only' if text_only else 'output-only'}
 
     @app.middleware('http')
     async def capture_bootstrap(request, call_next):
         response = await call_next(request)
-        for key, value in POLICY_HEADERS.items():
+        for key, value in policy_headers.items():
             response.headers[key] = value
         if 'text/html' not in response.headers.get('content-type', '').lower():
             return response
@@ -67,12 +85,12 @@ def install_output_only(app):
                 body.extend(chunk)
                 if len(body) > 2_000_000:
                     raise ValueError('HTML exceeds output-only bootstrap bound')
-            html = protected_html(body.decode('utf-8'), library)
+            html = protected_html(body.decode('utf-8'), library, text_only=text_only)
         except Exception:
             closer = getattr(response.body_iterator, 'aclose', None)
             if callable(closer):
                 await closer()
             return Response('Output-only page protection failed; application was not loaded.',
-                            status_code=503, media_type='text/plain', headers=POLICY_HEADERS)
+                            status_code=503, media_type='text/plain', headers=policy_headers)
         return Response(html, status_code=response.status_code, headers=headers,
                         background=response.background)

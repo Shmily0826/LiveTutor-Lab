@@ -24,7 +24,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import neko_desktop_tutor_host as host  # noqa: E402
-import neko_local_asr_probe as speech  # noqa: E402
 import neko_native_shell as avatar  # noqa: E402
 
 UI_PATH = "/plugin/study_companion/ui/"
@@ -70,8 +69,9 @@ def plugin_server_ready(timeout: float, launcher: subprocess.Popen) -> tuple[boo
     return False, reason
 
 
-def chrome_command(url: str) -> list[str]:
-    host.require_task_audio_allowed("product browser with audio capabilities")
+def chrome_command(url: str, *, text_only: bool = False) -> list[str]:
+    if not text_only:
+        host.require_task_audio_allowed("product browser with audio capabilities")
     candidates = [Path(os.environ[name]) / "Google/Chrome/Application/chrome.exe"
                   for name in ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA") if os.environ.get(name)]
     chrome = next((path for path in candidates if path.is_file()), None)
@@ -159,6 +159,12 @@ def remember_browser_tree(browser: subprocess.Popen, record: list[dict]) -> None
 
 
 def stop_owned_browser(record: list[dict]) -> None:
+    stop_owned_tree(record)
+    BROWSER_OWNER_FILE.unlink(missing_ok=True)
+
+
+def stop_owned_tree(record: list[dict]) -> None:
+    """Stop only recorded live instances, without consulting a shared PID file."""
     for pid in owned_browser_pids(record):
         subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)],
                        capture_output=True, text=True, timeout=30)
@@ -168,9 +174,8 @@ def stop_owned_browser(record: list[dict]) -> None:
         time.sleep(0.5)
         left = owned_browser_pids(record)
     if left:
-        raise RuntimeError(f"项目 Chrome 进程尚未退出（pid {left}）；"
+        raise RuntimeError(f"本次任务进程尚未退出（pid {left}）；"
                            "保留所有权记录，请关闭学习窗口后重试。")
-    BROWSER_OWNER_FILE.unlink(missing_ok=True)
 
 
 def speech_input_note() -> str:
@@ -182,6 +187,7 @@ def speech_input_note() -> str:
     speech worker.
     """
     try:
+        import neko_local_asr_probe as speech
         status = speech.speech_route_status()
     except Exception as error:  # a status line must never stop the avatar from opening
         return f"语音输入状态没查成（{type(error).__name__}），按麦克风前先看宿主日志。"
@@ -224,6 +230,46 @@ def host_command(minutes: int, api_budget: int, egress_budget: int,
     return [str(host.SOURCE_PYTHON), str(HOST_SCRIPT), "--source", "--store", store,
             "--hold", str(minutes * 60 + 120), "--seconds", "220", "--api-budget", str(api_budget),
             "--egress-budget", str(egress_budget), *(extra or [])]
+
+
+def host_options(args, voice_hosts: list[str]) -> list[str]:
+    options = []
+    if args.text_only:
+        options += ['--text-only']
+    if args.offline_egress:
+        options += ['--offline-egress']
+    if args.voice:
+        options += ['--voice', '--core-provider', 'free']
+        options += sum([['--allow-host', f'{h}:{args.voice_connects}'] for h in voice_hosts], [])
+    if args.budget_round:
+        options += ['--budget-round', args.budget_round]
+    if args.learning_surface:
+        options += ['--study-vision']
+    return options
+
+
+def cleanup_resources(surface, shell, launcher, launcher_owner, browser, browser_record, lesson):
+    """One failing resource must never prevent the other owned resources from closing."""
+    errors = []
+    def attempt(name, action):
+        try:
+            action()
+        except Exception as error:
+            errors.append(f'{name}: {type(error).__name__}: {error}')
+    if surface is not None:
+        attempt('learning surface shutdown', surface.shutdown)
+        attempt('learning surface close', surface.server_close)
+    if shell is not None:
+        attempt('avatar', lambda: avatar.shutdown(shell))
+    if launcher.poll() is None:
+        attempt('host tree', lambda: stop_owned_tree(launcher_owner))
+        attempt('host wait', lambda: launcher.wait(timeout=20))
+    if browser is not None:
+        attempt('browser ownership', lambda: remember_browser_tree(browser, browser_record))
+        attempt('browser tree', lambda: stop_owned_browser(browser_record))
+    if lesson is not None and lesson.poll() is None:
+        attempt('lesson', lesson.terminate)
+    return errors
 
 
 def round_balance_note(path: Path, round_id: str | None) -> str:
@@ -420,6 +466,10 @@ def main() -> int:
     parser.add_argument("--voice", action="store_true",
                         help="run the avatar on the app-supplied free realtime Core and name the "
                              "native realtime audio events as the only exception to the mute")
+    parser.add_argument('--text-only', action='store_true',
+                        help='visible avatar and Study, muted and capture-free; use the text box')
+    parser.add_argument('--offline-egress', action='store_true',
+                        help='deny external model calls while inspecting the existing UI and records')
     parser.add_argument("--voice-host", default="www.lanlan.tech,www.lanlan.app",
                         help="realtime hosts to allow, comma-separated. Both are listed because the "
                              "app rewrites the mainland endpoint lanlan.tech to lanlan.app once its "
@@ -445,7 +495,10 @@ def main() -> int:
                              "never open a dialog (a driver that cannot answer one hangs); with no "
                              "--code-root at all, a console gets the picker.")
     args = parser.parse_args()
-    host.require_task_audio_allowed("avatar/product UI startup")
+    if args.text_only and (args.voice or args.audio_input is not None):
+        parser.error('文字模式不能同时启用语音或真实/模拟音频输入。')
+    if not args.text_only:
+        host.require_task_audio_allowed("avatar/product UI startup")
     if not (args.voice_connects.isdigit() or args.voice_connects == "unlimited"):
         parser.error("voice-connects must be a nonnegative number or unlimited")
     if args.minutes <= 0 or args.api_budget < 0 or args.egress_budget < 0:
@@ -453,8 +506,8 @@ def main() -> int:
     store = (ROOT / "benchmarks/raw" / args.store).resolve()
     if not store.is_relative_to(ROOT / "benchmarks/raw"):
         parser.error("store must remain inside benchmarks/raw")
-    if args.learning_surface:
-        BROWSER_PROFILE = store / "browser/profile"
+    if args.learning_surface or args.text_only:
+        BROWSER_PROFILE = store / ("browser/text-profile" if args.text_only else "browser/profile")
         BROWSER_OWNER_FILE = BROWSER_PROFILE.parent / "browser-owner.json"
     UI_URL = f"http://127.0.0.1:{host.PLUGIN_PORT}{UI_PATH}"
     voice_hosts = [h.strip().lower() for h in args.voice_host.split(",") if h.strip()]
@@ -472,10 +525,10 @@ def main() -> int:
         host.read_key()
         print(f"宿主侧可靠性补丁：{host.apply_voice_host_patch()}")
         host.verify_source_audio_gate()
-        browser_args = chrome_command(UI_URL) if args.study_ui else None
+        browser_args = chrome_command(UI_URL, text_only=args.text_only) if args.study_ui else None
         if browser_args and BROWSER_OWNER_FILE.is_file():
             previous = json.loads(BROWSER_OWNER_FILE.read_text(encoding="utf-8"))
-            if owned_browser_processes(previous):
+            if owned_browser_pids(previous):
                 raise RuntimeError("项目专用 Chrome 窗口仍在运行；请先关闭该学习窗口再启动，不会接管或关闭其他 Chrome。")
     except Exception as error:
         print(f"启动检查失败：{error}")
@@ -542,7 +595,7 @@ def main() -> int:
     print(f"本次付费请求上限 {args.egress_budget}，想中途改就编辑这个文件（不用重启）："
           f"{ROOT / 'benchmarks/raw/neko-desktop-egress-cap'}")
     print(round_balance_note(ROOT / "benchmarks/raw/neko-desktop-egress-cap", args.budget_round))
-    print(speech_input_note())
+    print("文字模式：声音和麦克风均关闭，请使用聊天输入框。" if args.text_only else speech_input_note())
     data_dir = store / "N.E.K.O"
     chosen = (args.code_root or "").strip()
     # 双击入口（真控制台、没带 --code-root）就弹一次目录选择框；命令行传了就用传的，脚本运行不受影响。
@@ -565,23 +618,17 @@ def main() -> int:
             previous = str(json.loads(held.read_text(encoding="utf-8")).get("root") or "")
         except (OSError, ValueError):
             if held.is_file():
-                held.unlink()
-                print("代码问答：旧的授权文件读不出内容，已删除（没有可信的授权就等于没授权）。")
+                print("代码问答：旧的授权文件无法读取，已保留；本轮不使用这份不可信授权。")
         print("代码问答：" + (f"沿用上次授权的项目 {previous}（要换就再给一次 --code-root，"
                               "要停就删 code_project.json）。" if previous else
                               "这一轮没有授权任何项目，角色不会读代码；"
                               "需要就用 --code-root <项目目录> 启动。"))
-    voice_extra: list[str] = []
-    if args.voice:
-        voice_extra = ["--voice", "--core-provider", "free"]
-        voice_extra += sum([["--allow-host", f"{h}:{args.voice_connects}"] for h in voice_hosts], [])
-    if args.budget_round:
-        voice_extra += ["--budget-round", args.budget_round]
-    if args.learning_surface:
-        voice_extra += ["--study-vision"]
+    voice_extra = host_options(args, voice_hosts)
     surface = None
     launch_env = os.environ.copy()
     launch_env["PYTHONIOENCODING"] = "utf-8"
+    if args.text_only:
+        launch_env['NEKO_TASK_SILENT'] = '1'
     if args.learning_surface:
         from neko_learning_surface import LearningSurface, DEFAULT_MATERIALS
         materials = [path for path in DEFAULT_MATERIALS if path.is_file()]
@@ -599,6 +646,7 @@ def main() -> int:
     launcher = subprocess.Popen(
         host_command(args.minutes, args.api_budget, args.egress_budget, voice_extra, args.store),
         cwd=str(ROOT), env=launch_env, stdout=launcher_output, stderr=subprocess.STDOUT)
+    launcher_owner = [{"pid": launcher.pid, "created_at": process_creation_time(launcher.pid)}]
     browser = None
     browser_record = []
     lesson = None
@@ -609,13 +657,15 @@ def main() -> int:
             print(f"Study UI 没有就绪：{reason}（启动错误：{launcher_log}；运行日志：benchmarks/raw/neko-desktop-host.log）")
             return 1
         print(f"Study UI 已就绪：{UI_URL}")
+        if args.text_only:
+            avatar.verify_output_only_host('text-only')
         if not args.learning_surface:
             lesson = subprocess.Popen(lesson_command(), cwd=str(ROOT),
                                       stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
         try:
             shell = avatar.launch(store, 150,
                                   chat_surface=chat_surface, cdp_port=args.cdp_port or None,
-                                  audio_input=args.audio_input)
+                                  audio_input=args.audio_input, text_only=args.text_only)
         except RuntimeError as error:
             print(f"原生角色启动失败：{error}")
             print(f"可退回辅助网页面板：{UI_URL}（重新启动时加 --study-ui）")
@@ -625,7 +675,7 @@ def main() -> int:
             BROWSER_PROFILE.parent.mkdir(parents=True, exist_ok=True)
             browser = subprocess.Popen(browser_args, cwd=str(ROOT))
             remember_browser_tree(browser, browser_record)
-        print("\n直接在角色的聊天窗口里说话，例如：")
+        print("\n在角色聊天窗口输入文字，例如：" if args.text_only else "\n直接在角色的聊天窗口里说话，例如：")
         if args.learning_surface:
             print("  先在 Study 选择图片，再说：讲讲我交给 Study 的这张图，用两句话。")
             print("  查询授权项目里的 fetchWeather，讲讲天气请求怎样发出。")
@@ -654,28 +704,8 @@ def main() -> int:
     except KeyboardInterrupt:
         pass
     finally:
-        if surface is not None:
-            surface.shutdown()
-            surface.server_close()
-        if shell is not None:
-            avatar.shutdown(shell)
-        if launcher.poll() is None:
-            subprocess.run([str(host.SOURCE_PYTHON), str(HOST_SCRIPT), "--stop"], cwd=str(ROOT),
-                           capture_output=True, text=True)
-            try:
-                launcher.wait(timeout=20)
-            except subprocess.TimeoutExpired:
-                launcher.terminate()
-        if browser is not None:
-            remember_browser_tree(browser, browser_record)
-            try:
-                stop_owned_browser(browser_record)
-            except Exception as error:  # a stuck window must not skip the rest of the teardown
-                print(f"学习窗口没能自动关闭（{type(error).__name__}），请手动关掉它，"
-                      f"再跑一次 scripts/neko_session_guard.py stop；"
-                      f"在那之前角色可能仍在收音。")
-        if lesson is not None and lesson.poll() is None:
-            lesson.terminate()
+        cleanup_errors = cleanup_resources(surface, shell, launcher, launcher_owner,
+                                           browser, browser_record, lesson)
         launcher_output.close()
         audit = sorted((ROOT / "benchmarks/raw/evidence").glob("neko-desktop-host-*.json"))
         summary = {}
@@ -683,8 +713,9 @@ def main() -> int:
             record = json.loads(audit[-1].read_text(encoding="utf-8"))
             summary = {"allowed": record.get("sink_allowed_hosts"), "denied": record.get("sink_denied_hosts"),
                        "direct": record.get("observed_external_connections")}
-        print(json.dumps({"stopped": True, "egress_this_session": summary}, ensure_ascii=False))
-    return 0
+        print(json.dumps({"stopped": not cleanup_errors, "cleanup_errors": cleanup_errors,
+                          "egress_this_session": summary}, ensure_ascii=False))
+    return 1 if cleanup_errors else 0
 
 
 if __name__ == "__main__":

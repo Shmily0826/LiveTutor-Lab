@@ -133,9 +133,11 @@ def prepare_store(key: str, store: Path, core_provider: str = "deepseek") -> Pat
     if config_file.is_file():
         try:
             loaded = json.loads(config_file.read_text(encoding="utf-8"))
-            config = loaded if isinstance(loaded, dict) else {}
-        except ValueError:
-            config = {}
+            if not isinstance(loaded, dict):
+                raise ValueError('configuration must be an object')
+            config = loaded
+        except (OSError, ValueError):
+            raise RuntimeError(f'宿主配置无法读取，已保留原文件：{config_file}') from None
     before = {"DISABLE_TTS": config.get("DISABLE_TTS"), "coreApi": config.get("coreApi"),
               "ttsProvider": config.get("ttsProvider"), "assistApi": config.get("assistApi")}
     config.update({
@@ -172,6 +174,7 @@ def apply_voice_host_patch() -> str:
     behaves exactly like the patched one except that dropped tool work leaves no trace.
     """
     import neko_voice_host_patch as voice_patch
+    import neko_output_only_patch as capture_patch
     results = []
     for host_root in voice_patch.HOSTS:
         for relative, _ in voice_patch.TARGETS:
@@ -184,6 +187,7 @@ def apply_voice_host_patch() -> str:
         if traced != original:
             trace_path.write_text(traced, encoding="utf-8", newline="\n")
         results.append(f"{host_root.name}/_wire_trace.py=diagnostics ready")
+        results.append(f"{host_root.name}/capture-bootstrap={capture_patch.apply_to(host_root)}")
     return ",".join(results)
 
 
@@ -248,7 +252,7 @@ def prepare_tutor_conversation_defaults(runtime_root: Path) -> str:
     return "proactive chat defaults off" if changed else "kept saved proactive choice"
 
 
-def prepare_product_plugin(store: Path, *, study_vision: bool = False) -> None:
+def prepare_product_plugin(store: Path, *, study_vision: bool = False, text_only: bool = False) -> None:
     """Deploy only source/assets into the new isolated store; never copy learning data."""
     source = APP / "plugins/study_companion"
     target = store / "plugin-code/study_companion"
@@ -283,6 +287,11 @@ def prepare_product_plugin(store: Path, *, study_vision: bool = False) -> None:
     manifest = manifest.replace('os_signals_enabled = true', 'os_signals_enabled = false')
     manifest = manifest.replace('[study.supervision]\nenabled = true', '[study.supervision]\nenabled = false')
     (target / "plugin.toml").write_text(manifest, encoding="utf-8")
+    if text_only:
+        from neko_output_only_runtime import protected_html
+        page = target / 'static/index.html'
+        library = (ROOT/'scripts/neko_capture_policy.js').read_text(encoding='utf-8')
+        page.write_text(protected_html(page.read_text(encoding='utf-8'), library, text_only=True), encoding='utf-8')
 
 
 def prepare_summary_prompt_audit(store: Path) -> dict:
@@ -939,11 +948,16 @@ def main() -> int:
                         help="source host only: block all browser capture APIs; fixed input over WS, speaker output only")
     parser.add_argument('--offline-egress', action='store_true',
                         help='deny this relay external requests before spending; keep the existing shared ledger')
+    parser.add_argument('--text-only', action='store_true',
+                        help='source host: guarded capture-free pages and muted text teaching')
     parser.add_argument('--summary-prompt-audit',action='store_true',
                         help='task acceptance store only: record actual summary messages in private API audit')
     parser.add_argument('--session-tool-audit',action='store_true',
                         help='continuous-text task store only: record public session-tool receipts privately')
     args = parser.parse_args()
+
+    if args.text_only and (not args.source or args.voice or args.output_only):
+        parser.error('--text-only requires source and cannot combine with voice/output-only')
 
     if args.output_only and not args.source:
         parser.error("--output-only requires the verified source host")
@@ -992,7 +1006,7 @@ def main() -> int:
         raise SystemExit("store must remain inside benchmarks/raw")
     store = prepare_store(key, store, args.core_provider)
     if args.source:
-        prepare_product_plugin(store, study_vision=args.study_vision)
+        prepare_product_plugin(store, study_vision=args.study_vision, text_only=args.text_only)
         if args.summary_prompt_audit:
             print(json.dumps({'summary_prompt_audit':prepare_summary_prompt_audit(store)}))
         if args.session_tool_audit:
@@ -1037,6 +1051,7 @@ def main() -> int:
         "PYTHONIOENCODING": "utf-8",
         "NEKO_DEV_AUDIO_ALLOW": VOICE_GATE_EXCEPTIONS if args.voice else "",
         "NEKO_OUTPUT_ONLY": "1" if args.output_only else "0",
+        "NEKO_TEXT_ONLY": "1" if args.text_only else "0",
         "HTTP_PROXY": f"http://127.0.0.1:{sink.port}",
         "HTTPS_PROXY": f"http://127.0.0.1:{sink.port}",
         "NO_PROXY": "127.0.0.1,localhost",

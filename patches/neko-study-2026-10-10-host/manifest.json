@@ -279,9 +279,11 @@
     {
       "path": "main_logic/livetutor_output_only.py",
       "base_sha256": null,
-      "patched_sha256": "9479de31da8c37cd3093e429bcb2339a7dfa31b349e42ef11186a40c607feacc",
+      "patched_sha256": "e961790e1b0de875cea76baeb84f96de01d602c9638fde0800d6eb80bd9e962b",
       "reproduce": "python scripts/neko_output_only_patch.py",
-      "proof": "SOURCE_OFFLINE pending real browser/Native/output proof"
+      "proof": "SOURCE_OFFLINE pending real browser/Native/output proof",
+      "text_entry_scope": "source/offline plus two bounded task-store text launches; actual Native 8-API receipt/composer and Study render; no model/audio/human, original daily not run",
+      "text_entry_report": "docs/evidence/daily-companion-text-entry-2026-10-14.md"
     },
     {
       "path": "static/app/neko-capture-policy.js",
@@ -358,7 +360,7 @@
     },
     {
       "path": "scripts/neko_output_only_runtime.py",
-      "sha256": "9479de31da8c37cd3093e429bcb2339a7dfa31b349e42ef11186a40c607feacc"
+      "sha256": "e961790e1b0de875cea76baeb84f96de01d602c9638fde0800d6eb80bd9e962b"
     },
     {
       "path": "scripts/neko_capture_policy.js",

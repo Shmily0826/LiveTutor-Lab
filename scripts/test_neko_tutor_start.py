@@ -124,9 +124,15 @@ class ProductStartTest(unittest.TestCase):
     def test_owned_flutter_lesson(self):
         command = start.lesson_command()
         self.assertEqual(command, [str(start.host.SOURCE_PYTHON), str(ROOT / "scripts/neko_flutter_lesson_window.py")])
-        source = (ROOT / "scripts/neko_tutor_start.py").read_text(encoding="utf-8")
-        self.assertIn("lesson = subprocess.Popen(lesson_command()", source)
-        self.assertIn("lesson.terminate()", source)
+        import subprocess
+        lesson = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'])
+        try:
+            errors = start.cleanup_resources(None, None, SimpleNamespace(poll=lambda: 0), [], None, [], lesson)
+            self.assertEqual(errors, [])
+            lesson.wait(timeout=10)
+        finally:
+            if lesson.poll() is None:
+                lesson.kill(); lesson.wait(timeout=10)
 
     def test_task_browser_profile_and_mute(self):
         import tempfile

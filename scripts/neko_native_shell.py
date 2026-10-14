@@ -54,7 +54,7 @@ class _Entry(ctypes.Structure):
                 ("dwFlags", wintypes.DWORD), ("szExeFile", wintypes.WCHAR * 260)]
 
 
-def processes() -> list[tuple[int, str]]:
+def processes(include_parents=False) -> list[tuple]:
     handle = k32.CreateToolhelp32Snapshot(0x00000002, 0)
     found: list[tuple[int, str]] = []
     if handle != -1:
@@ -62,7 +62,8 @@ def processes() -> list[tuple[int, str]]:
         entry.dwSize = ctypes.sizeof(entry)
         ok = k32.Process32FirstW(handle, ctypes.byref(entry))
         while ok:
-            found.append((int(entry.th32ProcessID), entry.szExeFile))
+            item = (int(entry.th32ProcessID), entry.szExeFile)
+            found.append((*item, int(entry.th32ParentProcessID)) if include_parents else item)
             ok = k32.Process32NextW(handle, ctypes.byref(entry))
         k32.CloseHandle(handle)
     return found
@@ -149,25 +150,31 @@ def shell_environment(store: Path, userdata: Path | None = None) -> dict[str, st
     return env
 
 
-def verify_output_only_host():
+def verify_output_only_host(mode: str = 'output-only'):
     import hashlib
     expected = hashlib.sha256((ROOT/'scripts/neko_capture_policy.js').read_bytes()).hexdigest()
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     with opener.open(f"http://127.0.0.1:{MAIN_PORT}/",timeout=8) as response:
         body=response.read(16384).decode('utf-8')
-        if (response.status != 200 or response.headers.get('X-LiveTutor-Audio-Mode') != 'output-only'
+        if (response.status != 200 or response.headers.get('X-LiveTutor-Audio-Mode') != mode
                 or response.headers.get('X-LiveTutor-Capture-Policy-SHA256') != expected
                 or 'microphone=()' not in response.headers.get('Permissions-Policy','')
                 or 'NekoCapturePolicy.installOutputOnly({enabled:true})' not in body):
             raise RuntimeError('source host has no verified output-only page bootstrap')
+        if mode == 'text-only' and '__NEKO_TEXT_ONLY__' not in body:
+            raise RuntimeError('source host has no verified text-only page bootstrap')
 
 
 def launch(store: Path, wait_seconds: int = 150, chat_surface: str = "full",
            cdp_port: int | None = None, audio_input: str | None = None,
-           output_only: bool = False) -> dict:
+           output_only: bool = False, text_only: bool = False) -> dict:
     """Start the avatar shell and prove it attached to the host we control."""
     from neko_desktop_tutor_host import require_task_audio_allowed, require_task_speaker_output_allowed
-    if output_only:
+    if text_only:
+        if output_only or audio_input is not None:
+            raise RuntimeError('text-only forbids output-only and real or fake capture devices')
+        verify_output_only_host('text-only')
+    elif output_only:
         require_task_speaker_output_allowed("output-only Native avatar shell")
         if audio_input is not None:
             raise RuntimeError("output-only forbids real or fake capture devices")
@@ -182,17 +189,20 @@ def launch(store: Path, wait_seconds: int = 150, chat_surface: str = "full",
     EVIDENCE.mkdir(parents=True, exist_ok=True)
     log_path = EVIDENCE / f"neko-avatar-shell-{stamp}.log"
     userdata = None
-    if output_only:
+    if text_only:
+        userdata = store / 'text-only-userdata'
+    elif output_only:
         import uuid
         # A previously cached unprotected page must never run before this guard.
         userdata = store / 'output-only-userdata' / uuid.uuid4().hex
     config_path = write_surface_config(store, chat_surface, userdata)
-    backend_pids = {pid for pid, name in processes() if name.lower() == FROZEN_BACKEND}
     handle = log_path.open("wb")
     # The debugging port is only ever passed by the acceptance probes; the
     # learner-facing launcher runs without it so no local process can drive the
     # avatar window.
     flags = [*FLAGS] + ([f"--remote-debugging-port={cdp_port}"] if cdp_port else [])
+    if text_only:
+        flags.append('--mute-audio')
     if output_only:
         flags.append("--autoplay-policy=no-user-gesture-required")
     if audio_input:
@@ -216,15 +226,16 @@ def launch(store: Path, wait_seconds: int = 150, chat_surface: str = "full",
                   "--use-fake-ui-for-media-stream"]
     process = subprocess.Popen([str(EXE), *flags], cwd=str(APP), env=shell_environment(store, userdata),
                                stdout=handle, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
+    from neko_tutor_start import process_creation_time, owned_browser_pids
+    owner = {"pid": process.pid, "created_at": process_creation_time(process.pid)}
     started = time.monotonic()
     seen: list[dict] = []
     frozen: list[int] = []
-    outcome: dict[str, object] = {"pid": process.pid, "status": "starting", "output_only":output_only}
+    outcome: dict[str, object] = {**owner, "status": "starting", "output_only":output_only, "text_only":text_only}
     try:
         while time.monotonic() - started < wait_seconds:
             time.sleep(3)
-            frozen = [pid for pid, name in processes()
-                      if name.lower() == FROZEN_BACKEND and pid not in backend_pids]
+            frozen = owned_frozen_backends(owner) if owned_browser_pids([owner]) else []
             if frozen:
                 break
             seen = [item for item in windows_of(process.pid) if item["visible"] and item["width"] > 60]
@@ -242,8 +253,6 @@ def launch(store: Path, wait_seconds: int = 150, chat_surface: str = "full",
     if frozen:
         # The frozen backend carries no text-only audio gate and would read the
         # user's own provider settings: never leave it running.
-        for pid in frozen:
-            subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True)
         shutdown(outcome)
         raise RuntimeError(
             "原生壳没有 attach，而是自己拉起了冻结后端 "
@@ -251,21 +260,37 @@ def launch(store: Path, wait_seconds: int = 150, chat_surface: str = "full",
     if outcome.get("status") != "attached":
         shutdown(outcome)
         raise RuntimeError(f"原生角色窗口未就绪：{outcome.get('status')}（日志 {log_path.name}）")
-    PID_FILE.write_text(json.dumps({"pid": process.pid, "log": str(log_path)}), encoding="utf-8")
+    PID_FILE.write_text(json.dumps({**owner, "log": str(log_path)}), encoding="utf-8")
     outcome["log"] = str(log_path)
     return outcome
 
 
+def owned_frozen_backends(owner: dict) -> list[int]:
+    """A simultaneous unrelated launch is never ownership evidence."""
+    rows = processes(include_parents=True)
+    descendants = {int(owner['pid'])}
+    while True:
+        expanded = descendants | {pid for pid, _, parent in rows if parent in descendants}
+        if expanded == descendants:
+            break
+        descendants = expanded
+    return [pid for pid, name, _ in rows if pid in descendants and name.lower() == FROZEN_BACKEND]
+
+
 def shutdown(outcome: dict | None = None) -> None:
-    pid = (outcome or {}).get("pid")
-    if not pid and PID_FILE.is_file():
+    from neko_tutor_start import stop_owned_tree
+    owner = outcome
+    saved = None
+    if PID_FILE.is_file():
         try:
-            pid = json.loads(PID_FILE.read_text(encoding="utf-8")).get("pid")
+            saved = json.loads(PID_FILE.read_text(encoding="utf-8"))
         except ValueError:
-            pid = None
-    if pid:
-        subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True)
-    PID_FILE.unlink(missing_ok=True)
+            pass
+    owner = owner if owner is not None else saved
+    if owner:
+        stop_owned_tree([owner])
+    if owner and saved and all(owner.get(key) == saved.get(key) for key in ('pid', 'created_at')):
+        PID_FILE.unlink(missing_ok=True)
 
 
 def main() -> int:
@@ -282,6 +307,7 @@ def main() -> int:
                              "microphone instead of leaving the room open to listen")
     parser.add_argument("--output-only", action="store_true",
                         help="explicit speaker permission and guarded source host; no capture devices")
+    parser.add_argument('--text-only', action='store_true', help='guarded text-only source host; muted shell, no capture')
     args = parser.parse_args()
     if args.stop:
         shutdown()
@@ -289,7 +315,7 @@ def main() -> int:
         return 0
     try:
         outcome = launch(Path(args.store).resolve(), args.wait, args.chat_surface,
-                         args.cdp_port, args.audio_input, args.output_only)
+                         args.cdp_port, args.audio_input, args.output_only, args.text_only)
     except RuntimeError as error:
         print(f"原生角色启动失败：{error}", file=sys.stderr)
         return 1
