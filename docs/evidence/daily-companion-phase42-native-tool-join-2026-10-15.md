@@ -64,3 +64,6 @@ Main三项定向取消/替换测试 PASS7.069s；此前定向初测另一次sock
 两个30秒仍是各自起点，producer watchdog可能先于arbiter cancel grace安全失败，未宣称共享截止或超慢工具体验完善。多ASR/第二round、本地资格非provider严格因果、已开始内容/完成后迟工具明确拒绝均保留。运行版本未接新原型，production producer58bf…5d07b、gradepatch ad82…3f3b7be、host manifest40c8…3da71原SHA实核；SourceGate PASS，无live host/场/自有48911/48916/9234 listener，账本810/76/0。
 
 下一阶段先准备可回退的隔离实验接线及精确部署方案，default phrase/AUTO仍OFF；只有current bytes、canonical/normalizer、manifest、SourceGate及相关回归一致才允许受控单场，不能把本阶段78项当原50真实失败已修。若实际协议资格不满足，停止该线路无效重试并推进其余A–F；最终human仍等核心成熟。
+
+
+阶段42发布核验：8精确allowlist已commit/push 0ec30ad7aea5ce939079a252f0e51785fabd5ab0 到codex/daily-learning-companion，remote同SHA、publisher clean、Root index空；master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。无raw/DB/WAV/密钥/备份发布；contract原SHA与SourceGate再次核验通过，原ledger810/76/0。无live host/场、音频设备与系统音量未操作。下一43从冻结patch ceb906…67474a/test23070f…bc32c4与phase42报告接续，先准备隔离实验接线/回退、canonical/normalizer/manifest/Gate一致性和必要回归，default phrase/AUTO OFF；有界安全failclose不冒连续恢复，未真实模型/声音/human验收。全部A–F与局部阻塞转线、原账本不重置、禁mic/capture/loopback、实际证据完成条件保留，Goal active。

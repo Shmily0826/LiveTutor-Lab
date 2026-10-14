@@ -59,3 +59,6 @@ Main当前actual queue fixture无需改变host turn就复现never-announcing自�
 
 阶段41发布核验：16精确allowlist（无损PNG+测试/审查/当前记录、可重放隔离producer/patcher与40失败证据）已commit/push 70de00c0fd36aff082ebbf48f677c8d86d496fa1 到codex/daily-learning-companion，remote同SHA、publisher clean、master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb，Root index空。未发布raw/DB/录音/密钥/unused grade完整备份；contract原SHA、SourceGate、default static exact均再核通过，ledger810/76/0。无live exec/host/在线场，麦克风/capture/loopback及音量均未操作。
 下一42先本地收窄真实tooltask→native sealed origin的同lane continuation设计，从actual _capture_tool_task_owner/_start_raw_tool_call/_send_tool_results_openai_realtime与隔离测试接续，不能只按connection/时间或当前seq认父输入；先实际工具callback、并行/新PCM/旧conn/取消fixture及独立review，不接生产/盲开模型。若归属资格仍无足够证据，记录缺口并转A/C/D/E其余集成，不把40局部阻塞当Goal终止；本轮PNG不重复验证，密集字/语义/物理可听/human仍独立待验。
+
+
+阶段42发布核验：8精确allowlist已commit/push 0ec30ad7aea5ce939079a252f0e51785fabd5ab0 到codex/daily-learning-companion，remote同SHA、publisher clean、Root index空；master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。无raw/DB/WAV/密钥/备份发布；contract原SHA与SourceGate再次核验通过，原ledger810/76/0。无live host/场、音频设备与系统音量未操作。下一43从冻结patch ceb906…67474a/test23070f…bc32c4与phase42报告接续，先准备隔离实验接线/回退、canonical/normalizer/manifest/Gate一致性和必要回归，default phrase/AUTO OFF；有界安全failclose不冒连续恢复，未真实模型/声音/human验收。全部A–F与局部阻塞转线、原账本不重置、禁mic/capture/loopback、实际证据完成条件保留，Goal active。
