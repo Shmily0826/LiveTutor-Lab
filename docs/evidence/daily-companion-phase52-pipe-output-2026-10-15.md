@@ -22,3 +22,7 @@
 - scripts/neko_desktop_tutor_host.py: e7baa17fbd2cd462bbd4fecf79fe332dac7835a375aa35f2ff019154919a666a
 - scripts/neko_daily_code_dialogue_probe.py: 005afc08cbaf41dde390e4c0f91da8faa66cebab67d4687f86e00b8d1198be3d
 - patches/neko-study-2026-10-10-host/manifest.json: 5e5e385e16b064ab9e537eee3cfbd8c00d34c6ddd74b9681336ef84896b22c2a
+
+阶段52十文件精确发布已核：commit/push 8d9bf21aaceed89c23fb9d0313e144e23be2b822 到codex/daily-learning-companion，remote exact/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb不变/publisher clean/Root index空，原contract SHA保持；无raw/DB/密钥/录音/备份发布。无live宿主/自有端口，原ledger862/78/0，全部A–F/Goal active。
+
+三份工作记录按角色精简，全部精简前原bytes另存through-phase52归档并绑定SHA，不改contract/原证据。下一53已定位现有Focus/stream_text与Study教学模板，未变模型/推理开关或开新调用。
