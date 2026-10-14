@@ -8,10 +8,11 @@ from pathlib import Path
 import socket
 import subprocess
 import time
+import sys
 from urllib.parse import quote
 import websockets
-from neko_daily_voice_probe import stop_owned_host
-from neko_tutor_start import plugin_server_ready
+from neko_relevant_history_probe import remember_children
+from neko_tutor_start import plugin_server_ready, process_creation_time, stop_owned_tree
 from neko_lab_client import LabClient
 import neko_desktop_tutor_host as host
 
@@ -26,9 +27,51 @@ FOLLOW_UPS = [
     '已经纠正过行顺序。再核对客户端第16、17行和 server/routes/weather.js 第8、9行：只交换 map 两行的位置、不改键和值，会改变服务端收到的坐标吗？两句短答，不出题。',
     '只讲漏掉一个查询键的影响。现在读取 server/routes/weather.js 及其坐标解析辅助函数，指出实际判断和 HTTP 返回；用两句短答，区分事实与没确认的影响。',
 ]
+CONTRASTS = [
+    '请读取 weather_service.dart 与 server/routes/weather.js 的实际源码：只调换客户端 map 两行的书写位置，键和值都不改，会改变服务端收到的坐标吗？用两句短答，只讲这项改动，不出题。',
+    '现在换一种改动：lat 和 lon 两个键都保留，只把它们对应的纬度、经度值写反。服务端会缺值、拿到错误坐标，还是一定返回400？请重新核对消费与校验源码，用两句短答，分清确定事实与条件，不出题。',
+    '继续核对源码：只把客户端 lon 键改名为 longitude，服务端仍按原键读取，结果是什么？请纠正任何把“键还在但值写反”混同为“缺少原键”的解释；两句短答，不出题。',
+]
+
+
+def host_command(options):
+    return [str(host.SOURCE_PYTHON), '-X', 'utf8', str(ROOT/'scripts/neko_desktop_tutor_host.py'),
+        '--source', '--core-provider', 'deepseek', '--store', options.store, '--hold', '380',
+        '--seconds', '1', '--api-budget', '24', '--text-only', '--egress-budget', '2000',
+        '--budget-round', 'bargein-autocheck-20261012']
+
+
+def prepare_contrast_grant(options):
+    if not getattr(options, 'contrast_only', False): return
+    store = (ROOT/'benchmarks/raw'/options.store).resolve()
+    if (not options.store.startswith('neko-daily-code-contrast-') or store.exists()
+            or store.parent != (ROOT/'benchmarks/raw').resolve()):
+        raise ValueError('contrast scene requires a fresh task-owned code store')
+    if options.output.resolve().parent != (ROOT/'benchmarks/raw/evidence').resolve():
+        raise ValueError('contrast evidence must stay in task raw/evidence')
+    source = ROOT/'benchmarks/raw/neko-daily-companion/N.E.K.O/plugins/study_companion/data/code_project.json'
+    data = source.read_bytes()
+    grant = json.loads(data)
+    expected = Path(r'D:\UoA\S2\COMPSCI 734\project\Sky Scout\sky_scout').resolve(strict=True)
+    if Path(grant['root']).resolve(strict=True) != expected:
+        raise ValueError('saved code grant is not the user-authorized Sky Scout root')
+    # Reuse only the existing authorization, never a learning DB or source prefetch.
+    store.mkdir(exist_ok=False)
+    target = store/'N.E.K.O/plugins/study_companion/data/code_project.json'
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open('xb') as stream: stream.write(data)
+
+
+def cleanup_probe_host(process, ownership):
+    # Recorded children still need cleanup when the launcher has already exited.
+    stop_owned_tree(ownership)
+    process.wait(timeout=20)
 
 
 async def main(options):
+    if (getattr(options, 'contrast_only', False)
+            and options.output.resolve().parent != (ROOT/'benchmarks/raw/evidence').resolve()):
+        raise ValueError('contrast evidence must stay in task raw/evidence before reserving output')
     if options.output.exists(): raise RuntimeError('keep original evidence; new output only')
     for port in (48911,48916):
         with socket.socket() as check:
@@ -36,8 +79,12 @@ async def main(options):
     ledger = ROOT/'benchmarks/raw/neko-desktop-egress-cap'
     report = {'started':datetime.now(timezone.utc).isoformat(), 'before':json.loads(ledger.read_text()),
               'turns':[], 'room_microphone':False, 'audio_started':False,
+              'text_only':True, 'task_silent':True,
               'proof':'actual character brain via its existing text websocket; not textbox/DOM/device/human proof; no source prefetch'}
     assert report['before']['round']=='bargein-autocheck-20261012'
+    with options.output.open('x', encoding='utf-8') as stream:
+        json.dump(report, stream, ensure_ascii=False, indent=2)
+    prepare_contrast_grant(options)
     log = ROOT/'benchmarks/raw/neko-desktop-host.log'
     log_start=log.stat().st_size if log.exists() else 0
     store=ROOT/'benchmarks/raw'/options.store
@@ -46,15 +93,27 @@ async def main(options):
     saved_core=json.loads(core_path.read_text(encoding='utf-8')).get('coreApi','free') if core_path.is_file() else 'free'
     receipts=list(store.rglob('code_evidence.jsonl'))
     sizes={str(p):p.stat().st_size for p in receipts}
-    handle=options.output.with_suffix('.host.log').open('wb')
-    process=subprocess.Popen([str(host.SOURCE_PYTHON),'-X','utf8',str(ROOT/'scripts/neko_desktop_tutor_host.py'),
-        '--source','--core-provider','deepseek','--store',options.store,'--hold','380','--seconds','1','--api-budget','24',
-        '--egress-budget','2000','--allow-host','www.lanlan.app:unlimited','--allow-host','www.lanlan.tech:0','--budget-round','bargein-autocheck-20261012'],
-        cwd=ROOT,env={**os.environ,'PYTHONIOENCODING':'utf-8'},stdout=handle,stderr=subprocess.STDOUT)
+    handle=options.output.with_suffix('.host.log').open('xb')
+    process=subprocess.Popen(host_command(options),
+        cwd=ROOT,env={**os.environ,'PYTHONIOENCODING':'utf-8','NEKO_TASK_SILENT':'1'},stdout=handle,stderr=subprocess.STDOUT)
+    ownership=[]
+    tracker=None
     def save(): options.output.write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
     try:
+        created=process_creation_time(process.pid)
+        if created is None: raise RuntimeError('launcher identity unavailable; preserve evidence')
+        ownership.append({'pid':process.pid,'created_at':created})
+        report['ownership']=ownership
+        save()
+        async def track_children():
+            while process.poll() is None:
+                remember_children(process,ownership)
+                ownership[:]=list({(item['pid'],item['created_at']):item for item in ownership}.values())
+                await asyncio.sleep(.25)
+        tracker=asyncio.create_task(track_children())
         ready,reason=await asyncio.to_thread(plugin_server_ready,100,process)
         if not ready: raise RuntimeError('not ready: '+reason)
+        if tracker.done(): tracker.result()
         report['host_ready']=True; report['owned_host_pid']=process.pid
         client=LabClient()
         report['study_state_before']=await asyncio.to_thread(client.call,'study_status')
@@ -76,13 +135,16 @@ async def main(options):
                     if event.get('type')=='session_started': break
                     if event.get('type') in ('session_failed','session_ended_by_server'): raise RuntimeError('text session failed; no retry')
                 else: raise RuntimeError('text session readiness timeout')
-                questions = FOLLOW_UPS if options.follow_up_only else QUESTIONS + ([CORRECTION] if options.correction else [])
+                questions = CONTRASTS if getattr(options, 'contrast_only', False) else FOLLOW_UPS if options.follow_up_only else QUESTIONS + ([CORRECTION] if options.correction else [])
                 for number,question in enumerate(questions,1):
                     turn={'number':number,'question':question,'sent_wall':time.time(),'events':[]}
                     report['turns'].append(turn); save()
                     await ws.send(json.dumps({'action':'stream_data','input_type':'text','data':question,'request_id':f'daily-code-text-{number}'},ensure_ascii=False))
                     deadline=time.monotonic()+100
                     while time.monotonic()<deadline:
+                        spent = json.loads(ledger.read_text())['spent'].get('api.deepseek.com',0)
+                        if spent - report['before']['spent'].get('api.deepseek.com',0) >= 32:
+                            raise RuntimeError('scene reached 32-request stop boundary; no retry')
                         frame=await asyncio.wait_for(ws.recv(),timeout=max(.1,deadline-time.monotonic()))
                         if isinstance(frame,bytes): raise RuntimeError('unexpected audio in text scene')
                         event=json.loads(frame); kind=event.get('type')
@@ -101,7 +163,16 @@ async def main(options):
     except Exception as error:
         report['failure']=type(error).__name__+': '+str(error)
     finally:
-        await asyncio.to_thread(stop_owned_host,process);handle.close()
+        if tracker is not None:
+            tracker.cancel()
+            tracked=await asyncio.gather(tracker,return_exceptions=True)
+            if tracked and isinstance(tracked[0],Exception): report['tracker_error']=str(tracked[0])
+        try:
+            await asyncio.to_thread(cleanup_probe_host,process,ownership)
+        except Exception as error:
+            report['cleanup_error']=type(error).__name__+': '+str(error)
+        finally:
+            handle.close()
         report['after']=json.loads(ledger.read_text())
         report['owned_host_exit']=process.poll()
         if core_path.is_file():
@@ -125,6 +196,7 @@ async def main(options):
         report['semantics']='PENDING actual replies and receipts review; completed transport is not teaching acceptance'
         save()
         print(json.dumps({'report':str(options.output),'failure':report.get('failure'),'turns':len(report['turns']),'receipts':len(report['code_receipts']),'spent':report['after']['spent']},ensure_ascii=False),flush=True)
+    return report
 
 
 if __name__=='__main__':
@@ -133,4 +205,6 @@ if __name__=='__main__':
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--correction',action='store_true',help='one additional explicit correction of the observed map-order error')
     parser.add_argument('--follow-up-only',action='store_true',help='two affected short follow-ups; do not repeat accepted structure round')
-    asyncio.run(main(parser.parse_args()))
+    parser.add_argument('--contrast-only',action='store_true',help='three affected key/order/value contrasts in a fresh task store, no source prefetch')
+    result=asyncio.run(main(parser.parse_args()))
+    sys.exit(1 if result.get('failure') or result.get('cleanup_error') or result.get('tracker_error') else 0)

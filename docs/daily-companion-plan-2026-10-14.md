@@ -1,6 +1,6 @@
-# 日常学习伙伴执行计划（阶段48任务浏览器修复 / 整体未完成）
+# 日常学习伙伴执行计划（阶段49部分通过 / 整体未完成）
 
-48当前：仅任务浏览器profile补translate.enabled=false，保留其它JSON键，坏配置/活任务owner/未完成temp拒改。新6+window4+text9共19不同离线case PASS，独立新6 PASS；唯一58同54实际profile两次窗口观察仅2主窗/noaux、同课同PNG，退出后pref仍false。原55/57翻译popup失败保留，不推永久稳定/实际点击/完整asyncReady。58 exit0/cleanup[]、owned/Native与四端口清理，postGate PASS，ledger835/78/0，无模型/音频/真人新验收。下一B连续分轮与晚到尾约束离线设计，全部A–F/Goal active。
+49当前：唯一静音真实59已终止，controller exit0；任务host被有意forced-stop exit1，非自然退出0。3角色WS轮/8 CodeGraph receipts，DeepSeek累计847/2000（本场+12）、app78/null、tech0/0，原round不重置。首轮DSML工具标记泄漏无教学答案FAIL，后两轮区分值与缺键但过度断言HTTP结果，整体PARTIAL。已记录owned/三端口全清、post59 SourceGate PASS，无Native/浏览器/声音/mic/capture/loopback。下一50减少精确文件定位的无关查询并修工具标记过滤；不加轮数掩盖失败，不盲重跑59，全部A–F/Goal active。
 
 完整任务以[原始contract](daily-companion-contract-2026-10-14.md)全文为准，169行/SHA256 FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33，禁止摘要替代或修改。现有Goal 01a13531-0341-7611-afc2-5c472a7ccf50 active，全部A–F持续推进，不重建/缩范围/阶段假完成；GPT-6.1 Sol High不擅改。
 
@@ -8,7 +8,7 @@
 
 音频：必要speaker仅用户已设4%，不调音量；当前无声音。禁房间/物理/虚拟mic、capture初始化、loopback。旧真人许可不延续，新须明确准备好了；核心成熟后一次10–20min集中human，不再逐句让用户等待。固定WAV仅文件/内存/WS，发声须已审output-only保护；text-only TASK_SILENT/source guard。只观察任务学习窗口，不采其它窗口。
 
-原账本bargein-autocheck-20261012不重置/换轮：最新58实核DS835/2000、app78/null、tech0/0；启动前再核，连接保留单场超时/异常停止/退避。计数非金额，不为耗额度测试、不换付费供应商。仅Main调共享额度/安排在线会话；沿原最多2Agent、明确文件所有权，learning_memory容量失败冻结，screen_guidance仅独立报告，不新增/换模型。
+原账本bargein-autocheck-20261012不重置/换轮：最新59终态实核DS847/2000、app78/null、tech0/0；启动前再核，连接保留单场超时/异常停止/退避。计数非金额，不为耗额度测试、不换付费供应商。仅Main调共享额度/安排在线会话；沿原最多2Agent、明确文件所有权，learning_memory容量失败冻结，screen_guidance仅独立报告，不新增/换模型。
 
 保留Root脏master/空index/.workbuddy/用户历史；不reset/clean/stash/清库。只精确allowlist审查后commit/push codex/，不合主/强推/覆盖历史；排除密钥/DB/WAV/raw/备份。Sky Scout源码/索引/原HTML只读，复用原两图/47WAV/SQLite/CodeGraph，不造新记忆系统或重做已过材料。Root无.codegraph，Sky定位先CodeGraph；localhost用D:/AI/tools/web-inspector/cli.mjs，不查个人Chrome/安装项目Playwright。六目录审批拒绝不绕过。
 
@@ -24,8 +24,8 @@
 
 ## 接续顺序与全部余项
 
-1. 完成48最终独立原件核验与精确allowlist发布；46–47源码发布已核，不因阶段收尾结束Goal。
-2. 47恢复入口/48任务profile翻译偏好窄修已交付；下一49 B先核51真实输入/ASR/tool协议边界，离线解决晚到约束，不盲开新付费场。旧UI陈旧夹具登记F维护。
+1. 48已发布；收口49实际PARTIAL证据与精确allowlist发布，完整Goal持续。
+2. 50先改善D精确源码查询及DSML输出过滤，保持工具cap与授权边界；B51协议局部待适配，不盲开新付费场。旧UI陈旧夹具登记F维护。
 3. 依真实失败继续B/C/D/F，不盲重复未变已过场。
 
 | 范围 | 剩余工作与边界 |
@@ -71,3 +71,14 @@
 
 
 阶段48已独立58原件复核冻结，8精确allowlist commit/push d2ff794b20a3e76361d14134c90c1e9e38bd8da0 至codex/daily-learning-companion，remote exact/master原f1e8f3f不变/publisher clean/Root index空/contract原SHA/原ledger835-78-0均核。无raw/DB/WAV/Preferences/密钥/备份发布，product/host manifest不变。无live场/自有端口；下一49 B按51既有输入/ASR/tool协议核晚尾约束离线设计，不盲新付费场、不重做已过材料/普通打断，完整A–F/Goal active。
+
+
+阶段49开始：48实际修码/19离线/唯一58窗口与pref/独立复核/d2ff794+metadata83d741b发布属progress，remote exact/master未改、原账本835/78/0。完整A–F继续。B窄核51原report与现phrase sender/旧manual研究：完整PCM已写仍2ASR晚约束；没有新proxy endpoint回执，不盲重复MANUAL/同burst；现free registry supports_independent_asr=false，虽然本机有faster_whisper及缓存，不能翻能力标记冒接通。该局部项继续需明确proxy支持或经验证适配；转D真实源码教学的已知值/键混淆与短答纠错，不因B停全Goal。Main只增现codedialogue量具的定向3轮、严格text-only/TASK_SILENT、新任务store、无源码预取/无mic/无声，先离线/独立检查再唯一有界59；不重跑已过结构/索引/图材料。原script独占备份phase49-before。
+
+
+阶段49开发冻结：通用role指导区分specified edit/statement order/lookup key/value，沿实际consumer/guards，只答被问case，两短句包含不确定性，不硬编码Sky答案。复用codedialogue新增3个对比，strict text-only/TASK_SILENT、原round2000；fresh store排他mkdir/授权only、不拷DB或源码、输出先围栏后x保留；沿已证remember_children+creationtime/stop_owned_tree捕获去重child，parent先退仍清已记录child、不删共享PIDfile。独立发现并修两原P2及新增output校验顺序P2，最终Main6 PASS .027s，独立delta待收口。WS间>=32请求为停止边界，非并发严格32硬顶；2000全局硬顶不变。启动前835/78/0、59 store/output/log均未存在、48911/48916/9234无listener；Pre59 SourceGate PASS。唯一59尚未开，原旧D PARTIAL保留。
+
+
+阶段49唯一静音真实59已启动exec13483，fresh store neko-daily-code-contrast-20261015-59；raw evidence/daily-companion-code-contrast59.json已x预留，strict text-only/TASK_SILENT、DeepSeek现有角色textWS/CodeGraph，无Native/浏览器/音频/捕获/源码预取。独立3个量具P2全关闭/6PASS，835/78/0起、原2000硬顶/32事件间停止边界/单场380s不重置不重连。只poll同live handle，尚未就绪/终态，不冒模型或清理通过。
+
+阶段49终态与诊断：原raw59 SHA b24ca1b2b8e768eb8f8fc5d7a7dc688f2703c515ed785f84e915c02fb8021419，独立terminal SHA 2e6959db77cbe0e8357aa263ffbaef9242243e47b0687d6eb006ba2098fbe21d；原件semantics=PENDING保留，另件与独立review判PARTIAL。三轮约9.749/8.503/3.189s，工具实际shown客户端、route与坐标guard；下游src/weather.js只有空header，不能认领其实现/成功率。第一轮整段DSML无中文教学答案；后两轮“200还是400/通常仍200”遗漏实际shown502分支且无频率证据。8次工具查询中首explore主要给SkyMapPage，精确天气文件需后续查找。中央host.log 91918、91966分别在2026-10-15 11:24:18/26记录tool iteration cap 3 reached并forced final without tools，确认本场搜索耗尽工具轮数；尚不能说唯一根因或只加cap解决。既有ToolLeakFilter没有DSML支持，先修实际输出边界/文件解析，不执行泄漏文本为工具。独立最终6离线与59原件语义复核已闭合。当前无测试host，账本847/78/0，无设备/真人新验收。B自然停顿局部待proxy协议/适配，转D/F继续；49精确发布待收口，50先离线。
