@@ -56,7 +56,7 @@ function choose(id){
   if(current.kind==='html'){ui.frame.onload=loaded;ui.frame.src=current.url+'?theme=dark';ui.image.removeAttribute('src')}
   else{ui.frame.removeAttribute('src');ui.image.onload=loaded;ui.image.onerror=()=>{ready=false;clearLocal();say('图片未能载入，请重新载入材料。')};ui.image.style.width='100%';ui.zoom.value='1';ui.zoom.disabled=false;ui.image.src=current.url}
 }
-function apply(next){
+function apply(next,reloadCurrent=false){
   if(next.revision<revision)return; // A late earlier request cannot restore an old picture.
   state=next;
   const exists=current&&state.materials.some(m=>m.id===current.id);
@@ -64,7 +64,7 @@ function apply(next){
   if(ui.materials.options.length!==choices.length||[...ui.materials.options].some((option,i)=>option.value!==choices[i]?.id||option.textContent!==choices[i]?.name)){ui.materials.replaceChildren(...choices.map(m=>new Option(m.name,m.id)));ui.materials.disabled=!choices.length}
   ui.studyContext.hidden=!state.study;
   if(state.study)ui.studyContext.textContent=(state.study.following?'跟随 Study · ':'查看参考材料 · Study 当前课程：')+(state.study.course_id||'暂不可用');
-  if(!exists){choose(state.active_material_id)}
+  if(!exists||reloadCurrent){choose(state.active_material_id)}
   else if(current.id!==state.active_material_id)choose(state.active_material_id);
   ui.materials.value=state.study?.following?'@study':(current?.id||'');
   if(next.revision!==revision){revision=next.revision;if(next.command&&next.command.material_id===current?.id){command=next.command;ui.clear.disabled=false;ui.targetCaption.textContent=command.label}else clearLocal()}
@@ -75,7 +75,7 @@ ui.point.onclick=()=>{const selector=ui.targets.value;if(!selector)return;const 
 ui.image.onclick=event=>{if(!current||!ready)return;const r=ui.image.getBoundingClientRect();const x=Math.max(0,Math.min(.96,(event.clientX-r.left)/r.width-.02));const y=Math.max(0,Math.min(.96,(event.clientY-r.top)/r.height-.02));send({material_id:current.id,kind:'rect',x,y,width:.04,height:.04,label:'你选择的图片位置'})};
 ui.zoom.onchange=()=>{ui.image.style.width=(Number(ui.zoom.value)*100)+'%'};
 ui.clear.onclick=()=>send({material_id:current.id,kind:'clear'});
-ui.reload.onclick=async()=>{ui.reload.disabled=true;try{apply(await api('/api/reload',{}))}catch(error){say(error.message)}finally{ui.reload.disabled=false}};
+ui.reload.onclick=async()=>{ui.reload.disabled=true;try{apply(await api('/api/reload',{}),true)}catch(error){say(error.message)}finally{ui.reload.disabled=false}};
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&current)ui.clear.click()});
 function geometry(){
   if(!current||!command||!ready||command.material_id!==current.id)return null;

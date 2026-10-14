@@ -81,7 +81,18 @@ def chrome_command(url: str, *, text_only: bool = False) -> list[str]:
     return [str(chrome), f"--user-data-dir={BROWSER_PROFILE}", f"--app={url}", "--mute-audio",
             "--no-first-run", "--no-default-browser-check", "--disable-sync",
             "--disable-background-networking", "--disable-component-update",
-            "--disable-features=MediaRouter"]
+            "--disable-features=MediaRouter,Translate"]
+
+
+def browser_window_commands(template, *, study_ui: bool, surface_url: str = ""):
+    """Give the lesson its own app window instead of hiding it in a Study tab."""
+    if template is None:
+        return []
+    commands = [list(template)] if study_ui else []
+    if surface_url:
+        commands.append([arg for arg in template if not arg.startswith('--app=')]
+                        + ['--app=' + surface_url])
+    return commands
 
 
 # Ownership of the browser tree is proved with kernel32 and killed with `taskkill /T`, with no
@@ -351,7 +362,8 @@ class CoreProviderOverride:
                 close(owned)
 
 
-def cleanup_resources(surface, shell, launcher, launcher_owner, browser, browser_record, lesson):
+def cleanup_resources(surface, shell, launcher, launcher_owner, browser, browser_record, lesson,
+                      additional_browsers=()):
     """One failing resource must never prevent the other owned resources from closing."""
     errors = []
     def attempt(name, action):
@@ -367,8 +379,10 @@ def cleanup_resources(surface, shell, launcher, launcher_owner, browser, browser
     if launcher.poll() is None:
         attempt('host tree', lambda: stop_owned_tree(launcher_owner))
         attempt('host wait', lambda: launcher.wait(timeout=20))
-    if browser is not None:
-        attempt('browser ownership', lambda: remember_browser_tree(browser, browser_record))
+    task_browsers = ([browser] if browser is not None else []) + list(additional_browsers)
+    for task_browser in task_browsers:
+        attempt('browser ownership', lambda item=task_browser: remember_browser_tree(item, browser_record))
+    if task_browsers:
         attempt('browser tree', lambda: stop_owned_browser(browser_record))
     if lesson is not None and lesson.poll() is None:
         attempt('lesson', lesson.terminate)
@@ -628,7 +642,7 @@ def main() -> int:
         host.read_key()
         print(f"宿主侧可靠性补丁：{host.apply_voice_host_patch()}")
         host.verify_source_audio_gate()
-        browser_args = chrome_command(UI_URL, text_only=args.text_only) if args.study_ui else None
+        browser_args = chrome_command(UI_URL, text_only=args.text_only) if args.study_ui or args.learning_surface else None
         if browser_args and BROWSER_OWNER_FILE.is_file():
             previous = json.loads(BROWSER_OWNER_FILE.read_text(encoding="utf-8"))
             if owned_browser_pids(previous):
@@ -728,6 +742,7 @@ def main() -> int:
                               "需要就用 --code-root <项目目录> 启动。"))
     voice_extra = host_options(args, voice_hosts)
     surface = None
+    surface_url = ""
     launch_env = os.environ.copy()
     launch_env["PYTHONIOENCODING"] = "utf-8"
     if args.text_only:
@@ -741,8 +756,6 @@ def main() -> int:
         launch_env.update(NEKO_LEARNING_SURFACE_URL=surface_url,
                           NEKO_LEARNING_SURFACE_TOKEN=surface.token)
         print(f"只读学习材料与指示：{surface_url}")
-        if browser_args:
-            browser_args = [arg for arg in browser_args if not arg.startswith("--app=")] + ["--new-window", UI_URL, surface_url]
     store.mkdir(parents=True, exist_ok=True)
     provider_override = CoreProviderOverride(store, 'free' if args.voice else 'deepseek')
     launcher_log = store / "launcher.log"
@@ -752,6 +765,7 @@ def main() -> int:
         cwd=str(ROOT), env=launch_env, stdout=launcher_output, stderr=subprocess.STDOUT)
     launcher_owner = [{"pid": launcher.pid, "created_at": process_creation_time(launcher.pid)}]
     browser = None
+    task_browsers = []
     browser_record = []
     lesson = None
     shell = None
@@ -777,13 +791,21 @@ def main() -> int:
             print(f"可退回辅助网页面板：{UI_URL}（重新启动时加 --study-ui）")
             return 1
         print(f"原生角色已就绪：pid {shell['pid']}，可见窗口 {len(shell.get('windows', []))} 个。")
-        if browser_args:
+        commands = browser_window_commands(browser_args, study_ui=args.study_ui, surface_url=surface_url)
+        if commands:
             BROWSER_PROFILE.parent.mkdir(parents=True, exist_ok=True)
-            browser = subprocess.Popen(browser_args, cwd=str(ROOT))
-            remember_browser_tree(browser, browser_record)
+            for command in commands:
+                task_browser = subprocess.Popen(command, cwd=str(ROOT))
+                task_browsers.append(task_browser)
+                if browser is None:
+                    browser = task_browser
+                # Chrome may forward the second app to the first profile process.
+                # Keep every live process identity; never equate Popen with a window.
+                remember_browser_tree(task_browser, browser_record)
         print("\n在角色聊天窗口输入文字，例如：" if args.text_only else "\n直接在角色的聊天窗口里说话，例如：")
         if args.learning_surface:
-            print("  先在 Study 选择图片，再说：讲讲我交给 Study 的这张图，用两句话。")
+            print("  Study 用于选择课程和图片；独立的「学习材料」窗口显示当前图与指示，可自行并排摆放。")
+            print("  先在 Study 选择图片，再" + ("输入" if args.text_only else "说") + "：讲讲我交给 Study 的这张图，用两句话。")
             print("  查询授权项目里的 fetchWeather，讲讲天气请求怎样发出。")
             print("  在学习材料窗口选当前源码证据，再说：指向刚刚解释的代码行。")
         else:
@@ -805,13 +827,13 @@ def main() -> int:
         threading.Thread(target=wait_for_enter, daemon=True).start()
         deadline = time.monotonic() + args.minutes * 60
         while not finished.wait(1) and time.monotonic() < deadline and launcher.poll() is None:
-            if browser is not None:
-                remember_browser_tree(browser, browser_record)
+            for task_browser in task_browsers:
+                remember_browser_tree(task_browser, browser_record)
     except KeyboardInterrupt:
         pass
     finally:
         cleanup_errors = cleanup_resources(surface, shell, launcher, launcher_owner,
-                                           browser, browser_record, lesson)
+                                           browser, browser_record, lesson, task_browsers[1:])
         if not cleanup_errors and launcher.poll() is not None:
             try:
                 provider_override.restore()
