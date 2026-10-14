@@ -407,8 +407,16 @@ class _TutorContextSupportMixin:
                     response_mode=explicit_response_mode,
                 )
             if operation != LLM_OPERATION_CONCEPT_EXPLAIN:
+                matches = match_topics(topic_items, query=query, limit=5)
+                matches = [match for match in matches
+                           if int(match.get("topic_specific_score") or 0) >= 10]
+                if not matches:
+                    return {}, _knowledge_guidance_outcome(
+                        status="not_matched", source="query_match"
+                    )
                 guidance = build_knowledge_guidance_payload(
                     topics=topic_items,
+                    topic_id=str(matches[0]["id"]),
                     query=query,
                     max_depth=3,
                     match_limit=5,

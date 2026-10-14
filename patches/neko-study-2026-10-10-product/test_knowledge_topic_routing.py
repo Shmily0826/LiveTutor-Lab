@@ -11,6 +11,10 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 LIVE = ROOT / "benchmarks/raw/neko-product-data/plugin-code/study_companion"
 PAYLOAD = Path(__file__).with_name("payload") / "study_companion"
+# The result JSON carries Chinese topic names; on a default Windows console
+# (cp1252) that makes the final print alone fail the test.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 package = ModuleType("routing_test")
 package.__path__ = [str(PAYLOAD), str(LIVE)]
 sys.modules[package.__name__] = package
@@ -78,10 +82,41 @@ async def check():
     selected = next(topic for topic in topics if topic["name"] == "拓扑排序")
     guidance, result = await route(generic, selected["id"])
     assert result["knowledge_guidance_status"] == "applied" and result["knowledge_guidance_source"] == "selected_topic"
+    # Scene41's real question must not become a grammar lesson in non-explain paths.
+    all_topics = []
+    for path in sorted((LIVE / 'static/knowledge_seeds').glob('*.json')):
+        all_topics.extend(json.loads(path.read_text(encoding='utf-8')).get('topics', []))
+    arrow_query = '已有关系对照图的两条连接是 WEX→NUD、NUD→REZ。从 NUD 出发的那条箭头，起点和终点分别是什么？'
+    async def automatic(operation, query, selected_id=''):
+        fixture = SimpleNamespace(_knowledge_guidance_topics_cache={'all:5000':all_topics})
+        return await namespace['_build_knowledge_guidance_context'](
+            fixture, operation=operation, input_text=query,
+            context={'selected_topic_id':selected_id})
+    assert '从' not in graph._query_terms(arrow_query)
+    assert all(item.get('topic_specific_score',0) < 10 for item in graph.match_topics(all_topics, query=arrow_query))
+    for operation in ('answer', 'question'):
+        for query in (arrow_query, '连接', '从', 'input output boundary conditions'):
+            guidance, result = await automatic(operation, query)
+            assert not guidance and result['knowledge_guidance_status']=='not_matched', (operation, query, result)
+        for query in ('从句连接词选择', '图的 BFS 与 DFS', 'BFS'):
+            guidance, result = await automatic(operation, query)
+            assert result['knowledge_guidance_status']=='applied', (query, result)
+            assert guidance['topic']['id']==guidance['relevant_subgraph']['focus_topics'][0]['id']
+        guidance, result = await automatic(operation, arrow_query, 'english_senior_clause_connection')
+        assert result['knowledge_guidance_source']=='selected_topic' and guidance['topic']['subject']=='english'
+    # Complete aliases/identifiers work; a longer source identifier is not that alias.
+    identifier_topics=[{'id':'named_bfs','name':'Breadth-first traversal','subject':'computer_science','aliases':['BFS']}]
+    assert graph.match_topics(identifier_topics,query='Use BFS.') [0]['topic_specific_score'] >= 10
+    assert not any(item['topic_specific_score']>=10 for item in graph.match_topics(identifier_topics,query='BFSx'))
+    single_character=[{'id':'force','name':'力','subject':'physics'}]
+    assert graph.match_topics(single_character,query='力')[0]['topic_specific_score']>=10
+    assert not graph.match_topics(single_character,query='能力培养')
     return {"status": "PASS_TOPIC_SPECIFIC_KNOWLEDGE_ROUTING", "original_evidence_round": 5,
             "generic_overlap_rejected": True, "name_matches_preserved": confirmed,
             "bfs_keyword_preserved": True, "aliases_preserved": True,
-            "explicit_topic_preserved": True, "provider_calls": 0, "live_ui_retested": False}
+            "explicit_topic_preserved": True, "non_explain_generic_overlap_rejected": True,
+            "cross_subject_seeds_checked": len(all_topics), "source_identifier_boundary_preserved": True,
+            "provider_calls": 0, "live_ui_retested": False}
 
 
 print(json.dumps(asyncio.run(check()), ensure_ascii=False, indent=2))

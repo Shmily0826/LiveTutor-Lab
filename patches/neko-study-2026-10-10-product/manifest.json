@@ -16,8 +16,10 @@
     },
     {
       "path": "payload/study_companion/entry_tutor_context_support.py",
-      "sha256": "d201a761890707d9ea22a544e18a37820d9fa07a492b0dfaabd9c73209f4f49f",
-      "deployed_matches": true
+      "sha256": "08280ce2e8bf0077cce36b7764f9aef30b00c3c4818dba152f44509c2b512446",
+      "deployed_matches": true,
+      "phase30_prior_sha256": "d201a761890707d9ea22a544e18a37820d9fa07a492b0dfaabd9c73209f4f49f",
+      "phase30_verification": "Independent source/offline cross-subject 820-seed routing fixture passed; actual silent SDK44 no unrelated guidance, one grade/old4QA and formal hashes preserved. Whole teaching semantics PARTIAL; not Native/human acceptance."
     },
     {
       "path": "payload/study_companion/entry_tutor_question_entries.py",
@@ -31,8 +33,10 @@
     },
     {
       "path": "payload/study_companion/knowledge_graph_guidance.py",
-      "sha256": "892f8e8b33d6053f48a01a14cfd8c1da67e8424e6321f801e05ca6b40cdd2e38",
-      "deployed_matches": true
+      "sha256": "31b103c512eca8c5ac2eeea8d50db6c63cb213ab74e81bf0ae43421192420f89",
+      "deployed_matches": true,
+      "phase30_prior_sha256": "892f8e8b33d6053f48a01a14cfd8c1da67e8424e6321f801e05ca6b40cdd2e38",
+      "phase30_verification": "Independent source/offline cross-subject 820-seed routing fixture passed; actual silent SDK44 no unrelated guidance, one grade/old4QA and formal hashes preserved. Whole teaching semantics PARTIAL; not Native/human acceptance."
     },
     {
       "path": "payload/study_companion/knowledge_tracker.py",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
+import re
 from typing import Any
 
 from ._graph_utils import (
@@ -368,7 +369,8 @@ def _query_terms(query: str) -> list[str]:
             for index in range(0, max(0, len(compact_cjk) - size + 1)):
                 terms.add(compact_cjk[index : index + size])
     return sorted(
-        (term for term in terms if term not in GENERIC_QUERY_TERMS),
+        (term for term in terms if term not in GENERIC_QUERY_TERMS
+         and not (len(term) == 1 and "\u4e00" <= term <= "\u9fff" and term != normalized)),
         key=lambda item: (-len(item), item),
     )
 
@@ -382,6 +384,12 @@ def _subject_hints(query: str) -> set[str]:
         if any(token in normalized for token in tokens):
             hints.add(subject)
     return hints
+
+
+def _topic_phrase_in_query(phrase: str, query: str) -> bool:
+    if len(phrase) == 1 and "\u4e00" <= phrase <= "\u9fff":
+        return phrase == query.strip()
+    return bool(phrase and re.search(r"(?<![a-z0-9_])" + re.escape(phrase) + r"(?![a-z0-9_])", query))
 
 
 def match_topics(
@@ -405,8 +413,8 @@ def match_topics(
             }
         ]
     query_text = query or topic_id
+    query_lower = _text(query_text).lower()
     terms = _query_terms(query_text)
-    explicit_terms = set(_text(query_text).lower().replace("，", " ").replace("。", " ").split())
     subject_hints = _subject_hints(query_text)
     if not terms:
         return []
@@ -424,31 +432,30 @@ def match_topics(
         label = _topic_label(topic, current_id)
         label_lower = label.lower()
         aliases = [alias.lower() for alias in _topic_aliases(topic)]
+        latin_names = set(re.findall(r"[a-z][a-z0-9_]*", " ".join((label_lower, *aliases))))
         haystack = _topic_search_text(topic)
         score = 0
         matched_terms: list[str] = []
-        if label_lower and label_lower in terms:
+        if _topic_phrase_in_query(label_lower, query_lower):
             score += 40
             matched_terms.append(label_lower)
-        elif len(label_lower) >= 2 and label_lower in " ".join(terms):
-            score += 24
-            matched_terms.append(label_lower)
         for alias in aliases:
-            if alias and alias in terms:
+            if _topic_phrase_in_query(alias, query_lower):
                 score += 36
-                matched_terms.append(alias)
-            elif len(alias) >= 2 and alias in " ".join(terms):
-                score += 20
                 matched_terms.append(alias)
         topic_specific_score = score
         for term in terms:
             if not term:
                 continue
-            topic_specific = term in explicit_terms
+            # A standalone fragment is not proof of a particular curriculum topic.
+            topic_specific = (len(term) >= 2 and term in latin_names
+                              and _topic_phrase_in_query(term, query_lower))
             if term == current_id.lower() or term == label.lower():
                 term_score = 20
+                topic_specific = _topic_phrase_in_query(term, query_lower)
             elif term in aliases:
                 term_score = 18
+                topic_specific = _topic_phrase_in_query(term, query_lower)
             elif any(term in alias for alias in aliases):
                 term_score = 8 if len(term) >= 3 else 5
             elif label.lower().startswith(term):
