@@ -52,3 +52,5 @@ Core accepted比provider ASR观察约3/3毫秒，Native用户字幕比provider�
 1. 在已有精确pending四ID/首次实际语音owner下，真实首段“当前题+我的答案是...”应能表达答题，不再依赖末尾“请评分”属于同一ASR。拒绝假设/引用/他人/否定/新题/旧答案的条件继续，不把任意“我觉得”或“点评分”自动当答案。
 2. 仅扩大regex不足：实际transport对第二个无VAD completed再次note_user_turn_started，旧source tool task和scope会退休，首次pin也已消费。必须先审同一sealed本地输入批次的后续纯评分指令是否能有证据归属，再在scope推进前处理；任何新的有声PCM、answer修饰、换课/换题/activation/socket/connection变更都不能靠旧owner续用。不能shield旧task、伪造provider utterance ID、改owner.scope追最新或无条件拼接ASR。如果没有足够本地批次/新输入证据，使用明确的新Core事务/受控退役设计，而非声称suffix安全。
 3. 新方案先用39真实两ASR事件与实际Core/SDK/SQLite和new-input负例离线验证，review/部署清单后才考虑必要修后有界场。当前产品runtime不改，日常AUTO_GRADE仍OFF；不要为了变绿把39量具改成接受错误回复。完整A–F继续，human不逐句占用。
+
+阶段27发布确认：分段观测/测试/真实39失败证据共9 allowlist文件已review/commit/push `bf355bcedbad04d0c958f566560579820a862d92`，remote同SHA/candidate clean/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb；Root index未stage/原脏树保留，raw/录音/DB/密钥未提交。上一轮为progress（源码观测交付及改变下一步的真实短答失败证据），不是无进展等待。Goal active实查；无running exec/自有host待轮询，ledger699/68/0，未修短答不重复online。下轮先四文件，再按phase27末段修真实分段准入与scope/事务；不只regex，不复活owner，新PCM优先，其余A–F持续。
