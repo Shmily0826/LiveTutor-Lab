@@ -31,10 +31,11 @@ LOGGER=logging.getLogger('native-grade-test')
 
 def replay(relative):
     text=(HOST/relative).read_text(encoding='utf-8')
-    for old,new in grade_patch.UPGRADES.get(relative,()):
-        if new not in text:
-            assert text.count(old)==1,(relative,old[:60])
-            text=text.replace(old,new)
+    for upgrades in (grade_patch.UPGRADES,grade_patch.TRACE_UPGRADES):
+        for old,new in upgrades.get(relative,()):
+            if new not in text:
+                assert text.count(old)==1,(relative,old[:60])
+                text=text.replace(old,new)
     return ast.parse(text)
 
 def methods(tree,names):
@@ -110,6 +111,7 @@ class Client(ClientBase):
 
 core_tree=replay('main_logic/core/tool_calling.py')
 core_names={
+    '_record_study_grade_event',
     '_read_study_question_pin','_study_input_authority','_make_study_input_handler','_study_grade_claim_current',
     '_study_grade_output_held','_start_study_grade_claim','_study_grade_payload',
     '_run_study_grade_claim','_study_grade_notice','_relay_study_grade_once',
@@ -148,6 +150,18 @@ class Core(CoreBase):
     def _capture_voice_session_activation_generation(self):return self.activation
     def _ensure_audio_frame_send_lock(self):return self.audio_lock
     async def _restart_message_handler_after_session_reconnect(self,*args,**kwargs):return True
+
+
+class GradePatchMigration(unittest.TestCase):
+    def test_only_exact_material_grade_helper_variant_is_preserved(self):
+        from neko_material_audio_patch import normalize_material_audio
+        source=(HOST/'main_logic/core/tool_calling.py').read_text(encoding='utf-8')
+        self.assertEqual(normalize_material_audio(source),source)
+        needle='        if self._study_grade_output_held(): return True\n'
+        self.assertEqual(source.count(needle),1)
+        unknown=source.replace(needle,'        if self._study_grade_output_held(): return False\n')
+        with self.assertRaisesRegex(RuntimeError,'unknown material audio helper'):
+            normalize_material_audio(unknown)
 
 
 class NativeGradeRoute(unittest.IsolatedAsyncioTestCase):
@@ -403,6 +417,15 @@ class NativeGradeRoute(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([event['type'] for event in self.client.wire],['conversation.item.create'])
         self.assertFalse(self.core._study_grade_output_held())
         self.h._agent.answer_evaluate.assert_awaited_once()
+
+    async def test_grade_markers_contain_identity_and_time_without_answer_or_rubric(self):
+        with patch.object(LOGGER,'info') as log:
+            self.core._start_study_grade_claim('我回答刚才的题，我的答案是 REZ，请评分。',self.client,self.capture(),self.core.activation)
+            await self.settle()
+        events=[json.loads(call.args[1]) for call in log.call_args_list if call.args[0]=='[study-grade-event] %s']
+        self.assertEqual([event['stage'] for event in events],['accepted','grade_complete','relay_written'])
+        self.assertTrue(all(isinstance(event['wall'],float) and event['old_token']=='native_connection_original' for event in events))
+        self.assertFalse(any('answer' in key or 'rubric' in key or 'text' in key for event in events for key in event))
 
 
 if __name__=='__main__':unittest.main(verbosity=2)

@@ -418,5 +418,40 @@ UPGRADES = {
 }
 
 
+TRACE_HELPER = '''    def _record_study_grade_event(self, claim, stage):
+        # Identity/timing only: never copy the learner's answer into diagnostics.
+        pin = claim.get("pin") or {}
+        result = claim.get("result") or {}
+        source = claim["client"]
+        value = {key: pin.get(key) for key in ("course_id", "session_id", "question_id", "attempt_id")}
+        value.update(stage=stage, wall=__import__("time").time(),
+            connection=source._connection_generation,
+            scope=getattr(source, "_tool_scope_generation", 0),
+            token=getattr(source, "_native_output_connection_token", None),
+            old_token=claim.get("token"),
+            profile=getattr(getattr(source, "_realtime_protocol_capabilities", None), "route_key", None),
+            result_attempt_id=result.get("attempt_id"))
+        logger.info("[study-grade-event] %s", __import__("json").dumps(value, ensure_ascii=True))
+
+'''
+
+TRACE_UPGRADES = {'main_logic/core/tool_calling.py': (
+    ('    def _read_study_question_pin(self, source):', TRACE_HELPER+'    def _read_study_question_pin(self, source):'),
+    ('        self._study_grade_claim = claim\n',
+     '        self._study_grade_claim = claim\n        self._record_study_grade_event(claim, "accepted")\n'),
+    ('            claim["result"] = payload\n',
+     '            claim["result"] = payload\n            self._record_study_grade_event(claim, "grade_complete")\n'),
+    ('                claim["relay_written"] = True\n',
+     '                claim["relay_written"] = True\n                self._record_study_grade_event(claim, "relay_written")\n'),
+)}
+
+
 def upgrade_targets(targets):
-    return _upgrade_targets(targets, UPGRADES, [])
+    targets, replay = _upgrade_targets(targets, UPGRADES, [])
+    targets, trace_replay = _upgrade_targets(targets, TRACE_UPGRADES, [])
+    final=[]
+    for relative, old, new in replay:
+        for before, after in TRACE_UPGRADES.get(relative, ()):
+            new=new.replace(before, after)
+        final.append((relative,old,new))
+    return targets, trace_replay+tuple(final)

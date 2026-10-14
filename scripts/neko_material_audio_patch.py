@@ -387,7 +387,10 @@ def upgrade_targets(targets):
 
 def normalize_material_audio(text):
     """Upgrade only the exact locally deployed first draft; reject unknown edits."""
-    if HELPERS in text or '    def _valid_study_material_record' not in text:
+    grade_helpers = HELPERS.replace(
+        '    def _study_material_native_output_held(self):\n',
+        '    def _study_material_native_output_held(self):\n        if self._study_grade_output_held(): return True\n')
+    if HELPERS in text or grade_helpers in text or '    def _valid_study_material_record' not in text:
         return text
     start = text.index('    @staticmethod\n    def _valid_study_material_record')
     end = text.index('    def _make_tool_call_handler', start)

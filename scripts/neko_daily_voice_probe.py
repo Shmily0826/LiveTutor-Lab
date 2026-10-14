@@ -51,6 +51,14 @@ def teaching_defaults_unchanged(report):
             and bool(before_language) and before_language == after_language)
 
 
+def grade_quiz_prepared(result):
+    output = result.get('output') or {}
+    return (result.get('is_error') is False and output.get('tool') == 'study_quiz'
+            and output.get('ok') is not False and output.get('degraded') is False
+            and all(isinstance(output.get(key), str) and output[key].strip()
+                    for key in ('question', 'question_id', 'attempt_id')))
+
+
 def teaching_capture_seconds(paths):
     duration = 0.0
     for path in paths:
@@ -115,6 +123,8 @@ def material_retirement_observed(replacement, snapshot):
 
 async def main(args):
     output_only = getattr(args, 'output_only', False)
+    grade_current = getattr(args, 'grade_current', False)
+    prepare_grade_quiz = getattr(args, 'prepare_grade_quiz', False)
     if output_only:
         host.require_task_speaker_output_allowed("output-only voice acceptance probe")
     else:
@@ -123,6 +133,12 @@ async def main(args):
     if args.teaching_text_chain:
         raise ValueError('fixed text on a superseded controller is intentionally unauthorized; use --teaching-wav')
     teaching_chain = bool(args.teaching_wav)
+    if prepare_grade_quiz and not grade_current:
+        raise ValueError('quiz preparation belongs only to the explicit grade scene')
+    if grade_current and (not output_only or not args.wav or not args.verify_picture_state
+            or teaching_chain or args.followup_wav or args.prepare_picture or args.point_code
+            or args.manual_turn_probe or args.replace_picture_on_playback):
+        raise ValueError('grade scene requires one fixed WAV, existing task picture and output-only mode')
     if teaching_chain and (not args.verify_picture_state or args.wav or args.followup_wav
             or args.manual_turn_probe or args.point_code or args.replace_picture_on_playback):
         raise ValueError('teaching WAV chain requires existing isolated picture only; no mixed probe modes')
@@ -145,8 +161,13 @@ async def main(args):
         raise ValueError('voice fixture store must stay under project raw directory')
     if args.prepare_picture and (not args.store.startswith('neko-daily-speech-acceptance-') or store_path.exists()):
         raise ValueError('picture preference preparation requires a new isolated speech-acceptance store')
-    if args.verify_picture_state and not args.store.startswith(('neko-daily-speech-acceptance-','neko-daily-silent-vision-')):
+    if args.verify_picture_state and not (args.store.startswith(('neko-daily-speech-acceptance-','neko-daily-silent-vision-'))
+            or (grade_current and args.store.startswith('neko-daily-continuous-text-'))):
         raise ValueError('picture constraint probe must use an isolated speech-acceptance store')
+    if grade_current:
+        provenance = json.loads((store_path/'task-provenance.json').read_text(encoding='utf-8'))
+        if provenance.get('fresh') is not True:
+            raise ValueError('grade scene needs an existing task-owned fixture; preserve user history')
     for port in (host.MAIN_PORT, host.PLUGIN_PORT):
         with sockets.socket() as probe:
             if probe.connect_ex(("127.0.0.1", port)) == 0:
@@ -181,8 +202,11 @@ async def main(args):
     if getattr(args, 'phrase_input', False):
         env['NEKO_EXPERIMENTAL_PHRASE_INPUT'] = '1'
         report['experimental_phrase_input'] = True
+    if grade_current:
+        env['NEKO_STUDY_AUTO_GRADE'] = '1'
+        report['native_grade_opt_in'] = True
     startup_log = args.output.with_suffix('.host.log')
-    startup_handle = startup_log.open('wb')
+    startup_handle = startup_log.open('xb')
     report['startup_log'] = str(startup_log)
     provider_override = CoreProviderOverride(store_path, 'free')
     process = subprocess.Popen([str(host.SOURCE_PYTHON), "-X", "utf8", str(ROOT / "scripts/neko_desktop_tutor_host.py"),
@@ -236,6 +260,28 @@ async def main(args):
                 raise RuntimeError('current Study picture unavailable; no voice connection')
             report['preferences_before_voice'] = await asyncio.to_thread(call, 'study_preferences', {})
             report['study_before_voice'] = await asyncio.to_thread(client.call, 'study_status')
+            if grade_current:
+                from neko_native_grade_acceptance import grade_snapshot
+                if prepare_grade_quiz:
+                    report['grade_quiz_preparation'] = await asyncio.to_thread(call, 'study_quiz', {
+                        'request':'只出一道当前图片中某一条箭头的方向题，答案只需一条连接的起点和终点；不要公布答案。'})
+                    result = report['grade_quiz_preparation']
+                    if not grade_quiz_prepared(result):
+                        raise RuntimeError('formal grade quiz preparation failed; no Native connection')
+                report['grade_before'] = await asyncio.to_thread(grade_snapshot,
+                    store_path/'N.E.K.O/plugins/study_companion/data/study_companion.db')
+                from neko_study_answer_intent import read_question_pin
+                pin = read_question_pin((store_path/'N.E.K.O').resolve())
+                baseline = report['grade_before']
+                question = baseline.get('question') or {}
+                snapshot_pin = {**{key:baseline.get(key) for key in ('course_id','session_id')},
+                    **{key:question.get(key) for key in ('question_id','attempt_id','attempt_evaluated')}}
+                if baseline.get('ok') is not True or not pin or pin['attempt_evaluated'] or pin != snapshot_pin:
+                    raise RuntimeError('no complete pending question pin; do not start Native or fabricate a quiz')
+                if prepare_grade_quiz and any(question.get(key) != result['output'].get(key)
+                        for key in ('question_id','attempt_id')):
+                    raise RuntimeError('prepared question replaced before input; do not adopt a new question')
+                report['grade_input_pin'] = pin
             if teaching_chain:
                 from neko_daily_failure_probe import database_snapshot
                 report['teaching_db_before'] = await asyncio.to_thread(database_snapshot,
@@ -547,6 +593,13 @@ async def main(args):
             except Exception as diagnostic_exc:
                 report['native_failure_snapshot_error']=type(diagnostic_exc).__name__
     finally:
+        if grade_current and report.get('grade_before'):
+            try:
+                from neko_native_grade_acceptance import grade_snapshot
+                report['grade_after'] = await asyncio.to_thread(grade_snapshot,
+                    store_path/'N.E.K.O/plugins/study_companion/data/study_companion.db')
+            except Exception as error:
+                report['grade_after_error'] = type(error).__name__
         if replacement_task is not None and not replacement_task.done():
             replacement_task.cancel(); await asyncio.gather(replacement_task, return_exceptions=True)
         if observer_task is not None:
@@ -593,7 +646,15 @@ async def main(args):
                 fresh_log = handle.read().decode("utf-8", errors="replace")
             # These bounded diagnostic lines contain event timestamps, not credentials.
             report["timing_log"] = [line for line in fresh_log.splitlines() if any(mark in line for mark in (
-                "voice user_transcript", "TRIGGER entry='__llm_tool__study_", "首个 audio.delta", "/api/llm-tools/callback/study_companion/", "native-timing", "study voice admission", "study voice identical", "study-material-audio"))]
+                "voice user_transcript", "TRIGGER entry='__llm_tool__study_", "首个 audio.delta", "/api/llm-tools/callback/study_companion/", "native-timing", "study voice admission", "study voice identical", "study-material-audio", "[study-grade-event]"))]
+            if grade_current:
+                report['grade_markers'] = []
+                for line in fresh_log.splitlines():
+                    if '[study-grade-event] ' in line:
+                        try: report['grade_markers'].append(json.loads(line.split('[study-grade-event] ', 1)[1]))
+                        except ValueError: pass
+                profiles = {m.get('profile') for m in report['grade_markers'] if m.get('profile')}
+                report['grade_protocol_profile'] = next(iter(profiles)) if len(profiles) == 1 else None
             wire_records = []
             for line in fresh_log.splitlines():
                 if "[wire-trace] " in line:
@@ -602,7 +663,7 @@ async def main(args):
             report["wire_trace"] = wire_records
         report["proof"] = ("actual provider and Native renderer only; no capture devices or loopback; physical output and human listening remain unverified"
                            if output_only else "separate actual provider/native/loopback; fixed input proves this device route, human listening remains unverified")
-        if (args.prepare_picture or args.verify_picture_state) and not args.followup_wav and not teaching_chain:
+        if (args.prepare_picture or args.verify_picture_state) and not args.followup_wav and not teaching_chain and not grade_current:
             speech_end = report.get('fixed_speech_end_wall')
             audio = [e['t'] for e in report.get('wire_trace',[]) if e.get('dir') == 'recv' and e.get('type') == 'response.audio.delta']
             calls = [line for line in report.get('timing_log',[]) if "TRIGGER entry='__llm_tool__study_explain'" in line]
@@ -704,11 +765,16 @@ async def main(args):
         if output_only and report.get('turn_timeout') and not report.get('failure'):
             report['failure'] = 'TimeoutError: fixed input produced no completed response before the deadline'
         report['finalized'] = True
+        if grade_current:
+            from neko_native_grade_acceptance import grade_acceptance
+            report['grade_acceptance'] = grade_acceptance(report)
         save()
         print(json.dumps({"report": str(args.output), "failure": report.get("failure"), "reply": report.get("reply"),
                           "audio_bytes": report.get("socket_audio_bytes"), "loopback_loud": (report.get("loopback") or {}).get("loud_chunks"),
                           "spent": report["after"]["spent"], "acceptance": report.get('acceptance')}, ensure_ascii=False), flush=True)
         if output_only and (report.get('failure') or report.get('cleanup_errors')):
+            raise SystemExit(1)
+        if grade_current and not all(report['grade_acceptance']['checks'].values()):
             raise SystemExit(1)
 
 
@@ -724,6 +790,8 @@ if __name__ == "__main__":
     parser.add_argument("--speech-gate", action="store_true", help="one opt-in Study execution-admission scene; never changes onset/cancel")
     parser.add_argument("--output-only", action="store_true", help="speaker output with guarded capture APIs; no fake microphone or loopback")
     parser.add_argument("--phrase-input", action="store_true", help="one opt-in real phrase collector scene; default off")
+    parser.add_argument("--grade-current", action="store_true", help="one actual ASR -> formal current-question grade; output-only task fixture required")
+    parser.add_argument("--prepare-grade-quiz", action="store_true", help="prepare one formal quiz from this task's existing picture before the grade scene")
     parser.add_argument("--prepare-picture", action="store_true", help="fresh isolated course with an existing image, Chinese preference and no proactive quiz")
     parser.add_argument("--verify-picture-state", action="store_true", help="reuse the existing isolated picture course, read before/after; no extra image model preparation")
     parser.add_argument("--teaching-text-chain", action="store_true", help="disabled: a superseded controller must not gain text authority")

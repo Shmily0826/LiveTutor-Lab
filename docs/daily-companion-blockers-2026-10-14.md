@@ -3,7 +3,7 @@
 | 项 | 证据/尝试 | 恢复条件与继续方向 |
 |---|---|---|
 | Goal自动续跑 | 本轮get_goal active已核，旧paused记录仅历史 | 已恢复，不重建；自动续跑先读四文件 |
-| Native评分 | 真人口头判错，live/final SQLite仍pending/evaluation空 | 修实际角色工具选择，wrong纠正真实落库回读；并行出题及材料 |
+| Native评分 | 阶段25显式ASR正式wrong0、QA/Native11PCM子链与修后只读复核通过；原FAIL保留 | 默认OFF；接同题Native纠正/自然短答/legacy-replay和连续使用，不外推physical/human |
 | 题型/篇幅 | role quiz无request字段，后台丢方向二选一；有三句/unasked question | request透传/模型回归，临时不写长期偏好 |
 | 图可见 | 阶段22当前Study图片窗口真实原入口DOM通过；旧queued/用户未见图保持历史失败 | 自动可见入口已接；本人实际看到/使用待最终集中验收，Native直视仍不可靠 |
 | phrase34 | session_started/serverDSP无ASR/reply/PCM；根层缺两个helper已source修复review9过 | 发布SourceGate/实际部署后必要固定输入，非无效旧重跑；无mic/loopback |
@@ -43,3 +43,9 @@
 阶段24后续封版：初稿input-time authority P2已修并独立复核；17项Main/独立本地通过，最后defaultOFF绑定一行独立审；actual LANLAN_APP arbiter item驱动分支覆盖，非provider ACK。两host副本30文件回放/幂等/AST通过，原manifest全匹配后实际部署默认OFF；3helper实际cwd import和SourceGate通过。部署后ordinary handoff12/phrase transport20过。product avatar返回qid/attempt，canonical/LF清单及原daily仅code旧SHA保护替换，未动DB/config。仍未发布/真实Native/设备/真人验收；不能说口头绕正式评分已整体交付。账本677/63/0同round，本轮无外部调用/host/音频，Goal active。下一步精确codex分支发布、必要固定WAV真实集成；其它A–F保留继续。详phase24报告末段优先。
 
 阶段24源码已review/commit/push d520252c001f8d95a1f682f9fd15b27084a9d05b，远端codex/daily-learning-companion同SHA且candidate clean，remote master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。17 exact文件，staged LF产品29file及helper全部fingerprint核通过；Root index未stage，原脏树/.workbuddy保留。真实Native自动评分与设备仍待。下一轮先四文件，再准备自动评分专用observer：沿用既有任务材料/固定WAV，无mic/capture/loopback；先核真实任务库pending四身份（不得伪造、重置原历史），必要只创建本场新题，核ASR→QA及迟到音频owner/诚实失败。现有voice_probe默认只验study_explain，不能直接把其结果当grade PASS，先补针对性量具。未开online前先核账本和8API保护，保留单场超时/异常停止，不循环CONNECT。若局部protocol受阻，记录并转其余A–F，不停止全Goal。当前无新增host/音频会话，离线进程已terminal，Goal active。
+
+阶段25进行中（启动真实场前）：trace19本地/30文件回放幂等/AST和实际SourceGate过，defaultOFF。新增grade-current observer及5preflight拒绝测试、只读snapshot/validator正在独立复核。已有任务C32 QA2/grade2可只读取证，拟同已有图创建本场必要新题，再单固定WAV真实ASR正式评分，不碰原daily DB/历史。离线一次合成明确评分意图WAV，未播放、未采设备。当前ledger677/63/0不变、无host在线；先量具正确和baseline/pin一致再开有界单场。报告phase25，Goal active，全A–F持续。
+
+场36已terminal/exit1/cleanup_errors=[]，无Native连接/播放。真实quiz已成功保存pending题；observer错误要求rich study_quiz没有的ok字段而提前报FAIL，原raw保留SHA 8ce4ed6f033630c53c3521042c86b965f9e095c224974104554da89b8ad1f048。修为实际tool/非error/非degraded/题干双ID非空、补真实receipt第6前检，Main6PASS。只此新题DS+1至678，app63/tech0不变；旧QA2仍在。下一场37明确不prepare-grade-quiz，复用已保存qid/aid，启动前只读pin同36结果/未评分已核，不重出题、不重置历史，不重复未修服务场。当前无host listener，政策不变。
+
+阶段25实际集成：36为quiz receipt量具FAIL保留，37原FAIL/exit1仅QA question JSON形态比较假阴性，修13项Main/独立测试后只读复算19checks全True，原raw SHA不变。真实Native ASR→正式wrong0/同题同attempt/QA2→3、旧两QA完整hash保持，原生同时study_answer实际合并一grade；一次无PCM受控重连、新token11PCM/playback schedule/source_ended通过。Main对实际submitted图SHA同已有forward图并视觉核WEX→NUD，正式反馈/Native两句正确。无mic/capture/loopback/volumechange；physical/human待。总DS685/2000、app65/null、tech0/0同round，原Coreprovider恢复deepseek，学习偏好/语言不变；25285 terminal exit1/cleanup[]，48911/48916/9234无listener。AUTO_GRADE日常默认仍OFF。下一步复用本wrong题验证Native明确纠正新attempt/原错答保留，先扩适配correction量具再必要单场；旧short/legacy/replay/自然停顿/全A–F继续。证据phase25及grade-observer-review，Goal active，不整体complete。

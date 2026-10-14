@@ -1,0 +1,268 @@
+"""Small real SQLite and report fixtures; no host/model/provider/device."""
+from contextlib import closing
+from copy import deepcopy
+import json
+from pathlib import Path
+import sqlite3
+import tempfile
+import unittest
+from unittest.mock import patch
+
+import neko_native_grade_acceptance as subject
+
+ORIGINAL = '我 回 答 刚 才 的 题，我 的 答 案 是 REZ，请 判 断 对 不 对。'
+PIN = {'course_id': 'course-A', 'session_id': 'session-A', 'question_id': 'q-A', 'attempt_id': 'a-A'}
+GRADE = {'verdict': 'wrong', 'score': 0, 'reply': '先从 WEX 发起。'}
+
+
+class Fixture:
+    def __init__(self):
+        self.temp = tempfile.TemporaryDirectory(prefix='neko-grade-acceptance-')
+        self.db = Path(self.temp.name) / 'study.db'
+        self.question = {'question_id': PIN['question_id'], 'attempt_id': PIN['attempt_id'],
+                         'question': '谁先调用？', 'attempt_evaluated': False,
+                         'answer': 'PRIVATE_REFERENCE', 'rubric': 'PRIVATE_RUBRIC'}
+        self.state = {'study_course_id': PIN['course_id'], 'study_session_id': PIN['session_id'],
+                      'current_question': self.question, 'last_answer_evaluation': {}, 'history': ['PRIVATE_HISTORY']}
+        with closing(sqlite3.connect(self.db)) as c, c:
+            c.executescript('''CREATE TABLE kv(key TEXT PRIMARY KEY,value TEXT);
+                CREATE TABLE qa_records(id TEXT PRIMARY KEY,session_id TEXT,topic_id TEXT,question TEXT,
+                user_answer TEXT,eval_result TEXT,mode TEXT,response_time_ms INTEGER,created_at TEXT);
+                CREATE TABLE interactions(id INTEGER PRIMARY KEY,kind TEXT,input_text TEXT,output_text TEXT,
+                metadata TEXT,created_at TEXT,session_id TEXT);''')
+            c.execute('INSERT INTO kv VALUES (?,?)', ('state', json.dumps(self.state)))
+            c.execute('INSERT INTO qa_records VALUES (?,?,?,?,?,?,?,?,?)', ('old-qa', 'old-session', 'old-topic', 'old question',
+                'old answer', json.dumps({'verdict':'correct','score':1}), 'tutor', 100, 'old-time'))
+            c.execute('INSERT INTO interactions VALUES (?,?,?,?,?,?,?)', (1, 'explain', 'PRIVATE_EXPLANATION', 'PRIVATE_OUTPUT', '{}', 'old-time', 'old-session'))
+
+    def before_and_after(self):
+        before = subject.grade_snapshot(self.db)
+        self.question['attempt_evaluated'] = True
+        self.state['last_answer_evaluation'] = GRADE
+        metadata = {**{k: PIN[k] for k in ('question_id','attempt_id')},
+                    'material_context': {k: PIN[k] for k in ('course_id','session_id')},
+                    'degraded':False, 'payload': GRADE, 'rubric':'PRIVATE_RUBRIC'}
+        with closing(sqlite3.connect(self.db)) as c, c:
+            c.execute('UPDATE kv SET value=? WHERE key=?', (json.dumps(self.state),'state'))
+            c.execute('INSERT INTO qa_records VALUES (?,?,?,?,?,?,?,?,?)', ('new-qa',PIN['session_id'],'topic',
+                json.dumps(self.question,ensure_ascii=False),ORIGINAL,json.dumps(GRADE),'tutor',800,'new-time'))
+            c.execute('INSERT INTO interactions VALUES (?,?,?,?,?,?,?)', (2,'answer_evaluate',ORIGINAL,GRADE['reply'],json.dumps(metadata),'new-time',PIN['session_id']))
+        return before, subject.grade_snapshot(self.db)
+
+    def close(self):
+        self.temp.cleanup()
+
+
+def make_report(before, after):
+    old, new = 'native_connection_old', 'native_connection_new'
+    stages = []
+    for stage, wall, connection, scope, token in (('accepted',102,3,5,old),('grade_complete',104,3,5,old),('relay_written',105.5,4,7,new)):
+        stages.append({**PIN,'stage':stage,'wall':wall,'connection':connection,'scope':scope,'token':token,
+                       'old_token':old,'result_attempt_id':PIN['attempt_id'] if stage!='accepted' else '', 'profile':'lanlan_app_gemini'})
+    events = [{'type':'user_transcript','wall':102.1,'text':ORIGINAL},
+              {'type':'game_route_speech_cancel','wall':104.2,'correlation_id':old},
+              {'type':'speech_playback_state','wall':104.2,'correlationId':old,'active':False,'reason':'native_connection_cancel'},
+              {'type':'audio_chunk','wall':105.0,'correlation_id':new},
+              {'type':'audio_frame','wall':105.1,'correlation_id':new,'bytes':960},
+              {'type':'native_speech_playback_state','wall':105.2,'sdk_speech_correlation_id':new,'active':True},
+              {'type':'gemini_response','wall':105.3,'text':GRADE['reply']}]
+    return {'grade_before':before,'grade_after':after,'grade_markers':stages,'grade_protocol_profile':'lanlan_app_gemini',
+            'turns':[{'input_wall':100,'fixed_speech_end_wall':101,'observation_end_wall':110}],
+            'native_final':{'trace':{'events':events,'binaryFrames':1},'playback':{'active':False,'correlationId':new,
+                'remainingSeconds':0,'reason':'source_ended','updatedAt':109000}},
+            'capture_policy':{'flag':True,'readonly':True,'receipt':{'status':'installed','captureBlocked':True,'blocked':sorted(subject._BLOCKED)}},
+            'output_only':True,'room_microphone':False,'capture_devices':False,'loopback_enabled':False,'volume_changed':False,
+            'cleanup_errors':[],'failure':None,'timing_log':[],'wire_trace':[]}
+
+
+class GradeEvidenceTests(unittest.TestCase):
+    def setUp(self):
+        self.fixture = Fixture()
+        self.before, self.after = self.fixture.before_and_after()
+        self.report = make_report(self.before,self.after)
+
+    def tearDown(self):
+        self.fixture.close()
+
+    def assert_partial(self, report, check=None):
+        result = subject.grade_acceptance(report)
+        self.assertEqual(result['result'],'FAIL_OR_PARTIAL',result)
+        self.assertEqual(result['physical_output'],'UNVERIFIED_NO_LOOPBACK')
+        self.assertEqual(result['human'],'PENDING')
+        if check: self.assertFalse(result['checks'][check],result)
+
+    def test_success_is_only_candidate_and_fast_pcm_can_precede_relay_written(self):
+        original = deepcopy(self.report)
+        result = subject.grade_acceptance(self.report)
+        self.assertTrue(all(result['checks'].values()),result)
+        self.assertEqual(result['result'],'CANDIDATE_GRADE_FLOW_PASS_REQUIRES_SEMANTIC_REVIEW')
+        self.assertEqual(result['physical_output'],'UNVERIFIED_NO_LOOPBACK')
+        self.assertEqual(result['human'],'PENDING')
+        self.assertEqual(self.report,original)
+
+    def test_snapshot_readonly_private_projection_and_full_old_row_hash(self):
+        before_bytes = self.fixture.db.read_bytes()
+        queries=[]; connect=sqlite3.connect
+        def traced(*args,**kwargs):
+            self.assertTrue(kwargs['uri']);self.assertEqual(kwargs['timeout'],0);self.assertIn('?mode=ro',args[0])
+            connection=connect(*args,**kwargs);connection.set_trace_callback(queries.append);return connection
+        with patch.object(subject.sqlite3,'connect',side_effect=traced):
+            snap=subject.grade_snapshot(self.fixture.db)
+        self.assertEqual(self.fixture.db.read_bytes(),before_bytes)
+        self.assertNotIn('PRIVATE',json.dumps(snap))
+        self.assertTrue(any('query_only=ON' in q for q in queries))
+        self.assertFalse(any('UPDATE' in q or 'INSERT' in q or 'SELECT value' in q or 'output_text' in q for q in queries))
+        with closing(sqlite3.connect(self.fixture.db)) as c,c:
+            c.execute("UPDATE qa_records SET response_time_ms=101 WHERE id='old-qa'")
+        changed=subject.grade_snapshot(self.fixture.db)
+        self.assertNotEqual(changed['qa_records'][1]['row_sha256'],snap['qa_records'][1]['row_sha256'])
+        self.assert_partial({**self.report,'grade_after':changed},'old_qa_preserved')
+
+    def test_actual_store_serialized_question_and_legacy_plain_question(self):
+        projected=next(row for row in self.after['qa_records'] if row['id']=='new-qa')['question']
+        self.assertEqual(projected,{**{k:PIN[k] for k in ('question_id','attempt_id')},'question':self.fixture.question['question']})
+        self.assertNotIn('PRIVATE',json.dumps(self.after))
+        # Older raw reports retain the Store's JSON string; do not rewrite them.
+        report=deepcopy(self.report)
+        row=next(row for row in report['grade_after']['qa_records'] if row['id']=='new-qa')
+        row['question']=json.dumps(self.fixture.question,ensure_ascii=False)
+        self.assertTrue(all(subject.grade_acceptance(report)['checks'].values()))
+        row['question']=self.fixture.question['question']
+        self.assertTrue(all(subject.grade_acceptance(report)['checks'].values()))
+        row['question']='different legacy question'
+        self.assert_partial(report,'formal_identity_and_asr')
+
+    def test_serialized_question_malformed_or_different_ids_never_falls_back(self):
+        for kind in ('question','question_id','attempt_id','missing_id','malformed','array','scalar'):
+            report=deepcopy(self.report);question=deepcopy(self.fixture.question)
+            if kind in ('question','question_id','attempt_id'):question[kind]='different'
+            elif kind=='missing_id':question.pop('attempt_id')
+            raw=json.dumps(question,ensure_ascii=False)
+            if kind=='malformed':raw='{"question":"谁先调用？",bad'
+            elif kind=='array':raw=json.dumps([question])
+            elif kind=='scalar':raw='"谁先调用？"'
+            row=next(row for row in report['grade_after']['qa_records'] if row['id']=='new-qa')
+            row['question']=raw
+            self.assert_partial(report)
+        with closing(sqlite3.connect(self.fixture.db)) as c,c:
+            c.execute("UPDATE qa_records SET question=? WHERE id='new-qa'", ('{"question":"prompt","rubric":"PRIVATE",broken',))
+        snapshot=subject.grade_snapshot(self.fixture.db)
+        self.assertFalse(snapshot['ok'])
+        self.assertNotIn('PRIVATE',json.dumps(snapshot))
+
+    def test_missing_snapshots_markers_or_failure_never_pass(self):
+        for key in ('grade_before','grade_after','grade_markers','native_final','capture_policy','grade_protocol_profile','turns'):
+            with self.subTest(key=key):
+                report=deepcopy(self.report);report.pop(key);self.assert_partial(report)
+        for changed in ({'failure':'timeout'},{'turn_timeout':True},{'cleanup_errors':['host not stopped']}):
+            self.assert_partial({**self.report,**changed},'run_finished_without_failure')
+        self.assert_partial({})
+
+    def test_empty_identity_or_changed_question_attempt_course_is_partial(self):
+        for key in PIN:
+            report=deepcopy(self.report)
+            source=report['grade_before'] if key in ('course_id','session_id') else report['grade_before']['question']
+            source[key]=''
+            self.assert_partial(report,'pending_four_ids')
+        for key in PIN:
+            report=deepcopy(self.report)
+            source=report['grade_after'] if key in ('course_id','session_id') else report['grade_after']['question']
+            source[key]='foreign'
+            self.assert_partial(report,'same_question_attempt_evaluated')
+        report=deepcopy(self.report);report['grade_after']['question']['attempt_evaluated']=False
+        self.assert_partial(report,'same_question_attempt_evaluated')
+
+    def test_extra_qa_deleted_or_mutated_old_row_and_extra_formal_grade_fail(self):
+        report=deepcopy(self.report);row=deepcopy(report['grade_after']['qa_records'][0]);row['id']='third-qa';report['grade_after']['qa_records'].append(row)
+        self.assert_partial(report,'exactly_one_new_qa')
+        report=deepcopy(self.report);report['grade_after']['qa_records']=[r for r in report['grade_after']['qa_records'] if r['id']!='old-qa']
+        self.assert_partial(report,'old_qa_preserved')
+        report=deepcopy(self.report);old=next(r for r in report['grade_after']['qa_records'] if r['id']=='old-qa');old['row_sha256']='0'*64
+        self.assert_partial(report,'old_qa_preserved')
+        report=deepcopy(self.report);row=deepcopy(report['grade_after']['grade_interactions'][0]);row['id']=3;report['grade_after']['grade_interactions'].append(row)
+        self.assert_partial(report,'exactly_one_new_formal_interaction')
+
+    def test_no_asr_wrong_input_or_formal_identity_not_inferred_from_reply(self):
+        for kind in ('missing','different','duplicate'):
+            report=deepcopy(self.report);events=report['native_final']['trace']['events']
+            if kind=='missing':events.pop(0)
+            elif kind=='different':events[0]['text']='another answer'
+            else:events.append(deepcopy(events[0]))
+            self.assert_partial(report,'formal_identity_and_asr')
+        for key in PIN:
+            report=deepcopy(self.report);metadata=report['grade_after']['grade_interactions'][0]['metadata']
+            (metadata if key in ('question_id','attempt_id') else metadata['material_context'])[key]='foreign'
+            self.assert_partial(report,'formal_identity_and_asr')
+        report=deepcopy(self.report);report['grade_after']['grade_interactions']=[]
+        self.assert_partial(report,'exactly_one_new_formal_interaction')
+        report=deepcopy(self.report);report['grade_after']['last_answer_evaluation']['score']=1
+        self.assert_partial(report,'last_grade_consistent')
+
+    def test_no_pcm_no_cancel_no_stop_and_old_token_pcm_fail(self):
+        for event_type,check in (('audio_frame','new_token_pcm_after_grade'),('game_route_speech_cancel','old_token_cancel_received'),
+                                 ('speech_playback_state','old_queue_retired_or_never_received'),('native_speech_playback_state','new_token_playback_scheduled')):
+            report=deepcopy(self.report);report['native_final']['trace']['events']=[e for e in report['native_final']['trace']['events'] if e['type']!=event_type]
+            self.assert_partial(report,check)
+        report=deepcopy(self.report)
+        next(e for e in report['native_final']['trace']['events'] if e['type']=='audio_frame')['correlation_id']='native_connection_old'
+        self.assert_partial(report,'new_token_pcm_after_grade')
+
+    def test_fresh_renderer_complete_trace_can_prove_no_old_queue_received(self):
+        report=deepcopy(self.report)
+        report['native_final']['trace']['events']=[e for e in report['native_final']['trace']['events'] if e['type']!='speech_playback_state']
+        report['native_initial']={'wall':99,'trace':{'binaryFrames':0,'installedAt':98}}
+        report['native']={'pid':1234,'windows':1,'fake_silent_input':False}
+        result=subject.grade_acceptance(report)
+        self.assertTrue(all(result['checks'].values()),result)
+        self.assertEqual(result['old_output_retirement_evidence'],'FRESH_RENDERER_NEVER_RECEIVED_OLD_PCM')
+        for kind in ('initial','counter','evicted','outside','missing_native','late_install','already_playing'):
+            bad=deepcopy(report)
+            if kind=='initial':bad['native_initial']['trace']['binaryFrames']=1
+            elif kind in ('counter','evicted'):bad['native_final']['trace']['binaryFrames']=2
+            elif kind=='outside':
+                bad['native_final']['trace']['events'].append({'type':'audio_frame','wall':99,'correlation_id':'native_connection_new','bytes':100})
+                bad['native_final']['trace']['binaryFrames']=2
+            elif kind=='missing_native':bad.pop('native')
+            elif kind=='late_install':bad['native_initial']['trace']['installedAt']=100.1
+            else:bad['native_initial']['playback']={'active':True,'remainingSeconds':1}
+            self.assert_partial(bad,'old_queue_retired_or_never_received')
+
+    def test_grade_late_marker_identity_and_time_boundaries(self):
+        report=deepcopy(self.report);report['grade_markers'][1]['wall']=105.15
+        self.assert_partial(report,'new_token_pcm_after_grade')
+        for key,value in (('connection',9),('scope',99),('attempt_id','foreign'),('token','native_connection_foreign')):
+            report=deepcopy(self.report);report['grade_markers'][1][key]=value
+            self.assert_partial(report,'marker_chain')
+        report=deepcopy(self.report);report['grade_markers'][1]['wall']=101
+        self.assert_partial(report,'marker_chain')
+        report=deepcopy(self.report);report['turns'][0]['observation_end_wall']=104
+        self.assert_partial(report)
+        report=deepcopy(self.report);report['grade_markers'][1]['wall']=float('nan')
+        self.assert_partial(report)
+
+    def test_terminal_capture_and_actual_free_profile_are_required(self):
+        for change in ({'active':True},{'remainingSeconds':1},{'reason':'cancelled'},{'correlationId':'native_connection_old'}, {'updatedAt':105000}):
+            report=deepcopy(self.report);report['native_final']['playback'].update(change)
+            self.assert_partial(report,'native_terminal')
+        for key,value in (('room_microphone',True),('capture_devices',True),('loopback_enabled',True),('output_only',False),('volume_changed',True)):
+            self.assert_partial({**self.report,key:value},'output_only_capture_guard')
+        report=deepcopy(self.report);report['capture_policy']['receipt']['blocked'].pop()
+        self.assert_partial(report,'output_only_capture_guard')
+        report=deepcopy(self.report);report['grade_protocol_profile']='strict_default'
+        self.assert_partial(report,'actual_free_profile')
+        report=deepcopy(self.report);report['grade_markers'][2]['profile']='strict_default'
+        self.assert_partial(report,'actual_free_profile')
+
+    def test_snapshot_missing_invalid_or_locked_fails_without_creation(self):
+        missing=Path(self.fixture.temp.name)/'missing.db'
+        self.assertFalse(subject.grade_snapshot(missing)['ok']);self.assertFalse(missing.exists())
+        with closing(sqlite3.connect(self.fixture.db)) as c:
+            c.execute('BEGIN EXCLUSIVE')
+            self.assertFalse(subject.grade_snapshot(self.fixture.db)['ok'])
+            c.rollback()
+        with closing(sqlite3.connect(self.fixture.db)) as c,c:
+            c.execute("UPDATE kv SET value='bad JSON' WHERE key='state'")
+        self.assertFalse(subject.grade_snapshot(self.fixture.db)['ok'])
+
+
+if __name__=='__main__':unittest.main(verbosity=2)
