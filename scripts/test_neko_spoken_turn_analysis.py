@@ -10,10 +10,33 @@ import wave
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from neko_spoken_turn_analysis import analyze_scene, analyze_wave, parse_phrase_deliveries, analyze_grade_latency
+from neko_spoken_turn_analysis import analyze_scene, analyze_wave, parse_phrase_deliveries, analyze_grade_latency, parse_study_text_records
 
 
 class SpokenTurnAnalysisTest(unittest.TestCase):
+    def test_digest_capture_keeps_same_timestamp_deltas_in_actual_order_without_copying_body(self):
+        first={'stage':'provider_delta','t':100.,'cid':'1234abcd','gen':2,'response_id':'r',
+               'chars':3,'sha256':'a'*64}
+        second={**first,'chars':4,'sha256':'b'*64}
+        text='\n'.join('prefix [study-text] '+json.dumps(row) for row in (first,second))
+        self.assertEqual(parse_study_text_records(text),[first,second])
+
+    def test_malformed_or_content_bearing_diagnostics_are_not_copied_to_report(self):
+        valid={'stage':'core_queue','t':100.,'cid':'1234abcd','chars':3,'sha256':'a'*64}
+        invalid=[{**valid,'reply':'PRIVATE ANSWER'},{**valid,'t':True},{**valid,'chars':True},
+                 {**valid,'stage':'unknown'},{**valid,'stage':[]},{**valid,'gen':True},
+                 {**valid,'scope':'PRIVATE ANSWER'},{**valid,'sha256':'PRIVATE ANSWER'},
+                 {**valid,'stream_sha256':'bad'},{**valid,'token':'x'*161}]
+        text='[study-text] invalid\n'+ '\n'.join('[study-text] '+json.dumps(row) for row in invalid)
+        self.assertEqual(parse_study_text_records(text),[])
+
+    def test_pathological_json_cannot_abort_capture_or_hide_later_valid_record(self):
+        valid={'stage':'core_queue','t':100.,'cid':'1234abcd','chars':3,'sha256':'a'*64}
+        rows=[{**valid,'t':10**400},{**valid,'mono':10**400},valid]
+        text='[study-text] '+'['*1100+'0'+']'*1100+'\n'
+        text+='\n'.join('[study-text] '+json.dumps(row) for row in rows)
+        self.assertEqual(parse_study_text_records(text),[valid])
+
     def scene(self):
         return {"input_audio_start_wall": 100., "fixed_speech_end_wall": 112., "manual_end_sent_wall": 113.2,
                 "wire_trace": [

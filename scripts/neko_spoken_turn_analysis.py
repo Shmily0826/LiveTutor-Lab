@@ -10,13 +10,53 @@ import array
 import hashlib
 import json
 import math
+import re
 from pathlib import Path
 import sys
 import wave
 
 
 def _timestamp(value):
-    return float(value) if type(value) in (int, float) and math.isfinite(value) else None
+    try:
+        return float(value) if type(value) in (int, float) and math.isfinite(value) else None
+    except OverflowError:
+        return None
+
+
+def parse_study_text_records(log_text):
+    """Keep opt-in digest evidence in order, refusing content-bearing records."""
+    fields={'stage','t','mono','cid','chars','utf8_bytes','sha256','gen','response_id','scope','token',
+            'stream_chars','stream_chunks','stream_sha256','cumulative_available','bytes','delivery'}
+    stages={'grade_reply','relay_write','relay_envelope_write','provider_delta','provider_done',
+            'omni_callback','core_entry','core_queue','core_ws'}
+    records=[]
+    for line in log_text.splitlines():
+        if '[study-text] ' not in line:continue
+        try:value=json.loads(line.split('[study-text] ',1)[1])
+        except (ValueError,RecursionError):continue
+        if (not isinstance(value,dict) or not set(value)<=fields
+                or not isinstance(value.get('stage'),str) or value['stage'] not in stages
+                or _timestamp(value.get('t')) is None
+                or not isinstance(value.get('cid'),str) or not re.fullmatch('[0-9a-f]{8}',value['cid'])
+                or not isinstance(value.get('sha256'),str) or not re.fullmatch('[0-9a-f]{64}',value['sha256'])):
+            continue
+        if any(key in value and (type(value[key]) is not int or value[key]<0)
+               for key in ('chars','utf8_bytes','stream_chars','stream_chunks','bytes')):
+            continue
+        if (any(value.get(key) is not None and (type(value[key]) is not int or value[key]<0)
+                for key in ('gen','scope'))
+                or 'mono' in value and _timestamp(value['mono']) is None
+                or 'cumulative_available' in value and type(value['cumulative_available']) is not bool
+                or 'delivery' in value and value['delivery']!='local_socket_write_only'):
+            continue
+        if any(value.get(key) is not None and (not isinstance(value[key],str) or len(value[key])>160)
+               for key in ('response_id','token')):
+            continue
+        if 'stream_sha256' in value and (not isinstance(value['stream_sha256'],str)
+                or not re.fullmatch('[0-9a-f]{64}',value['stream_sha256'])):
+            continue
+        records.append(value)
+    return records
 
 
 def analyze_scene(scene, *, input_kind="unknown"):

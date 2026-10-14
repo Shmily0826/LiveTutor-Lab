@@ -731,6 +731,8 @@ async def main(args):
                     try: wire_records.append(json.loads(line.split("[wire-trace] ", 1)[1]))
                     except ValueError: pass
             report["wire_trace"] = wire_records
+            from neko_spoken_turn_analysis import parse_study_text_records
+            report['study_text_trace'] = parse_study_text_records(fresh_log)
         report["proof"] = ("actual provider and Native renderer only; no capture devices or loopback; physical output and human listening remain unverified"
                            if output_only else "separate actual provider/native/loopback; fixed input proves this device route, human listening remains unverified")
         if (args.prepare_picture or args.verify_picture_state) and not args.followup_wav and not teaching_chain and not grade_current:
