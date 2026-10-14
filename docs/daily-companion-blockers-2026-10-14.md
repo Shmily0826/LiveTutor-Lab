@@ -37,4 +37,7 @@
 | E指示 | 受控HTML/图片/源码已有指示；继续窗口移动缩放滚动/更新定位及入口恢复，不能冒任意桌面全支持，只指示由学习者操作，沿已有开源/许可记录。 |
 | F交付 | 多轮/换材料/换课/重启/网络恢复集成、启动/支持/发布/最终体验步骤继续。核心成熟后一次human；复杂人格后置。 |
 
-本次精简前完整原bytes独占归档：[历史](evidence/daily-companion-blockers-history-through-phase46-validation-2026-10-15.md)，SHA256 a97013e73abe151559e37e333dac04360907e696b1b62ac99799413ecd1d778b。该归档承接较早完整历史链，未改contract或raw。46最终发布pending。
+本次精简前完整原bytes独占归档：[历史](evidence/daily-companion-blockers-history-through-phase46-validation-2026-10-15.md)，SHA256 a97013e73abe151559e37e333dac04360907e696b1b62ac99799413ecd1d778b。该归档承接较早完整历史链，未改contract或raw。46源码发布已核，详末段。
+
+
+阶段46已独立56原件复核关闭，无新P1/P2；12精确allowlist已commit/push c21b23c0e8ac8de11381e68c41edebbf02e0e77d 到codex/daily-learning-companion。remote exact、master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb、publisher clean、Root index空，原contract SHA及ledger835/78/0保持。未发布raw/DB/WAV/密钥/备份；三份工作记录完整原bytes历史归档已随文档发布。无live测试进程/端口，下一47材料关闭恢复入口；完整A–F/Goal active。
