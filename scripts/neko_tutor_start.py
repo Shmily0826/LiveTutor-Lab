@@ -19,6 +19,7 @@ import time
 import threading
 from contextlib import contextmanager
 import urllib.request
+from urllib.parse import urlencode
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -89,6 +90,9 @@ def browser_window_commands(template, *, study_ui: bool, surface_url: str = ""):
     if template is None:
         return []
     commands = [list(template)] if study_ui else []
+    if commands and surface_url:
+        commands[0] = [arg + ('&' if '?' in arg else '?') + urlencode({'learning_surface': surface_url})
+                       if arg.startswith('--app=') else arg for arg in commands[0]]
     if surface_url:
         commands.append([arg for arg in template if not arg.startswith('--app=')]
                         + ['--app=' + surface_url])

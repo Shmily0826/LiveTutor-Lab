@@ -25,12 +25,12 @@
 ## 接续顺序与全部余项
 
 1. 完成46最终独立原件核验与精确allowlist发布；不因本阶段收尾结束Goal。
-2. 下一47 A/E：关闭材料窗的明确重开入口，保持任务profile身份及学习者主动操作，不自动反复抢窗；先窄读当前回调/Study UI接线。
+2. 47已交付主动恢复入口；下一48 A/E：57重现Translate popup的task-profile配置，保持所有权/不改个人Chrome；旧UI陈旧夹具登记F维护。
 3. 依真实失败继续B/C/D/F，不盲重复未变已过场。
 
 | 范围 | 剩余工作与边界 |
 |---|---|
-| A入口/材料 | 已固定配置/课程/图片、无损PNG、材料同步、独立可见窗口和同图重试。下一补关闭材料窗后的方便恢复入口、密集小字与日常完整链。 |
+| A入口/材料 | 已固定配置/课程/图片、无损PNG、材料同步、独立可见窗口和同图重试。47已补主动恢复入口，保留actual taskChrome点击与翻译popup稳定性边界；密集小字与日常完整链继续。 |
 | B语音/教学 | 51多ASR/晚尾约束仍PARTIAL；自然停顿/普通打断、中英切换与语言记忆、术语数字代码口语、按分段时刻优化仍需集成。默认phrase/AUTO OFF，避免盲重连。 |
 | C记忆 | 已保留历史、44有界相关历史、45精确登记别名/概念身份及有限证据措辞。自由语义/旧多ID不猜合，长期偏好实际使用和跨题模型评分余证继续。 |
 | D源码 | 复用CodeGraph/只读Sky，继续结构/调用/行/影响、索引版本引用范围、事实与推断证据，避免整仓发送。 |
@@ -41,3 +41,15 @@
 
 
 阶段46已独立56原件复核关闭，无新P1/P2；12精确allowlist已commit/push c21b23c0e8ac8de11381e68c41edebbf02e0e77d 到codex/daily-learning-companion。remote exact、master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb、publisher clean、Root index空，原contract SHA及ledger835/78/0保持。未发布raw/DB/WAV/密钥/备份；三份工作记录完整原bytes历史归档已随文档发布。无live测试进程/端口，下一47材料关闭恢复入口；完整A–F/Goal active。
+
+
+阶段47开始：46实际source/21离线/桌手机DOM/54-56窗口与清理/独立复核/c21b23c+53a5f20发布为progress，remote exact/master未改/publisher clean/Root index空。Main仅推进A/E主动重开材料入口：Study启动URL携带无token的当前loopback surface地址，既有toolbar隐藏link严格验证后显示，由学习者点击新页，不自动反复抢窗。开始前原5文件独占备份phase47-before；独立Agent仅material-reopen-review。原ledger835/78/0，无live进程/音频/模型，完整A–F/Goal active。
+
+
+阶段47开发冻结：Study launch URL带编码learning_surface，首await前严格原串/URL双核，仅绝对127.0.0.1非0端口根URL、单值/无token。新toolbar主动新页anchor/relnoopener，未改CSP/数据/声音。link离线valid/reset/duplicate+18unsafe PASS，window4/text9 PASS；共享DOM桌手机各4有意义正向+1absent隐藏检查，真实PNG加载/自身window.closedtrue后再click重开，首pagehide观察器FAIL原raw保留，仅修test观察器。旧product-ui夹具在原main也$id未定义，stub尝试又缺revision，已撤销；另记F维护不冒通过。默认双static逐oldSHA独占备份部署，protected_html/全product指纹/SourceGate PASS，独立freeze复审pending。无外部/设备，ledger835/78/0，下一唯一57实际完整bootstrap核query/按钮/恢复与清理；未开前不冒已通过。
+
+
+阶段47唯一完整入口57已实际启动：exec86035 tty，仍复用54任务store，surface http://127.0.0.1:53515；--text-only/offline-egress/API0/3min/原round，835/78/0，不mic/capture/loopback/发声/音量。只poll同handle，未终态前不冒Ready/清理/完整通过。独立source/fixture复审已闭合，无新P1/P2；待完整Study bootstrap真实query入口和同课图观察后Enter清理。
+
+
+阶段47终态：57 exec86035 Enter正常exit0/cleanup[]，全部owned与Native16508死、48911/48916/9234/53515无listener，原ledger835/78/0；raw57 SHA0e023b5284ae8de32349d32e54e8bfe5d0b364e9d032d1ad6e09aa9538d56892。actual owned Chrome Study命令含本场surface query，current课/PNG保持；正式受保护Study在共享浏览器的早期initializer入口可见/无page-console error，但快照仍Refreshing，未冒其余async Ready/真实taskChrome已点击。2主窗外Translate popup再现，two_expected_windows=false保留，46的56单场通过不外推稳定抑制。重开点击/实际window.closed/再PNGready窄证仅真实共享fixture；模型/设备/human无新验收。最终product manifest db8d169e6519a53ed29af99f59c8e8212d2d6e29aa8d3ce0fe8ec57978092820，post57 SourceGate PASS，双static源码/default精确部署不改用户DB；下一48任务profile翻译pref窄修/本地验证，再继续B/D/F。独立57复核/发布pending，Goal active。

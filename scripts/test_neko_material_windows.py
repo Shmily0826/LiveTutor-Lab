@@ -1,5 +1,6 @@
 """Window-command and independent cleanup checks; no browser/host is started."""
 import unittest
+from urllib.parse import urlsplit, parse_qs
 from unittest.mock import Mock, patch
 import neko_tutor_start as start
 
@@ -13,7 +14,9 @@ class MaterialWindows(unittest.TestCase):
         before = list(self.template)
         commands = start.browser_window_commands(self.template, study_ui=True, surface_url=self.surface)
         self.assertEqual(len(commands), 2)
-        self.assertEqual(commands[0], before)
+        study_url = next(arg[6:] for arg in commands[0] if arg.startswith('--app='))
+        self.assertEqual(parse_qs(urlsplit(study_url).query), {'learning_surface': [self.surface]})
+        self.assertEqual(study_url.split('?')[0], next(arg[6:] for arg in before if arg.startswith('--app=')))
         self.assertEqual(self.template, before)
         for command in commands:
             self.assertEqual(sum(arg.startswith('--app=') for arg in command), 1)

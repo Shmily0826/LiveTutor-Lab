@@ -110,18 +110,22 @@
     },
     {
       "path": "static/index.html",
-      "sha256": "cb27a30693e5023dd167781165201712aed79e8662602594f984f2e7e2440928",
+      "sha256": "e8326a83958fab73370a99943ed43bd9c5aa2ca9a5231a39a6f9d27aa9303ca3",
       "deployed_matches": false,
       "protected_deployed_matches": true,
-      "protected_deployed_sha256": "b601a1f408e25f14cf55dfbb4ee1dab85ce76d4a5e791f0cc1d125706eb56239",
-      "deployment_transform": "exact protected_html(canonical index, pinned capture policy, text_only=True), Windows write_text newline conversion"
+      "protected_deployed_sha256": "1bb5c9a2e83d425c0180a46e853ee121ccab308ff51e7f325af0231b77868569",
+      "deployment_transform": "exact protected_html(canonical index, pinned capture policy, text_only=True), Windows write_text newline conversion",
+      "phase47_prior_sha256": "cb27a30693e5023dd167781165201712aed79e8662602594f984f2e7e2440928",
+      "phase47_verification": "Reviewed source/offline URL allowlist; real shared-browser shipped HTML/CSS initializer local picture load, window.closed and reopen, absent computed hidden. Silent offline launcher57 actual owned command query/current course+PNG/early guarded served initializer link visible; async readiness/click in physical task Chrome not claimed. Translate auxiliary popup recurred (original false retained); no model/audio/human proof."
     },
     {
       "path": "static/main.js",
-      "sha256": "acde4db25cdcd7195853a1a2a477bb28ae4f99d2e1d8f1e6a1b0ce5c45953b25",
+      "sha256": "add5f2c643e41e11654b9929429e6da82d55eab61fc30c5d876a043cb3c13beb",
       "deployed_matches": true,
       "phase41_prior_sha256": "38cb30d8622fdf539b2754911b2a8663b4ff9e9d502672561a3434ff434e6185",
-      "phase41_verification": "Reviewed source/offline Node7 and actual local browser36 checks (PNG pixels/dimensions/exact fixture submission; desktop/mobile replacement/races). No model/device/human or dense-small-text understanding acceptance."
+      "phase41_verification": "Reviewed source/offline Node7 and actual local browser36 checks (PNG pixels/dimensions/exact fixture submission; desktop/mobile replacement/races). No model/device/human or dense-small-text understanding acceptance.",
+      "phase47_prior_sha256": "acde4db25cdcd7195853a1a2a477bb28ae4f99d2e1d8f1e6a1b0ce5c45953b25",
+      "phase47_verification": "Reviewed source/offline URL allowlist; real shared-browser shipped HTML/CSS initializer local picture load, window.closed and reopen, absent computed hidden. Silent offline launcher57 actual owned command query/current course+PNG/early guarded served initializer link visible; async readiness/click in physical task Chrome not claimed. Translate auxiliary popup recurred (original false retained); no model/audio/human proof."
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",

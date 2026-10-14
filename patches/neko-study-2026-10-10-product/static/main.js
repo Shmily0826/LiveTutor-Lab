@@ -2546,7 +2546,25 @@ const documentController = window.StudyDocumentController.create({
   onAnalysisComplete: refreshStatus,
 });
 
+function configureLearningMaterialLink() {
+  const link = $id('learningMaterialLink');
+  if (!link) return;
+  link.hidden = true;
+  link.removeAttribute('href');
+  try {
+    const values = new URLSearchParams(window.location.search).getAll('learning_surface');
+    if (values.length !== 1 || !/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}\/?$/.test(values[0])) return;
+    const value = values[0];
+    const url = new URL(value);
+    if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || !Number(url.port) ||
+        url.username || url.password || url.pathname !== '/' || url.search || url.hash) return;
+    link.href = url.href;
+    link.hidden = false;
+  } catch { /* No valid current learning window was supplied by the launcher. */ }
+}
+
 async function bootstrap() {
+  configureLearningMaterialLink();
   if (window.I18n && typeof window.I18n.init === 'function') {
     await window.I18n.init(PLUGIN_ID);
     window.I18n.scanDOM();
