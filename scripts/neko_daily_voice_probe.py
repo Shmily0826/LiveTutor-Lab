@@ -661,6 +661,8 @@ async def main(args):
             report["timing_log"] = [line for line in fresh_log.splitlines() if any(mark in line for mark in (
                 "voice user_transcript", "TRIGGER entry='__llm_tool__study_", "首个 audio.delta", "/api/llm-tools/callback/study_companion/", "native-timing", "study voice admission", "study voice identical", "study-material-audio", "[study-grade-event]"))]
             if grade_current:
+                from neko_spoken_turn_analysis import parse_phrase_deliveries
+                report['phrase_deliveries'] = parse_phrase_deliveries(fresh_log)
                 report['grade_markers'] = []
                 for line in fresh_log.splitlines():
                     if '[study-grade-event] ' in line:
@@ -781,6 +783,8 @@ async def main(args):
         if grade_current:
             from neko_native_grade_acceptance import grade_acceptance
             report['grade_acceptance'] = grade_acceptance(report)
+            from neko_spoken_turn_analysis import analyze_grade_latency
+            report['grade_latency'] = analyze_grade_latency(report)
         save()
         print(json.dumps({"report": str(args.output), "failure": report.get("failure"), "reply": report.get("reply"),
                           "audio_bytes": report.get("socket_audio_bytes"), "loopback_loud": (report.get("loopback") or {}).get("loud_chunks"),

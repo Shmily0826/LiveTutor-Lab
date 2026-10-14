@@ -1,21 +1,21 @@
-# 日常学习伙伴执行计划（2026-10-15，阶段26）
+# 日常学习伙伴执行计划（2026-10-15，阶段27）
 
 完整契约：[原文](daily-companion-contract-2026-10-14.md)，169行，SHA256 `FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33`，未修改。每次上下文压缩或自动续跑先完整读取 contract、plan、status、blockers；后续用户明确指令优先，同步更新记录。Goal `01a13531-0341-7611-afc2-5c472a7ccf50` 当前实查 active，不重建、不局部标完成；完成依据实际交付和证据。局部阻塞记录失败/尝试/恢复条件，转其他任务；限流停止无效重试并退避。
 
 当前权限：必要扬声器仅用户已设约4%，不调整音量；禁止房间/物理/虚拟麦克风、捕获设备初始化和回环。已结束真人场的mic授权不延续。固定WAV只走文件→内存/WS，真实发声必须output-only及8API捕获保护；文字child `NEKO_TASK_SILENT=1`。不夜间要求本人朗读；再次集中真人体验待核心可用及本人明确在场。
 
-账本沿用 `bargein-autocheck-20261012` 不重置/换轮：最新实查 DeepSeek **691/2000**、Lanlan.app **67/null**、Lanlan.tech **0/0**；仅Main调整额度和安排在线。无其他付费供应商；连接有界超时/异常停止/退避，不无限重连，不为耗额度测试。请求计数非账单金额。
+账本沿用 `bargein-autocheck-20261012` 不重置/换轮：最新实查 DeepSeek **699/2000**、Lanlan.app **68/null**、Lanlan.tech **0/0**；仅Main调整额度和安排在线。无其他付费供应商；连接有界超时/异常停止/退避，不无限重连，不为耗额度测试。请求计数非账单金额。
 
 允许项目必要修改/隔离依赖、自有测试进程清理；保留Root脏树/.workbuddy/原历史。仅审查过allowlist commit/push `codex/`功能分支，不合并主分支、不强推/覆远端；排除密钥、用户DB、raw音频与无关修改。已有两个子Agent窄范围不冲突，无新增或换模型；Sky Scout源码/索引/已有架构图只读，复用已有两对比图。复用原SQLite和CodeGraph，不另建记忆/索引系统。
 
 源码/离线、真实模型/SQLite、Native接收与播放调度、物理可听、真人体验分别报告；不能用日志/排程冒充可听或本人认可。当前人工不再逐句协助；自动验证到可用后一次约10–20分钟集中体验。
 
-## 当前顺序
+## 当前顺序（阶段27末）
 
-1. 收尾阶段26真实Native明确纠正：场38已终结，正式correct100/同qid新attempt/原wrong与topic保留；原checker FAIL保留，核源码/反例21tests后只读复算22/22全真、Main语义正确；不付费重跑修量具。observer/量具/证据已review/commit/push `3016a30a8910f6e21efbf63c6b94725f276b87f4`，原产品Core未变、日常自动评分仍默认OFF。
-2. 响应前段：既有场38日志可进一步拆phrase封口、写入、ASR，先用已存在证据分析，保留ordinary打断及1.2s自然停顿保护；不能凭总时延直接缩静音阈值或绕协议提交。
-3. 扩连续使用及启用范围：自然短答/追问、legacy None/PCM replay/歧义首帧pin仍failclosed；明确哪种入口可正式评分，再考虑日常默认，防跨课/换题/重复成绩。correct题不能拿wrong-correction模式重评。
-4. 继续下表全部A–F，单一Native/桌面/设备阻塞不结束Goal。集中human仅最后，不重复已过基线。
+1. 新真实场39短答暴露分段FAIL：provider把同一已完整写入phrase拆成“当前题+我的答案是WEX指向NUD”和“点评分”，没有Core claim，provider两次study_answer只存一QA，但Native说旧“已经评分”。原FAIL保留，不重复未修在线。优先成套修明确声明准入与后续同批次纯请求的scope/事务归属，不能只加regex、shield旧owner或拼接未知内容。
+2. 12项/Main独立分段诊断、原37/38只读v2已过；需用39真实事件做离线Core/SDK/SQLite/新有声PCM/换题/连接反例，review/部署清单后才必要修后单场。日常AUTO_GRADE仍OFF。
+3. 延迟定位：长输入写完→accepted7.790/9.290s，短输入首ASR约4.723s但场39语义FAIL，不能把8.564s错误回复当优化成功。保护自然停顿1.2s和普通打断，未证实协议不乱发commit。
+4. 其它完整A–F继续，局部provider分段不等于全局阻塞。核心可用后一次集中human，不逐句占本人时间。
 
 | 契约范围 | 继续验收及剩余工作 |
 |---|---|
@@ -31,3 +31,9 @@
 ## 历史承接
 
 精简前plan原bytes独占归档：`docs/evidence/daily-companion-plan-history-through-phase25-and-phase26-preflight-2026-10-15.md`，SHA256 `d8a3694ecaf0e466f3d05a920dd1aa2621215b613ece26d3aeb8e38b0508f210`。此前phase18/16/14/12/10/8及human档保留。旧失败和额度是历史，不能自动当当前；四份最初报告及已过基线不从头重跑。
+
+阶段27启动前：既有phrase/grade自动分段诊断已source修及Main/独立12tests，两个诊断P2已闭；preflight8/完成7过。37/38原件不变，v2只读派生确认写完→accepted7.790/9.290s、Core比provider观察仅约3ms，保护1.2s停顿。必要一场短6.438s固定输入39将复用C32原图，因原题correct通过原Study生成新题而不改历史。SourceGate/output-only已过；本轮尚无新host/调用，ledger691/67/0，mic/capture/loopback仍禁、speaker用户4%。详phase27报告；Goal active/all A–F保留。
+
+阶段27场39收尾：exec11085 terminal/exit1/cleanup[]，任务48911/48916/9234无listener，无live场需轮询。原raw39 SHA3199f88767ef1eec3d6e73c04663d6bc71c3d49af400e09bbf1ef726413180e0，实际一个完整109782sample phrase、两个ASR、provider两次study_answer、QA4→5 current correct100及旧四QA hash保留，但没有Core grade markers，Native错误复述旧“已经评分”。新QA来自provider简写，不是完整逐字ASR；helper后续未执行false不等于实际捕获失败，八API实installed/locked且mic/capture/loopback/volumechange全false。真实偏好/语言相同，task provider恢复deepseek。账本699/2000、app68/null、tech0/0同round，+8DS/+1app，不把全DS当评分。
+
+下一轮先四文件，从phase27末段/latency-review的真实分段缺陷续：首段明确“当前题+我的答案是...”的准入和后段scope/事务必须成套，保护新PCM/换题/连接、未知修饰不拼接；单改regex后第二ASR会retire旧task，禁止复活owner。优先离线actual Core/SDK/SQLite回放再必要有界修后场；当前没有新的runtime修复/默认启用，余A–F持续。旧阶段25/26成功及37/38原FAIL/derived都保留，不外推39。

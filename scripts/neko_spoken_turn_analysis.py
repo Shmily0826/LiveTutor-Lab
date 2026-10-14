@@ -94,6 +94,124 @@ def analyze_wave(path, *, threshold=100, frame_ms=10, minimum_gap_ms=150):
             "proof": "raw amplitude only, not RNNoise verdict or semantic sentence boundaries"}
 
 
+def parse_phrase_deliveries(log_text):
+    """Keep only the existing count/clock diagnostic, never arbitrary log content."""
+    fields = ("connection_generation", "source_samples", "output_samples", "compressed_zero_samples",
+              "written_samples", "speech_end_estimated_wall", "sealed_estimated_wall", "sealed_wall",
+              "queue_wait_ms", "started_wall", "first_write_wall", "first_write_completed_ms",
+              "completed_wall", "write_elapsed_ms")
+    records = []
+    for line in log_text.splitlines():
+        if "native phrase delivery " not in line:
+            continue
+        try:
+            raw = json.loads(line.split("native phrase delivery ", 1)[1])
+            if (not isinstance(raw, dict) or raw.get("result") != "written_waiting_provider_boundary"
+                    or raw.get("input_timebase") != "arrival_derived_sample_estimate"):
+                continue
+            public = {key: raw[key] for key in fields}
+            if not all(_timestamp(v) is not None and v >= 0 for v in public.values()):
+                continue
+            public.update(result="written_waiting_provider_boundary", input_timebase=raw["input_timebase"])
+            if public not in records:  # The host has two logging handlers for the same record.
+                records.append(public)
+        except (KeyError, ValueError, TypeError):
+            continue
+    return records
+
+
+def analyze_grade_latency(scene):
+    """Observed single-turn clocks, not service-only latency or an acceptance gate."""
+    result = {"status": "unavailable", "seconds": {}, "phrase_status": "unavailable",
+              "physical_playback_start": "unverified", "external_calls": 0,
+              "scope": "fixed input / local writes / provider receive / Native schedule; no provider ACK or physical clock"}
+    try:
+        turn, = scene["turns"]
+        start, end, stop = (turn[k] for k in ("input_wall", "fixed_speech_end_wall", "observation_end_wall"))
+        if not all(_timestamp(v) is not None and v > 0 for v in (start, end, stop)) or not start <= end < stop:
+            return result
+        markers = scene["grade_markers"]
+        if len(markers) != 3 or {m["stage"] for m in markers} != {"accepted", "grade_complete", "relay_written"}:
+            return result
+        accepted, graded, relay = (next(m for m in markers if m["stage"] == stage)
+                                   for stage in ("accepted", "grade_complete", "relay_written"))
+        if (not all(_timestamp(m.get("wall")) is not None for m in markers)
+                or not end <= accepted["wall"] <= graded["wall"] <= relay["wall"] <= stop
+                or not all(isinstance(accepted.get(k), str) and accepted[k]
+                           and all(m.get(k) == accepted[k] for m in markers)
+                           for k in ("course_id", "session_id", "question_id", "attempt_id"))
+                or not all(type(m.get(k)) is int and m[k] >= 0 for m in markers for k in ("connection", "scope"))
+                or accepted["connection"] < 1
+                or graded["connection"] != accepted["connection"] or graded["scope"] != accepted["scope"]
+                or relay["connection"] != accepted["connection"] + 1 or relay["scope"] <= accepted["scope"]
+                or not isinstance(accepted.get("token"), str) or not accepted["token"]
+                or graded.get("token") != accepted["token"]
+                or not isinstance(relay.get("token"), str) or not relay["token"]
+                or relay["token"] == accepted.get("token")):
+            return result
+        events = [e for e in scene["native_final"]["trace"]["events"] if isinstance(e, dict)
+                  and _timestamp(e.get("wall")) is not None and start <= e["wall"] <= stop]
+        pcm = [e["wall"] for e in events if e.get("type") == "audio_frame"
+               and e.get("correlation_id") == relay["token"] and type(e.get("bytes")) is int and e["bytes"] > 0
+               and e["wall"] >= graded["wall"]]
+        schedule = [e["wall"] for e in events if e.get("type") == "speech_playback_state"
+                    and e.get("reason") == "chunk_scheduled" and e.get("active") is True
+                    and e.get("correlationId") == relay["token"] and pcm and e["wall"] >= min(pcm)]
+        seconds = result["seconds"]
+        seconds.update(input_end_to_accepted_asr=accepted["wall"] - end,
+                       accepted_asr_to_grade=graded["wall"] - accepted["wall"],
+                       grade_to_relay_write=relay["wall"] - graded["wall"])
+        if pcm:
+            seconds.update(input_end_to_native_pcm=min(pcm) - end,
+                           relay_write_to_native_pcm=min(pcm) - relay["wall"])
+        if schedule:
+            seconds.update(pcm_to_native_schedule=min(schedule) - min(pcm),
+                           input_end_to_native_schedule=min(schedule) - end)
+        for name, candidates in (
+            ("native_asr", [e["wall"] for e in events if e.get("type") == "user_transcript"]),
+            ("provider_asr", [e["t"] for e in scene.get("wire_trace", []) if isinstance(e, dict)
+                and e.get("dir") == "recv" and e.get("type") == "conversation.item.input_audio_transcription.completed"
+                and _timestamp(e.get("t")) is not None and end <= e["t"] <= stop]),
+        ):
+            if len(candidates) == 1 and candidates[0] >= end:
+                seconds["input_end_to_" + name] = candidates[0] - end
+        deliveries = []
+        for item in scene.get("phrase_deliveries", []):
+            if not isinstance(item, dict):
+                continue
+            clocks = [item.get(k) for k in ("speech_end_estimated_wall", "sealed_wall", "started_wall",
+                                            "first_write_wall", "completed_wall", "sealed_estimated_wall")]
+            if not all(_timestamp(v) is not None for v in clocks):
+                continue
+            speech, sealed, began, first, completed, estimated_seal = clocks
+            if (not start <= speech <= sealed <= began <= first <= completed <= accepted["wall"]
+                    or estimated_seal < speech):
+                continue
+            counts = [item.get(k) for k in ("connection_generation", "source_samples", "output_samples", "written_samples")]
+            if (not all(type(v) is int and v > 0 for v in counts)
+                    or counts[0] != accepted.get("connection") or counts[1] < counts[2] or counts[2] != counts[3]
+                    or item.get("result") != "written_waiting_provider_boundary"
+                    or item.get("input_timebase") != "arrival_derived_sample_estimate"):
+                continue
+            if item not in deliveries:
+                deliveries.append(item)
+        if len(deliveries) == 1:
+            item = deliveries[0]
+            result["phrase_status"] = "one_completed_write_in_this_turn"
+            seconds.update(estimated_phrase_quiet=item["sealed_estimated_wall"] - item["speech_end_estimated_wall"],
+                           input_end_to_phrase_seal=item["sealed_wall"] - end,
+                           phrase_seal_to_write_start=item["started_wall"] - item["sealed_wall"],
+                           phrase_write=item["completed_wall"] - item["started_wall"],
+                           phrase_write_to_accepted_asr=accepted["wall"] - item["completed_wall"])
+        elif deliveries:
+            result["phrase_status"] = "ambiguous_multiple_writes"
+        result["status"] = "observed_single_grade_turn"
+        result["seconds"] = {k: round(v, 6) for k, v in seconds.items()}
+    except (KeyError, TypeError, ValueError, IndexError):
+        result.update(status="unavailable", seconds={}, phrase_status="unavailable")
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scene", type=Path, action="append", required=True)
@@ -105,7 +223,8 @@ def main():
     for path in args.scene:
         scene = json.loads(path.read_text(encoding="utf-8"))
         scenes.append({"path": str(path), "wav_hash_matches": scene.get("input_wav_sha256") == amplitude["sha256"],
-                       **analyze_scene(scene, input_kind=args.input_kind)})
+                       **analyze_scene(scene, input_kind=args.input_kind),
+                       "grade_latency": analyze_grade_latency(scene)})
     print(json.dumps({"wave": amplitude, "scenes": scenes, "external_calls": 0}, ensure_ascii=True, indent=2))
 
 
