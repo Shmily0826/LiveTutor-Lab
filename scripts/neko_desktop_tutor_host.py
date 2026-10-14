@@ -175,8 +175,12 @@ def apply_voice_host_patch() -> str:
     """
     import neko_voice_host_patch as voice_patch
     import neko_output_only_patch as capture_patch
+    from neko_runtime_helpers import deploy_runtime_helpers
+    manifest = json.loads((ROOT / 'patches/neko-study-2026-10-10-host/manifest.json').read_text(encoding='utf-8'))
     results = []
     for host_root in voice_patch.HOSTS:
+        deployed_helpers = deploy_runtime_helpers(ROOT, host_root, manifest)
+        results.append(f"{host_root.name}/phrase-helpers={','.join(deployed_helpers)}")
         for relative, _ in voice_patch.TARGETS:
             target = host_root / relative
             results.append(f"{host_root.name}/{relative}={voice_patch.apply_to(target)}")
@@ -443,6 +447,8 @@ def verify_source_audio_gate() -> None:
         path = ROOT / item["path"]
         if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != item["sha256"]:
             raise RuntimeError(f"native phrase runtime helper fingerprint differs: {item['path']}")
+    from neko_runtime_helpers import verify_runtime_helpers
+    verify_runtime_helpers(ROOT, SOURCE_APP, manifest, SOURCE_PYTHON)
 
 
 QUIET_BRAIN_KEYS = ("recent_memory_auto_review",)

@@ -354,11 +354,13 @@
   "runtime_helpers": [
     {
       "path": "scripts/neko_phrase_input_buffer.py",
-      "sha256": "2bb1a65c72ac4bbf122ea9327de58df9d806572d6fa30f04c3eeca3132d9e99b"
+      "sha256": "2bb1a65c72ac4bbf122ea9327de58df9d806572d6fa30f04c3eeca3132d9e99b",
+      "deployed_path": "neko_phrase_input_buffer.py"
     },
     {
       "path": "scripts/neko_phrase_input_transport.py",
-      "sha256": "79cff29ca529ebc2e2e421288f48f0a384ed6d88399707d24711223ecfa324bb"
+      "sha256": "79cff29ca529ebc2e2e421288f48f0a384ed6d88399707d24711223ecfa324bb",
+      "deployed_path": "neko_phrase_input_transport.py"
     },
     {
       "path": "scripts/neko_output_only_runtime.py",
@@ -367,11 +369,21 @@
     {
       "path": "scripts/neko_capture_policy.js",
       "sha256": "2bde39c6042ea835c26464c8455567677c680126cd9d0f7761f1e7690ac4992a"
+    },
+    {
+      "path": "scripts/neko_runtime_helpers.py",
+      "sha256": "c4e411e48b231e607631dca16620d8ce2d597c3de6b7fe14dc6e38b993c14fd6"
     }
   ],
   "daily_phrase_input_update": {
     "scope": "default OFF; real Core authority/receipt and owned unsent normal16k free-app uplink; legacy/handoff entire input bypass",
     "offline": "20 actual Core/Omni socket cases including reviewed logging-failure cleanup and preroll-only route exit; fresh LF replay; no audio devices/model/Native for phrase",
     "report": "docs/evidence/daily-companion-phrase-input-implementation-2026-10-14.md"
+  },
+  "daily_phrase_helper_deployment": {
+    "scope": "two exact phrase helpers deployed into launcher cwd; source AND deployed fingerprints, actual cwd child imports checked before host launch",
+    "prior_failure": "voice34 runtime log repeated ModuleNotFoundError at22:20:10..30; source-only script checks missed missing deployed helpers",
+    "report": "docs/evidence/daily-companion-phase20-phrase-helper-deployment-2026-10-14.md",
+    "runtime": "Source/deployed fingerprint and actual launcher cwd imports PASS; online phrase after repair pending; preserve voice34 FAIL"
   }
 }
