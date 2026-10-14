@@ -1,4 +1,4 @@
-# 日常学习伙伴执行计划（阶段52交付，整体未完成）
+# 日常学习伙伴执行计划（阶段53核心语义窄通过，整体未完成）
 
 完整任务以[原始 contract](daily-companion-contract-2026-10-14.md)全文为准，不摘要替代、不修改；169行，SHA256 `FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33`。Goal `01a13531-0341-7611-afc2-5c472a7ccf50` active，完整A–F不缩范围、不因局部失败结束。沿用户指定模型，不擅自换模型。
 
@@ -6,7 +6,7 @@
 
 ## 本轮交付与下一步
 
-已发布52输出修复，实际source与完整任务以[状态](daily-companion-status-2026-10-14.md)为准。下一53先查已存在的源码教学、Focus推理和证据校验路径：61的数值例子与条件泛化错误仍需修，不能只添同义guidance、硬编码Sky答案或重复付费场。`_streaming._focus_stream_overrides`已存在，stream_text默认thinking_on=False；尚未核61实际是否启用及DeepSeek能力，不翻能力标记、不直接换模型。
+52已发布，53修复与真实62证据待精确发布。当前与完整任务以[状态](daily-companion-status-2026-10-14.md)为准；下一54先处理角色简短风格，并推进F完整UI/陈旧夹具。62数值与拒绝错误纠正窄证已有，不再重复同题；Focus即时cue有明确支持范围，不能冒通用推理保证。
 
 保持原CodeGraph、Study vision和SQLite，先最小修码/有关离线检查，证据充分后仅跑改变所需有界真实场。51语音端点局部未解时继续其它项；无效重试停止并记退避/恢复条件。全部自主项完成或全部余项依赖同一不可解条件才汇总全局阻塞。
 
@@ -21,10 +21,22 @@
 
 ## 不可丢失的操作约束
 
-- 原账本 `bargein-autocheck-20261012`，不重置/不换轮。最新实核DS862/2000、app78/null、tech0/0；启动前再核。连接保留单场超时/异常停止/退避，不换其它付费供应商，不为耗额度测试；计数非金额。
+- 原账本 `bargein-autocheck-20261012`，不重置/不换轮。最新实核DS868/2000、app78/null、tech0/0；启动前再核。连接保留单场超时/异常停止/退避，不换其它付费供应商，不为耗额度测试；计数非金额。
 - 必要扬声器仅用户已设4%，不调音量；当前静音。禁房间/物理/虚拟麦克风、capture初始化、loopback；旧真人许可不延续。固定WAV仅文件/内存/WS，发声须审output-only。核心成熟后一次10–20分钟human，须重新明确准备好了，不逐句让用户等待。
 - 保留Root脏master/空index/.workbuddy/用户历史；不reset/clean/stash/清库。仅精确allowlist审后commit/push codex/，不合主/强推/覆盖历史，排除密钥/DB/WAV/raw/备份。
 - Sky Scout源码/项目内索引/原HTML只读，复用已有两图、47WAV、CodeGraph、SQLite。Root当前无.codegraph；Sky定位先CodeGraph。localhost用全局web-inspector，不查个人Chrome、不装项目Playwright；六目录删除审批拒绝不绕过。
 - 最多沿原2Agent明确文件范围；learning_memory容量失败冻结，screen_guidance原独立报告范围，不新增/换模型；仅Main调共享额度或安排在线会话。
 
 精简前完整原bytes历史已独占归档：[through52](evidence/daily-companion-plan-history-through-phase52-2026-10-15.md)，SHA256 `2a31aa0bf12d7d5d72dce84f2435a72aa672639c00c1afdba01ba5d8c36f4b09`。历史原件不改；原contract不变。旧档相对链接按原docs位置理解。
+
+阶段53开始：52源码8d9bf21+完整归档/精简metadata808f98a已发布为progress，原账本862/78/0/无live场。61按自身时间窗日志实核两轮regular，question信号分别None/0.3，当前FocusScorer复杂度只读上一轮master reading；不是已经证明唯一质量根因。复用现Focus question信号，对用户当前明确源码解释/影响/校验请求加入即时信号，仍经core全局及focusCognitionEnabled用户开关/滞回/上限，不换模型/provider、不改emotion逻辑；不从屏幕或隐藏prompt打分。先本地正反例/关闭开关检查，部署和协议核对后仅一场必要验证。
+
+阶段53开发冻结：8新离线+4原scorer/question checks PASS，共12不同case，不计重复；actual source scorer SHA185044e52bae217757ee10dd273779eeb94fac820fcc18d94b8e07150f96e1d1、host manifest SHA7804da9efaccc9d255d8256a6be329da898999465975d0bd41db53c81833bd00、SourceGate PASS。当前明确源码推理为既有question信号1.0，仍合并其它信号、受现阈值/情绪/开关/滞回/硬顶，不保证所有语义/所有自定义阈值进入。只支持现中英cue与列举源码扩展名，纯读/无需推理不加此信号。62 fresh场两问显式材料范围、两个数值例子与错误纠正，既有量具仅在本进程替换问题，无源码预取/新图。原862/78/0/同deepseek-flash、text-only/TASK_SILENT、380s与32事件间停止/2000总顶，不mic/声音/capture/loopback；目标均不存在/三端口空，随后启动，未终态不冒模型通过。
+
+阶段53唯一静音真实62已启动exec94567；只poll同handle，不因观察超时重启。尚未终态，不冒实际启用/质量/清理通过；没有Native/浏览器/设备/捕获。
+
+53真实62终态：原raw SHA08212f3ed0442d1f7796493091cee4455a64159d6d4b0f70bea71ed6e7823ce6，terminal另件 SHA80a56f6e4e5a081a6c0d11f6375bc623819a9e9e543510d983074826fbd732f0，原semantics=PENDING保留，Main另件判核心窄PASS/风格PARTIAL。两轮11.572/5.423s，DeepSeek862→868恰6/app78不变，实际CodeGraph commit7aae20f；坐标guard/route/client均有shown，第二轮再次读guard。两个数值例子按原合法输入对调，100超过lat90→400早return，40/30有限且范围合法→调用fetchWeather，未说下游必成功；被用户错误纠正时按实际guard拒绝，不固执维护原错。第二答却“不同意”后追加嗯/喵/重复结论共4句，第一答“后面成不成这两句不管”语气欠耐心；不把句数/基础风格冒通过。
+
+当前场time-window仅提取两条Focus诊断（12:06:38/49）均question1.0、score0.60、charge0.6/0.9、modefocus，各有focus_thinking事件；与source registry/overrides相符，不保存/打印推理链，也不冒完整HTTP body wire capture。问题同时比61增加明确文件范围和数值例子，不能将改善全归因推理开关，也不是性能对照实验。传输无failure/cleanup/tracker错误；controller0，host1是owned forced-stop，全部owned已死/48911、48916、9234无listener，post62 SourceGate PASS；无Native/浏览器/设备/真人新证明。12=新8+原scorer4，同suite重跑不重复计数；offline raw SHA352155f5540dc116b99b273ef85900b35c4c8656f6a1ed7a931c0690d030fb51。
+
+接续边界：53的即时Focus只改实际source离线文字brain路径，不能据此认领free Native Realtime的源码口语同样改善。D语音仍需复用已有Study教师/授权CodeGraph与朗读桥接后验证；不能把文字路径当最终日常语音交付。54先处理角色风格与F UI入口/夹具，随后继续此集成，不因62核心窄PASS收缩A–F。

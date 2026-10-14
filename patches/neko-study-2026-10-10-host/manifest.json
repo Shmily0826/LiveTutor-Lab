@@ -349,6 +349,12 @@
       "base_sha256": "44d93874b56d175a53bc1c3fbaf583b126e3dd0c63f62519b5e157a5c6724c01",
       "patched_sha256": "f832282705c7f9d7e1668eebd96c850a73633006570c6b561a6b6c9c82e90f53",
       "phase51_verification": "Main new13 plus unchanged legacy34 filter cases; actual methods with isolated stream chunks, no model/device/human proof. DSML display containment and honest empty-final fallback; no text-to-tool execution, cap increase or retries."
+    },
+    {
+      "path": "main_logic/activity/focus_scorer.py",
+      "base_sha256": "361fe50e2122d0a8a7bfec3b24116d68d6159f00b55db01bbf976092ab6b1a1e",
+      "patched_sha256": "185044e52bae217757ee10dd273779eeb94fac820fcc18d94b8e07150f96e1d1",
+      "phase53_verification": "Main8 offline scorer/replay/actual global+user-off gates. Explicit current Chinese/English source reasoning contributes question1.0 via existing Focus; read-only/ordinary chat unchanged. Core switch, state hysteresis, emotion weights and provider/model preserved. Actual quality/Focus run pending."
     }
   ],
   "native_barge_in_handoff": {
@@ -466,6 +472,11 @@
       "path": "scripts/neko_pipe_output_patch.py",
       "sha256": "9e8319533925710bd8687e9b1ae986de3126cf63a2609a17d5f9bb619452a981",
       "reason": "Replay only exact known actual-source streaming guard; candidate historical source remains separate"
+    },
+    {
+      "path": "scripts/neko_source_focus_patch.py",
+      "sha256": "19470cce6950a6bb595664d4b451dfa044a2547f8da8a30ad98d46b212ac60fb",
+      "reason": "Replay only known actual-source Focus scorer; preserve master and user off gates"
     }
   ],
   "daily_phrase_input_update": {

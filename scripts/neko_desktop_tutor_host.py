@@ -196,6 +196,8 @@ def apply_voice_host_patch() -> str:
         results.append(f"{host_root.name}/dsml-output={dsml_patch.apply_to(host_root)}")
     import neko_pipe_output_patch as pipe_patch
     results.append(f"source/pipe-output={pipe_patch.apply_to(SOURCE_APP)}")
+    import neko_source_focus_patch as source_focus_patch
+    results.append(f"source/source-focus={source_focus_patch.apply_to(SOURCE_APP)}")
     return ",".join(results)
 
 
