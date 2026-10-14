@@ -654,4 +654,5 @@ def upgrade_targets(targets):
         for before, after in DAILY_UPGRADES.get(relative, ()):
             new=new.replace(before, after)
         final.append((relative,old,new))
-    return targets, daily_replay+tuple(final)
+    from neko_study_text_trace_patch import upgrade_targets as text_trace_targets
+    return text_trace_targets(targets, daily_replay+tuple(final))

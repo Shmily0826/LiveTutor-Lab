@@ -20,3 +20,7 @@ Main观测草稿5文件：NativeTelemetry原500ring增加严格本地observer_se
 Native terminal判据保留旧final sourceended；只有新增完整seq/counters历史、实际device sourceended/queue0/正确token/done、后无PCM或文字或active状态，才把后来空队列speech_cancel与已正常结束分开记证据，不允许任意cancel冒正常结束。Main telemetry18+grade acceptance27+preflight9离线PASS（JS真实INSTALL在no-device fixture重放750events、gap/改写/counter/overflow拒、latecancel负例）；独立observation-review进行中。未重算原49，真实新采集/物理/human仍未验。
 
 正式反馈短文本根因UNKNOWN：独立feedback-boundary-review实际AST封装/relay表达式/Omni flush/Core handle/send与真实emotionregex '<(.*?)>'均完整保持22chars/hash，未复刻49异步时序；单delta数量不能证明provider原文短。Main下一补既有WIRE_TRACE受控len/hash边界（reply/实际relay/write/providerreceive/callback/Corepublish/Native），不记正文、不新routing，先offline再考虑唯一必要线上。默认AUTO_GRADE仍OFF，其他A–F和本人集中验收继续；账本不重置。
+
+
+阶段37发布核对：12精确allowlist已push源码/证据commit 62dfc8a025e92030be4498172a20ddaf65bec1ca；remote codex/daily-learning-companion同SHA，publisher clean，remote master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb，Root index空。当前SourceGate全指纹/隔离helper导入再次PASS，无host/设备启动。原contract SHA不变，账本785/74/0。本阶段是progress，Goal active，A–F余项及49 PARTIAL保留。
+38定向接续：现有scripts/neko_spoken_turn_patch.py已管理_wire_trace.py的spoken诊断（初始化由launcher调用），可优先复用RealtimeWireTrace，避免另增runtime helper/记忆系统；record_recv的first-delta节流前应记录每个真实delta的无正文长度/hash及实际response/物理generation，不能只记录首delta；Core entry/queue/WS以及实际relay payload应分开hash，按真实边界接入且诊断失败不影响路由。当前尚未修改该实现、manifest或host源码，不凭设计冒已交付；先最小离线/独立review再必要线上，不盲重复49。

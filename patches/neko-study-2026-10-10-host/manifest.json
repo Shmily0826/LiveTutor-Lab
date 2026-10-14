@@ -24,7 +24,8 @@
     {
       "path": "main_logic/core/turn.py",
       "base_sha256": "d667800c79cac68989fa388efa3a12734baa133e86ef156e173d44e6cfa04add",
-      "patched_sha256": "4513a0a76f94e39097a2fce7e0be5b66aaf3d59baecbc8e4e907f2e221b93f1e"
+      "patched_sha256": "f0d6b1940265a7cdd93f890df85c62e2ada0707a4b527d6b6563a24c10f22e3a",
+      "phase38_prior_sha256": "4513a0a76f94e39097a2fce7e0be5b66aaf3d59baecbc8e4e907f2e221b93f1e"
     },
     {
       "path": "main_logic/tts_client/__init__.py",
@@ -39,7 +40,7 @@
     {
       "path": "main_logic/omni_realtime_client/_transport.py",
       "base_sha256": "2d6c058206c1beafc3e1d35a8f5111042ff509a31f398053ce7b97a825242423",
-      "patched_sha256": "634ec3f9a681bf0a4fc1e63a554fcae6a87ca3b5dafd7e914ec234a36ffed853",
+      "patched_sha256": "78df4190470f8d6ec43ae94c2995fa1eef9b3e30a59b3673418b32c6ddacdd65",
       "resealed_utc": "2026-10-13T14:38:47.980810+00:00",
       "resealed_reason": "Bounded free-route late-ASR raw tool dispatch, pinned original connection/session, one expected scope advance, foreign retirement rejects; onset, PCM, response lifecycle unchanged; 6 candidate, 5 existing tool lifecycle and 19 barge guards passed; actual role/voice not yet verified.",
       "verified_by": {
@@ -64,7 +65,8 @@
       "phase28_verified_by": "28 offline Core/SDK/SQLite route and migration tests; 15 intent + 1 symlink privilege skip; 20 phrase tests; independent review. Real post-fix session pending; default AUTO_GRADE remains OFF.",
       "phase33_prior_sha256": "12f8a1180de26ce67990f522ce5c8474346922f35ebf43c7a3ccd898e6e59950",
       "phase33_resealed_utc": "2026-10-14T18:17:33.626769+00:00",
-      "phase33_verified_by": "Main+independent Native route36; intent19 pass+1 Windows symlink skip; guarded healthy-empty rearm, explicit submission refusal, claim-required provider grading. SOURCE/OFFLINE only; actual continuous Native pending; daily AUTO_GRADE OFF."
+      "phase33_verified_by": "Main+independent Native route36; intent19 pass+1 Windows symlink skip; guarded healthy-empty rearm, explicit submission refusal, claim-required provider grading. SOURCE/OFFLINE only; actual continuous Native pending; daily AUTO_GRADE OFF.",
+      "phase38_prior_sha256": "634ec3f9a681bf0a4fc1e63a554fcae6a87ca3b5dafd7e914ec234a36ffed853"
     },
     {
       "path": "app/agent_server/capabilities.py",
@@ -241,7 +243,7 @@
     {
       "path": "main_logic/core/tool_calling.py",
       "base_sha256": "f33ce8396ba6a1dbc8d39cd8db34e312fea2a7e1ec6cf62395b040ee275b5faa",
-      "patched_sha256": "fd5160b4d8c7836c9d1167c346163ef6aeed3076d9fa0326843c522c1f3cab86",
+      "patched_sha256": "f4c0eaed424284215a47c34dc0dc3b8d4a47828daa04d80994ad05fa5911f56b",
       "material_audio_update": {
         "proof": "SOURCE/OFFLINE and fixed-input replacement14 cross-process/native-token/loopback/fresh reverse-picture reply passed; human, long-quiet recovery, other teaching output provenance pending",
         "offline": "28 host/event/owner/delivery tests including current role independent of native capture and host-private stripping without capture; 11 producer SQLite/push tests; 14 UI checks; 4 host fresh-LF replay/deployed/idempotence/AST matched, unknown edits refused; real Core registry/remote dispatcher plus SDK local-model-stub probe passed; current-picture native13 preserves literal image identifiers/negative-picture requests",
@@ -259,7 +261,8 @@
       "phase28_verified_by": "28 offline Core/SDK/SQLite route and migration tests; 15 intent + 1 symlink privilege skip; 20 phrase tests; independent review. Real post-fix session pending; default AUTO_GRADE remains OFF.",
       "phase33_prior_sha256": "7d91949b61449679916a4489bca09bf68788d6475078d5ba6105cff96a3ec07d",
       "phase33_resealed_utc": "2026-10-14T18:17:33.626769+00:00",
-      "phase33_verified_by": "Main+independent Native route36; intent19 pass+1 Windows symlink skip; guarded healthy-empty rearm, explicit submission refusal, claim-required provider grading. SOURCE/OFFLINE only; actual continuous Native pending; daily AUTO_GRADE OFF."
+      "phase33_verified_by": "Main+independent Native route36; intent19 pass+1 Windows symlink skip; guarded healthy-empty rearm, explicit submission refusal, claim-required provider grading. SOURCE/OFFLINE only; actual continuous Native pending; daily AUTO_GRADE OFF.",
+      "phase38_prior_sha256": "fd5160b4d8c7836c9d1167c346163ef6aeed3076d9fa0326843c522c1f3cab86"
     },
     {
       "path": "app/main_server/character_runtime.py",
@@ -318,6 +321,12 @@
       "proof": "SOURCE_OFFLINE pending real browser/Native/output proof",
       "fixed_input_duplicate_open": "guarded only: same socket deduplicates unchanged fingerprint to preserve queued PCM; changed state still advances, new socket resets, ordinary unchanged; JS17/router-ASR4 offline, real27 cause unresolved",
       "fixed_input_auxiliary_scope": "guarded chat/chat_full only: never-engaged passive idle is omitted before generation; hard mute/focus/recovery and release after engagement retained; fixed source restricted to root; ordinary unchanged; local diagnosis is not provider ACK"
+    },
+    {
+      "path": "main_logic/omni_realtime_client/_wire_trace.py",
+      "base_sha256": null,
+      "phase38_prior_sha256": "714502f39f0368132556664a92734e41ac02521d0035e0ce04ae4a6952ea2140",
+      "patched_sha256": "9b30a9dfe4c314b223590f36020b09e6071da8f8a9451a4fd081a51aebb191c5"
     }
   ],
   "native_barge_in_handoff": {
@@ -400,13 +409,18 @@
     },
     {
       "path": "scripts/neko_native_grade_patch.py",
-      "sha256": "0e9a8054860690ec3675b567507453d07c2c93fb150fde492db94cc987afec99",
+      "sha256": "ad82cf1102d37e57da4aeeeea033cc5ea03f75eb250d2f7a8c2d07bdd3f3b7be",
       "phase33_prior_sha256": "54d9b7e1b8cf49afeae01b4231288751261e1c37dcd48c3236e69d06ff1f12e4",
-      "phase35_prior_sha256": "d9b511352910333e29d71f5010cc53c65dcd4ac6449585e58f3047e38e475ada"
+      "phase35_prior_sha256": "d9b511352910333e29d71f5010cc53c65dcd4ac6449585e58f3047e38e475ada",
+      "phase38_prior_sha256": "0e9a8054860690ec3675b567507453d07c2c93fb150fde492db94cc987afec99"
     },
     {
       "path": "scripts/neko_material_audio_patch.py",
       "sha256": "08f1501a508b632f88ca584ae786a68a948ac9d3595dccef932b0085f087e6fd"
+    },
+    {
+      "path": "scripts/neko_study_text_trace_patch.py",
+      "sha256": "e6bd8accfb23a9d1cc78afa21018f2e3f3cd47412d4865c87992df6dfd15480c"
     }
   ],
   "daily_phrase_input_update": {
@@ -433,5 +447,11 @@
     "physical_output": "UNVERIFIED_NO_LOOPBACK",
     "human_experience": "PENDING",
     "limits": "one explicit pending-answer scene; Native correction/natural short answers/legacy/replay and daily default integration remain open"
+  },
+  "daily_feedback_text_trace": {
+    "gate": "existing NEKO_REALTIME_WIRE_TRACE only; no new routing",
+    "proof": "SOURCE/OFFLINE: Main 7 trace +38 route+5 spoken; independent7, no provider/device/human",
+    "privacy": "length and UTF8 digests only; bounded64 identity streams; no content retained",
+    "report": "docs/evidence/daily-companion-phase38-feedback-trace-2026-10-15.md"
   }
 }

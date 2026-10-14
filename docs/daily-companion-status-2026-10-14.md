@@ -1,4 +1,4 @@
-# 日常学习伙伴当前状态（2026-10-15，阶段36已发布，下一阶段37）
+# 日常学习伙伴当前状态（2026-10-15，阶段38已部署，反馈短句尚待定位）
 
 完整原任务：[contract](daily-companion-contract-2026-10-14.md)，原169行/SHA256 FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33，完整A–F/权限预算/发布验收不以摘要替代、不修改。现有Goal 01a13531-0341-7611-afc2-5c472a7ccf50 active，不重建/擅改模型；小阶段、局部失败、时间或额度不是完成依据。
 
@@ -61,3 +61,16 @@ Native terminal判据保留旧final sourceended；只有新增完整seq/counters
 
 阶段37完成SOURCE/OFFLINE窄修：6源码/测试文件，Main18 telemetry+27 acceptance+13 probe共58 PASS；独立原18/27未变、13新增重验PASS。独立发现末段observer task异常可吞P2并实际AST复现，已同步failed/ended/error再raise，每轮grace后与最后SDK/截图后fresh capture并前后核task，正常cancel/gather/置None后才end_session；独立closure无剩余具体P1/P2。详evidence/daily-companion-phase37-native-observation-2026-10-15.md及native-observation-review。500ring累积12000有严格sequence/counters/identity，不造证据；正常sourceended后的空队列cancel只在完整证据下分开诊断。
 原49/raw/PARTIAL不改，正式22chars而Native7chars的根因UNKNOWN。无模型/Native/浏览器/音频设备调用；账本原round实核DS785/2000、app74/null、tech0/0，无live host/exec。现有Goal active，完整A–F不变，不把本阶段当完成。下一38：仅既有WIRE_TRACE受控len/hash边界诊断（正式结果/relay实际write/provider原始delta/Omni callback/Core queue/WS），先离线，再必要线上；本人集中验收待核心成熟，无需逐句配合。
+
+
+阶段37发布核对：12精确allowlist已push源码/证据commit 62dfc8a025e92030be4498172a20ddaf65bec1ca；remote codex/daily-learning-companion同SHA，publisher clean，remote master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb，Root index空。当前SourceGate全指纹/隔离helper导入再次PASS，无host/设备启动。原contract SHA不变，账本785/74/0。本阶段是progress，Goal active，A–F余项及49 PARTIAL保留。
+38定向接续：现有scripts/neko_spoken_turn_patch.py已管理_wire_trace.py的spoken诊断（初始化由launcher调用），可优先复用RealtimeWireTrace，避免另增runtime helper/记忆系统；record_recv的first-delta节流前应记录每个真实delta的无正文长度/hash及实际response/物理generation，不能只记录首delta；Core entry/queue/WS以及实际relay payload应分开hash，按真实边界接入且诊断失败不影响路由。当前尚未修改该实现、manifest或host源码，不凭设计冒已交付；先最小离线/独立review再必要线上，不盲重复49。
+
+
+阶段38草稿开始（未部署/未发布）：Main新增scripts/neko_study_text_trace_patch.py，并在neko_native_grade_patch.upgrade_targets末尾接入，复用既有RealtimeWireTrace对象，不新增runtime helper/服务。4文件actual Source当前版本复制至temp，canonical replay+AST+幂等均过。加入每delta原始转写/既有5个Omni callback/Core entry+queue+WS/grade_reply/实际序列化relay payload成功本地write的无正文chars/UTF8 SHA；累计最多64已绑定generation+response的流，缺identity/容量不冒完整prefix。
+重要：当前只是草稿，neko_native_grade_patch helper SHA已变化而manifest尚旧，SourceGate应拒绝启动；尚未改两host或manifest，也没有任何在线/声音/设备调用。下一先专门离线fixture/原grade route回归、独立review，再审阅oldSHA备份/精确部署/manifest同步；不启动旧gate不符的host、不把37先前SourceGate PASS称38已过。账本785/74/0。
+
+
+阶段38完成SOURCE/OFFLINE+精确部署：Main7诊断+38grade route+5spoken共50PASS，独立7PASS/无新增具体P1/P2。已有RealtimeWireTrace扩展无正文length/UTF8hash，provider每delta节流前/完整done、formal grade reply、actual serialized relay成功write（bare/envelope分开，非ACK）、5Omni callback、Core entry/queue/WS；Core identity首await前冻结；64有身份流累计，缺失/容量不造prefix。logger异常不会改变路由，缺关键记录仍UNKNOWN。
+8个两host各自oldSHA核对/exclusive备份→canonical patch/AST/幂等；candidate与Source旧Core turn差异保留。manifest同步4Source+原grade helper+新trace patch helper；SourceGate源码及实际cwd helper导入PASS，草稿hash不符阻塞已关闭。完整证据evidence/daily-companion-phase38-feedback-trace-2026-10-15.md、feedback-trace-review。无host/Native/API/设备调用，原账本DS785/2000、app74/null、tech0/0；原49/raw/PARTIAL不改，短反馈根因仍UNKNOWN。
+下一39：仅一场必要的改进观测固定WAV连续场，用新增真实边界区分模型原始短句与转发丢失，沿原对比材料/47WAV、不预造题，先SourceGate/ledger/自有空端口核对，output-only+8API保护、不mic/capture/loopback，speaker仅用户设4%不调整。失败具体记录并转其他A–F，不无效重连。Goal active/完整contract不变；核心成熟再集中human，不要求逐句配合。
