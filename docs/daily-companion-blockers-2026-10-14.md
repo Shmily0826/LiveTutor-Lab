@@ -28,3 +28,6 @@
 52已终态、无live handle；所有余项未依赖同一不可解外部条件。Goal active，不暂停/假完成；无新额度重置或付费供应商授权需求。
 
 本次精简前完整记录独占归档：[历史](evidence/daily-companion-blockers-history-through-phase44-start-2026-10-15.md)，SHA256 cc7949ec310e7614660d4c20d9e90032b7c47e0d49ade86b829b6ce97e2bf039。历史链保留全部较早失败/权限/状态，当前摘要不覆盖contract或原raw。
+
+
+阶段44发布已核：15精确allowlist commit/push 73bb0ff2b03e749cb5f84bb00b113f7cf570c2e0 到codex/daily-learning-companion，remote exact、publisher clean、Root index空；master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。无raw/DB/WAV/密钥/备份发布，三份历史任务记录是完整原bytes归档。contract原SHA不变、post52 SourceGate与全product source/default指纹PASS；ledger833/78/0，无live场/自有端口。下一45按plan继续有限历史表述与跨题自由标签出处，A–F未完成，Goal active。

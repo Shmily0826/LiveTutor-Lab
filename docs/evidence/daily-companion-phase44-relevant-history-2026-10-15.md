@@ -69,3 +69,6 @@ SourceGate再次PASS。Main将同一离线fixture的SOURCE在内存指向实际d
 
 
 52独立原件复核已关闭：4条actual QA record IDs1/2/8/9，旧wrong与同qid/binding correct进入实际prompt并被模型准确引用，114 QA前后集合hash同，interaction0→1仅concept_explain。独立同判合成历史特定回忆窄MODEL PASS、全局否定断言诚实性PARTIAL，不改raw。最终product manifest SHA `c3f82cb418b95f3650fdffa7f52c6c9ee3c06d4c146cb86dfe6f021e5079a1be`，全manifest source/default（含原protected static例外）逐项hash再核PASS。source/test四+一指纹维持冻结；下一精确15文件allowlist发布，不带raw/DB/备份/录音/密钥。
+
+
+阶段44发布已核：15精确allowlist commit/push 73bb0ff2b03e749cb5f84bb00b113f7cf570c2e0 到codex/daily-learning-companion，remote exact、publisher clean、Root index空；master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。无raw/DB/WAV/密钥/备份发布，三份历史任务记录是完整原bytes归档。contract原SHA不变、post52 SourceGate与全product source/default指纹PASS；ledger833/78/0，无live场/自有端口。下一45按plan继续有限历史表述与跨题自由标签出处，A–F未完成，Goal active。

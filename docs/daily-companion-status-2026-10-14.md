@@ -22,7 +22,7 @@
 
 52 exec78416已terminal，不再poll或重启；raw c296d1050ecc890670db82dcdd19c79c3793d7e6974f10984bb3b79d3aacf63d。launcher45928与已记录owned children无存活，48911/48916/9234无listener，cleanup_error null；无live音频场/学习宿主。当前52数据均测试自有保留。
 
-最新已发布仍 fba88600d4eea3cc4363bd68c2d84c235a74dea5（43 source aa18b6a5…），publisher C:/Users/Shmily/.codex/worktrees/daily-companion/LiveTutor-Lab clean/Root index空上次核；44待发布。remote master f1e8f3f5605659f0526e43bc3b85c60ae46c85fb不可改。
+44源码及15文件已发布 73bb0ff2b03e749cb5f84bb00b113f7cf570c2e0；publisher C:/Users/Shmily/.codex/worktrees/daily-companion/LiveTutor-Lab clean/Root index空已核，元数据接续更新不含代码变更。remote master f1e8f3f5605659f0526e43bc3b85c60ae46c85fb不可改。
 
 ## 继承证据边界
 
@@ -33,3 +33,6 @@
 真人验收仍待核心成熟后集中一次；普通打断/基础真人教学既有通过不从头重做。下一动作见plan，不具备全Goal complete/global blocked依据。
 
 本次精简前完整记录独占归档：[历史](evidence/daily-companion-status-history-through-phase44-start-2026-10-15.md)，SHA256 5043e7b7a3a3a3ee1281e263923fb91ed405ca3a185f7c64c1c92523f1475906。历史链保留全部较早失败/权限/状态，当前摘要不覆盖contract或原raw。
+
+
+阶段44发布已核：15精确allowlist commit/push 73bb0ff2b03e749cb5f84bb00b113f7cf570c2e0 到codex/daily-learning-companion，remote exact、publisher clean、Root index空；master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。无raw/DB/WAV/密钥/备份发布，三份历史任务记录是完整原bytes归档。contract原SHA不变、post52 SourceGate与全product source/default指纹PASS；ledger833/78/0，无live场/自有端口。下一45按plan继续有限历史表述与跨题自由标签出处，A–F未完成，Goal active。

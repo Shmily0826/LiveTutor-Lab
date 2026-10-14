@@ -18,7 +18,7 @@
 
 ## 下一步
 
-1. 52证据独立复核已关闭；精确allowlist发布44，核remote/主分支/Root index/contract/ledger；不重跑52，不把本阶段完成当全Goal完成。
+1. 44已独立复核与精确发布（source73bb0ff），不重跑52，不把本阶段完成当全Goal完成；按下一项进入45。
 2. C：明确有限历史不代表完整历史；修复held question自由topic label被当authoritative selected ID而导致跨题/语言分散的问题。先区分trusted ID与label、同课唯一候选/歧义拒绝，不猜合旧三ID。复用entry_tutor_answer_entries与既有binding/Store，不另造库。
 3. 按真实变更补必要静音模型/本地集成，再继续D/E/A/F。B多ASR/尾约束保留局部问题，先可独立推进，避免盲开新音频场。
 
@@ -34,3 +34,6 @@
 | F集成/交付 | 多轮/换材料/换课/重启/网络恢复、启动文档/支持范围/发布/体验步骤继续。基础风格简短耐心纠错；成熟后集中human，复杂人格后置。 |
 
 本次精简前完整记录独占归档：[历史](evidence/daily-companion-plan-history-through-phase44-start-2026-10-15.md)，SHA256 f1fba802dc3f8f1a8c7ec44a7af76b2068f47f34f138e47f89f99d1a65c88333。历史链保留全部较早失败/权限/状态，当前摘要不覆盖contract或原raw。
+
+
+阶段44发布已核：15精确allowlist commit/push 73bb0ff2b03e749cb5f84bb00b113f7cf570c2e0 到codex/daily-learning-companion，remote exact、publisher clean、Root index空；master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。无raw/DB/WAV/密钥/备份发布，三份历史任务记录是完整原bytes归档。contract原SHA不变、post52 SourceGate与全product source/default指纹PASS；ledger833/78/0，无live场/自有端口。下一45按plan继续有限历史表述与跨题自由标签出处，A–F未完成，Goal active。
