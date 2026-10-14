@@ -43,3 +43,6 @@ entry_tutor_context_support的non-explain复用既有specific>=10资格，未匹
 
 
 独立收尾：guidance-relevance-review已复核44原SHA/10checks及底层notmatched/no payload、QA/formal4→5和旧hash、字段诊断PARTIAL，未改原件/未重试模型。concept-identity-investigation已完成只读源码+既有8断言/纯AST反例：_track_learning无稳定selected/held topic时取模型label，已有::scoped key绕过拼写canonical；同qid/aid但无topic也会分散，非仅匿名SDK。下一步先在原question/topic体系中、模型await前绑定证据支持的稳定selected/held topic，复用既有SQLite；匿名同题只在course/question/expected/material唯一历史身份有据时复用，已有三identity不任挑一个/不改旧成绩。跨题概念翻译不冒同题provenance，完整建议/边界见调查报告。局部失败不结束A–F Goal。当前本轮源码/默认部署/清单/离线/真实44窄链已完成，待精确发布SHA确认。
+
+
+阶段30发布确认：10精确allowlist文件（2源码/1测试/1manifest、3当前记录、3证据调查）已review/commit/push `f8a21cf1893265cde83d22d63c7d2e33bf46bf53` 到codex/daily-learning-companion，remote同SHA/candidate clean/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。Root index空/脏树/.workbuddy/原历史保留，raw/录音/DB/密钥未提交；contract原SHA不变。无live场/host待轮询，ledger721/70/0原round。当前轮progress（源码/默认部署/离线/真实44窄链及改变下一步的C/B失败证据），非等待或Goal完成。下轮先四文件，再读concept-identity-investigation接续已有_track_learning/_record_answer_knowledge/held topic选择链，优先稳定后续同题归属；原已三identity不能任挑/合并旧行，不建新系统。所有A–F持续，语言cfg与诊断一致性仍待修；不复跑已过指导/29语言/28声链。
