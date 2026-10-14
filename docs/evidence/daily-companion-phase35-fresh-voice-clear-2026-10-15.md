@@ -13,3 +13,12 @@ clear窄修：canonical grade patch只有AUTO1 + _rearm_empty_study_question_pin
 阶段35部署完成：Main+独立首次voice3/Native route38 PASS，无新P1/P2；审报告fresh-voice-clear-review冻结。两实际host _audio旧SHA8cd3cdd8bfd960ea7919342f218385d54c1d34da6606d109024d94c5468d9bac核对后exclusive phase35-before备份，canonical仅窄clear hunk改至cee4583d4d2513ae07d65a3ea1758cd823c1b5cd53a8bd1f154e2429683872d1，重复apply already patched；manifest_audio及grade-patch helper同步，完整SourceGate PASS。host控制脚本4b3a4eba40908eae61f57d274d9cec229ac52ccccbd80aeea0370f2f681889ba、gradepatch0e9a8054860690ec3675b567507453d07c2c93fb150fde492db94cc987afec99。
 
 必要修后场48已启动，唯一exec21739，不另开并行场；全新neko-daily-speech-acceptance-20261015-48验证first launch，不修改47/旧史，复用原forwardPNG/47三WAV（不重做材料），参数与47相同output-only/phrase/speech-gate/grade-chain/prepare-picture/verify，output daily-companion-20261015-continuous48.json。本场起步ledger746/71/0，运行中未判PASS，须等同一exec终态与source/runtime/Native/SQLite/cleanup。禁mic/capture/loopback，speaker仅用户4%不调音量。47原FAIL及source/offline与真实层差异继续保留；全部A–F Goal active。
+
+
+阶段35发布代码b16c6caa08c5d2c1714a0bf5a9cc75613fb91714（10精确allowlist）已push，未合master，Root index空。修后场48 exec21739已terminal exit1，raw SHA256 6ae4df57741b31c6ec5e93c6618b418fb07d508e7ad25d1121a232949c644aa7；failure为role quiz has no valid pending pin，probe在答案输入前停止，不伪造题。cleanup[]、launcher48352/native进程不存在，48911/48916/9234无listener。ledger原round DS746→757/2000（+11）、app71→72/null、tech0/0。
+
+首次启动修复获得真实窄证据：全新48 active默认卡test/voiceyui，启动当时guidance等于35 canonical；actual free=True/tts=False/captured=True，Native收到5帧（4帧正bytes合计166000，1空帧）/对应token排程/sourceendedqueue0，8API捕获保护installed。不是物理听见/完整真人体验通过；47音频FAIL不回写。
+
+连续学习仍FAIL/PARTIAL：完整第一请求ASR被角色交给study_explain而非study_quiz，只说“这道题可以这样出：”，实际SQL current_question仍空，0QA/0grade_markers；后两输入没有提交，因此clear窄修仍只有SOURCE/OFFLINE，不能算修后Native答题已过。按实际失败继续，不重跑未修线路，不把成功启动等同Goal完成。
+
+下一阶段36：已有角色guidance通用句“图片调用study_material后study_explain”包含出题，与后面明确出题study_quiz冲突。Main已最小收窄为image explanation，并明确当前图出题用study_quiz、读返回的实际question而非draft/preface；新卡/既有ours guidance通过现有入口生效，学习者自写guidance保留。官方fresh3测试再次PASS；这只是SOURCE/OFFLINE，尚未复核/部署到48或真实模型证明，不盲启daily AUTO_GRADE。下一复核该窄prompt后必要单场（复用同3WAV/原图），失败原件保留。其余A–F/预算/权限不变。

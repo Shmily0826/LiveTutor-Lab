@@ -1,88 +1,48 @@
-# 日常学习伙伴执行计划（2026-10-15，阶段32收尾）
+# 日常学习伙伴执行计划（2026-10-15，阶段36进行中）
 
-完整原任务：[contract](daily-companion-contract-2026-10-14.md)，原169行/SHA256 `FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33`，不以摘要替代、不修改。Goal `01a13531-0341-7611-afc2-5c472a7ccf50` active，不重建；完成须全部A–F实际交付及证据，不能因单项或时间标完成。
+完整原任务：[contract](daily-companion-contract-2026-10-14.md)，原169行/SHA256 FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33，完整A–F/权限预算/发布验收不以摘要替代、不修改。现有Goal 01a13531-0341-7611-afc2-5c472a7ccf50 active，不重建/擅改模型；小阶段、局部失败、时间或额度不是完成依据。
 
-每次压缩/自动续跑先完整读contract、plan、status、blockers，再读最新阶段报告，从明确函数接续；用户后续明确指令优先并同步记录。局部阻塞记失败/尝试/恢复条件并换可行任务；限流停止无效重试/退避，不因局部阻塞全局结束。
+每次压缩/自动续跑先完整读contract、plan、status、blockers，再最新阶段报告，从明确函数继续，不重新大扫；用户后续明确指令优先并同步记录。局部阻塞记失败/尝试/恢复条件，继续其他可行项；限流停止无效重试/退避。仅全部可自主工作完结或所有余项同一外部条件时汇总全局阻塞。
 
-当前音频边界：必要speaker仅用户已设约4%，不调音量；禁止房间/物理/虚拟mic、捕获设备初始化、回环。已结束human场授权不延续。文字child必须TASK_SILENT，SOURCE+text-only；固定WAV仅文件/内存/WS，必要发声另走已审output-only及8API捕获保护。不要求夜间朗读，下一集中human待核心可用及本人明确在场。这里的捕获设备禁用指音频输入；contract授权的指定学习窗口/受控页面截图仍可用，不采其他窗口内容。
+音频：必要speaker仅用户已设约4%不调整；禁房间/物理/虚拟mic、音频捕获初始化、回环，旧真人场授权不延续。固定WAV仅文件/内存/WS，发声必须已审output-only和8API保护；文字child TASK_SILENT+source/text-only。指定学习窗口/受控页面截图按原授权可用，不采其他窗口。用户不刻意逐句验收，核心可用后一次10–20分钟human，再明确在场授权mic；旧human看不到图/80%等Main组织FAIL保留。
 
-账本沿用bargein-autocheck-20261012：DeepSeek **724/2000**、app **70/null**、tech **0/0**，不重置/换轮/其他付费商，不为耗额度测试；请求数非金额。只有Main调整共享额度与安排在线音频；超时/异常停止/退避避免无限重连。
+沿用bargein-autocheck-20261012，DS累计上限2000，app null（无限额但单场超时/异常停/退避），tech0；不重置/换轮/其他付费商，不为耗额度测，请求计数非金额。49终态已核785/2000、app74/null、tech0/0；原round不重置。只有Main调额度/安排在线，最多原两个Agent：screen_guidance窄审、learning_memory容量失败冻结，不换模型/新增。
 
-授权必要本项目代码/隔离依赖/自有测试进程；保留Root脏树/.workbuddy/原学习历史，不删库/清空/reset/clean。仅审查allowlist commit/push codex/功能分支，不合master/强推/覆盖历史；排除密钥、DB、raw录音及无关改动。已有两Agent：screen_guidance窄审，learning_memory容量失败冻结，不换模型/新增。Sky Scout代码/索引/已有架构图只读，复用原两对比图；既有SQLite/CodeGraph，不另建系统。
+授权必要项目代码/隔离依赖/自有测试进程；保留Root原脏master/空index/.workbuddy/用户历史，不reset/clean/stash/清库；仅精确审查allowlist push codex/功能分支，不合master/强推/覆盖历史，排除密钥/DB/raw录音/无关修改。Sky Scout源码/索引/已有HTML只读，原两对比图复用；既有SQLite/CodeGraph，不另建系统。Root无.codegraph；Sky定位先已有CodeGraph。localhost/受控HTML检查用共享D:/AI/tools/web-inspector/cli.mjs，不装项目Playwright/不查个人Chrome。六空目录清理曾自动拒绝，未绕过。
 
-源码/离线、真实模型/SQLite、Native接收与排程、实际可听、真人体验分开；任何未验收层不得冒PASS。当前用户不逐句配合，自动开发到核心可用后再集中10–20分钟human，旧体验80%等Main的组织FAIL保留。
+证据分层：SOURCE/OFFLINE、真实模型/SQLite、Native接收排程、物理可听、human分别写；空帧不算正PCM，发送不算provider ACK。未验收不冒PASS，完成须实际全契约交付及证据。
 
-## 本轮与下一步
+## 当前执行方向
 
-上一轮31代码92ec265/元数据c2157e1为实际progress；本轮32同样完成产品修复、离线、部署、真实SDK46窄链及独立复核，是progress，非wait/Goal完成。46已terminal无需轮询。
+阶段36只改scripts/neko_desktop_tutor_host.py的既有role guidance：通用图片指令限定explanation；明确出题/方向题调用study_quiz、omit topic用当前像素，只说返回实际question，不draft/preface。旧ours guidance自动更新，用户自写保留。当前候选SHA475d60ff20c3f9f81f41bdd2c120be26b5d1145f4d46253ee354bca5bcdee280；fresh3再次PASS、独立无P1/P2，仍SOURCE ONLY。
 
-1. 当前封版：directSDK启动应用已有English课程偏好；新课程无偏好时回配置默认；临时回答结束尊重当前持久选择。31未来同题binding保留，不合并旧三identity。详[32](evidence/daily-companion-phase32-course-language-2026-10-15.md)和[独立审](evidence/daily-companion-course-language-review-2026-10-15.md)。精确发布SHA见末段。
-2. 下一优先日常角色连续学习整合：从 `scripts/neko_native_grade_patch.py` / `neko_study_answer_intent.py` / `neko_native_grade_acceptance.py` 及当前daily AUTO_GRADE默认OFF边界接续，复用actual held question/pin、答案意图和现有SDK；不制造pending、不放宽所有消息评分。把追问/出题/正式错答→纠正/记忆/正确材料接上日常入口，必要固定WAV/output-only验证；不复跑31/32同题已过文字路径。
-3. 保留B其他共享cfg并发隔离/跨字段诊断、C跨题concept identity、D源码版本引用、E受控表面和F集成余项，按实际失败推进。自动到核心可用，再一次human，不夜间采mic。
+必要修后场49已终结（整体PARTIAL）：exec30272、store neko-daily-speech-acceptance-20261015-49、raw evidence/daily-companion-20261015-continuous49.json。output-only/phrase-input/speech-gate/grade-chain/prepare-picture/verify-picture-state，复用原forwardPNG及47三WAV，不预造题。场前757/72/0，终态785/74/0，cleanup[]；当前无live场，不盲重复未修线路。48只走首轮，不能替代49答题证明。
 
-| 全契约 | 日常交付与剩余证据 |
+下一：49正式唯一grade已发生，但播报截断/证据环形丢失仍PARTIAL，先独立核raw、Main定向离线修，再必要实测。daily AUTO_GRADE仍OFF，日常Avatar typed无ASRclaim目前被Native guard拒，不把direct Study entry/SDK保留冒UI E2E；需正确text ingress或明确Study答题入口。
+
+| 契约 | 交付与余项（继承证据按报告，不重验未改基线） |
 |---|---|
-| A 入口/材料 | 固定数据配置/课程、初次引导/就绪/失败信息；便捷图/指定窗口、正确换材料换课、Study vision到角色声音；阶段19原入口/22当前图DOM证据继承，密集小字和本人可见性边界保留。 |
-| B 语言/教学 | 本轮直接启动English；29临时中→英文字继承。还需日常声音中英/术语数字代码、自然停顿及ordinary barge-in保护、端到端延迟，简短追问/诚实纠错。40短输入到PCM10.952s不是物理播放体验。 |
-| C 记忆 | 既有SQLite原题错答纠正/换课重启、四项明确长期偏好和相关取用；31同题未来归属跨restart过，旧三identity不猜译合并；跨题概念一致仍保留，不另建库。 |
-| D 源码 | 已有CodeGraph与授权Sky；结构/调用/行/影响、索引/源码版本/引用范围、事实与推断，避免重复整仓。Root无.codegraph，Sky定位先已有CodeGraph，只读源码和索引。 |
-| E 指示 | 受控HTML/图片/源码内指点，移动缩放滚动过期与换材料退役；既有开源适配/许可证据继承，只指示由学习者操作，任意桌面不冒全支持。 |
-| F 稳定交付 | 多轮/换材料换课/重启/网络恢复、启动方式/支持范围/已知问题/发布记录/体验步骤；伙伴默认简短耐心愿纠错，复杂人格后置。 |
+| A 入口/材料 | 固定配置/课/首次引导/就绪/失败反馈，图提交/指定窗口/正确换材料换课；19原入口/22当前图DOM继承，35修fresh native角色配置；密集小字/本人看见图的完整体验待证。 |
+| B 教学/语音 | 中英/单次切换/课程语言；32实际SDK46 English，48首次Native4正PCM窄证；连续角色出题→答题/追问在49，普通打断/自然停顿保护、术语数字代码、全链延迟余项保留。 |
+| C 记忆 | 原题/错答/纠正/重启换课、四项明确长期偏好取用；31未来同题binding/45重启，旧三identity不合。跨题概念、相关历史实用、一时要求不升长期，复用既有库。 |
+| D 源码 | CodeGraph已有，Sky只读：结构/调用/行/改动影响、源码版本/引用/索引更新、事实推断区分，避免整仓重复读。 |
+| E 指示 | 受控HTML/图片/源码指点、移动缩放滚动/换材料退役，沿用开源适配/许可证据，只指示由学习者操作；任意桌面不冒全支持。 |
+| F 交付 | 多轮/替换/换课/重启/网络恢复、启动方式/范围/问题/发布/体验步骤，简短耐心愿纠错；核心可用再集中human，复杂人格后置。 |
 
-## 工作树与交接
-
-无live host/exec。Root index空、原脏master保留；发布checkout `C:/Users/Shmily/.codex/worktrees/daily-companion/LiveTutor-Lab` / codex/daily-learning-companion，master f1e8f3f5605659f0526e43bc3b85c60ae46c85fb未动。本轮精确发布待末段确认。旧4原始报告及所有已验基线通过历史归档链保留，不从头重验；旧额度不自动当现状。
-
-本次精简前全文按原bytes独占归档 [历史](evidence/daily-companion-plan-history-through-phase31-and-phase32-start-2026-10-15.md)，SHA256 `1c63459f4b54f84929453c1fd13ae4b02448141bd254212a1f37478c39789e17`；更早历史/失败/原报告沿归档链保留，contract原文未变。
+本次精简前全文按原bytes独占归档[历史](evidence/daily-companion-plan-history-through-phase35-and-phase36-start-2026-10-15.md)，SHA256 3a027c87a585f227df2c4a6905b62390ae39cefec87efa8088d53e54ddef7900；通过原归档链保留全部更早报告/权限/失败，contract未变。
 
 
-阶段32发布确认：14精确allowlist文件（2产品source/1manifest、3隔离测试脚本、3当前记录、2证据、3原bytes历史档）已review/commit/push `f42386db3b5d63e9e9784f7e71b22b49414aa9a5` 到codex/daily-learning-companion，remote同SHA/candidate clean/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。Root index空/脏树/.workbuddy/原历史保留，无DB/raw/录音/密钥提交，contract169行原SHA不变。源码/离线、默认部署、实际静音direct SDK46 English及旧7QA/正式成绩保持窄链已验，DS724/2000/app70/null/tech0/0原round。exec66133已terminal0/host主动终止1/无cleanup_error，无live场需轮询。本轮progress；Goal active/all A–F完整继续，下一先四文件再按plan Native grade/intent/acceptance日常整合，不为延长运行反复付费测同题。共享cfg其他并发/语音/设备/human不冒PASS。
+阶段36真实49终态：唯一exec30272 exit1，finalized true/failure null/cleanup[]，launcher14952/native已不存在，48911/48916/9234无listener；raw SHA256 60988217eff6581fa038736e6d6cde71283ca4fb778f808894455c03da3e1148。ledger原round DS757→785/2000（+28计数非金额），app72→74/null（含正式relay一次受控重连），tech0/0。停止未修线路的在线重跑。
+
+实际模型/SQLite窄链PASS：healthyempty首输入→role study_quiz实际生成WEX出发指向谁→同connection1不同完整sealed delivery的自然ASR“我 的 答 案 是 WEX 指 向 NUD 。”→accepted/grade_complete/relay_written三身份一致；新增唯一QA+唯一formal、correct100、题/attempt保持，原ASR完整存。第一0QA，第二1，第三追问后仍1且题未换。baseline本场0QA，旧行保持check属空基线，不能冒原八史重启回归。Core accepted→gradecomplete1.782s、complete→relay0.598s，不是完整语音延迟。controlledconn1→2原token实际cancel/stop、新tokenPCM和排程均有。
+
+完整Native仍PARTIAL：第一6audio_frame=5正/1空；第二6正帧，但Native只转述“答对了：WEX”，正式feedback为“答对了：WEX 是起点，箭头终点是 NUD。”，新token终态speech_cancel而非source_ended，严格20grade checks仅native_terminal false。第三34帧=33正/1空、sourceended/题无误但最终snapshot无当轮ASR/只见回复后段，可能trace环形淘汰，需精确分开量具丢证据与实际截断。continuous checks 5true（健康empty/rolequiz/quiz不grade/前两同conn/追问不改grade），answer_flow与three_completed false，不写全链PASS/物理/HumanPASS。
+
+下一优先：在不再在线下，独立continuous49-review核实际raw，Main精确追answer新token的speech_cancel原因；补probe按轮累积流式Native证据，不能裁历史/重置计数伪造fresh。只有具体修后再必要实测；daily AUTO_GRADE仍OFF，Avatar typed/UI与其余A–F继续，不因该局部失败结束Goal。源码/模型/Native/物理/human层分开，原47/48/49失败均保留。
 
 
-阶段33启动：上一轮32源码/部署/真实46/push f42386d/记录3e4979e是progress，Goal active、ledger724/70/0不变，无live host/exec，Root index空/candidate clean。当前Main/独立实际source/offline发现日常启用三缺口：无题首输入永久poison挡同conn出题→回答；撤回/未确定/no-submit仍识别为answer；无可信localclaim的provider study_answer仍可写QA。调查报告daily-grade-readiness-review保留反例，40先备题不能证明这条连续链。
+49独立复核完成（continuous49-review）：Native第二轮172events无淘汰，实际文本确实只“答对了：WEX”；但其169320bytes/6正PCM后，1792003568.559已有同新token source_ended inactive/remaining0，1792003598.567才speech_cancel（晚30.008s）。因此final覆盖造成native_terminal false，不能说该late cancel截断了在播音频；源码30000ms sticky empty-queue fallback高度吻合，未凭时长冒唯一caller原因。短反馈独立仍未解，不能借修量具改整体PASS。
 
-本阶段先修真实准入：显式健康空question状态须区别DB失败/身份不全，只有旧sealed输入ASR已归属、provider边界完成、同driver/delivery/epoch/authority及下一新正输入才允许无题slot重获新题；replay/overlap/owner/scope毒化不清、不在旧ASR上重读题。无owner provider不能绕local判定写grade，已有同claim join/正式UI/SDK保留。只在可信pending pin可用时接纳首人称中英答案/选择声明，撤回与未提交/不确定优先拒绝，完整原ASR不截短。先实际helper/Core/SDK/tempSQLite离线及独立审，再旧SHA部署和必要真实同连接出题→回答链；尚不盲启daily AUTO_GRADE。原图/源码/材料复用，mic/capture音频/loopback禁，必要speaker仅4%不调整，不反复跑31/32同题文字。
+第三轮Native trace真实上限500（不是300），最终正好500且首wall3632.110已晚于wire ASR3623.838/3629.026，明确环形淘汰；最后窗口34frames非本轮累计45，不能将其ASR缺失称未识别，也不能按只剩后段做完整语义验收。原raw保持不重算。
 
-
-阶段33源码进展：4脚本已实现受限健康空题描述/同conn新输入重获题、无claim provider正式grade拒绝、可信pending自己的中英声明及withdraw/no-submit/uncertain优先拒绝。Main实际intent19（18过/1Windows symlink权限skip）和Native route36全过，含patch迁移幂等、完整Core/SDK/tempSQLite、旧sealed边界、新positive还不够/必须different实际sealed batch与递增seq、失败read/replay/overlap/scope不清poison；所有fake model/transport，只是SOURCE/OFFLINE，不是实时。空题SQL只投影bool，不读private问题整体。独立审进行中。
-
-重要：真实host source仍旧，host manifest/helper指纹尚旧，勿启动host/在线；需独立审后oldSHAguard备份、实际patch及SourceGate同步。ledger724/70/0，无live进程。daily AUTO_GRADE仍OFF。独立SOURCE追踪已确认当前Core普通Omni经ASR pipeline/RNNoise概率或RMS计算bool，并显式传speech_active；此前把普通入口猜为None不成立。legacy/direct client的None仍保守拒绝，真实设备入口未运行，不冒全可用。三缺口初稿反例及旧40有限证明保留在readiness-review。
-
-
-阶段33收口（SOURCE/OFFLINE/部署）：独立发现额外P2“不是最终答案/仅示例/尚未提交”已前置拒绝，最终Main+独立intent20项=19PASS/1Windows symlink权限1314 skip；Main最终Native36全PASS，独立36已PASS，含实际Core/SDK/tempSQLite但模型/外层transport double，空题fixture恢复不冒真实工具出题。独立report已冻结无剩余具体P1/P2；direct Study entry/SDK保留不等于Avatar typed/UI自然评分，后者active Native无ASRclaim仍拒绝，保留待接。
-
-两个任务宿主benchmarks/raw/neko-product-host及candidates/N.E.K.O均oldSHA完整核对/独占phase33-before备份后，仅canonical patcher改transport+Core，复制纯intent；transport新SHA634ec3f9a681bf0a4fc1e63a554fcae6a87ca3b5dafd7e914ec234a36ffed853，Core fd5160b4d8c7836c9d1167c346163ef6aeed3076d9fa0326843c522c1f3cab86，intent829c2da3cc181b7f99505e09d5b600a346d87fabe2d594ff83639f953a01c7a2；patch重复apply already patched。hostmanifest两源/两helper指纹同步，Main完整verify_source_audio_gate PASS，不启动服务。原backup/raw不入Git。daily AUTO_GRADE仍OFF，账本原round DS724/2000/app70/null/tech0/0不变，无live host/exec，未用任何音频设备/捕获/loopback/在线。
-
-下一实质目标：复用已有daily voice probe三WAV教学链，新增受控正式评分链模式，起步确认无pending，第一轮真实角色工具出题，下一不同sealed输入用自己的自然声明回答；核同conn/唯一正式grade/原ASR/旧历史/新token排程，再追问核不误grade。先probe preflight与观测判据离线审查，再必要唯一有界fixed-WAV output-only场，不用pre-generated题或SDK46冒连续Native；所有物理可听/human未验仍PENDING。阶段33源/部署非全Goal完成。
-
-
-阶段33发布已核：ae248a14c23048150294c710fec147f0069c6416 已push codex/daily-learning-companion，10精确allowlist，publisher clean，remote master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb，Root index空。阶段34正准备唯一必要真实连续场47：全新task-owned speech-acceptance store，复用原forward PNG；既有C32保留evaluated题，41保留8QA历史（其早期JSON题缺qid/aid，现grade_snapshot保守拒绝），不清空/改造旧题为pending。通过现有Study image/session/preferences setup建立新课，随后Native内实际出题→自己的自然答案→非答题追问；不在Native前preparequiz。新3fixed WAV由Huihui直接exclusive文件流生成，无播放/捕获。
-
-新增grade-chain观测复用原单成绩严格receipt，逐轮保存SQL/Native snapshot；first/third也核ASR/正PCM/turnend/sourceended回执，不以reply/count冒通过，两次实际delivery需完整written/result/同generation。Main preflight9/acceptance25本地过，独立复核进行中，尚未在线，ledger724/70/0，无live进程。检查器发现的弱证据反例写在continuous-grade-probe-review并收紧，不能把fixturePASS冒真实学习。真实场准备命令与结果待阶段34报告。
-
-
-阶段34场47已启动（exec42404，尚非结果）：独立最终preflight9/acceptance25 PASS、两量具P2关闭；probe16cc4bbc406516e49e2f8591ac0118108ee48b4a8de3742ab41fbb7463f07dbd、acceptance7608015d33cc67048991156e42697426e2e895592a6f0dd906f94b5187e77be1。唯一命令neko_daily_voice_probe.py --store neko-daily-speech-acceptance-20261015-47 --output benchmarks/raw/evidence/daily-companion-20261015-continuous47.json --output-only --phrase-input --speech-gate --grade-chain --prepare-picture --verify-picture-state --teaching-wav [daily-continuous-quiz47/answer47/followup47.wav]。三文件Huihui仅exclusive WaveStream合成，8.476/4.058/9.026秒，SHA b65720996f8f25184e9b776169378502ae5b508e6e580bfa2a8d351f5a0ecf40 / d0d21ac5f74f8e77a499818d8c52fb99eeb7ac91730645f31e969e326a781cbf / 9685bbb3db11102e45e85e6475523cf2a28ee9d9f259b069f8f8e38c811b84ff。
-沿用原账本起步724/70/0，SOURCE gate/输出权限预核PASS，必要speaker仅用户已设4%不调整，8API捕获保护在renderer启动先验，mic/设备捕获/loopback禁止。单场hold/每轮deadline+owned cleanup，限流异常终止不无效重连。需等同一exec终结并核raw/SQLite/实际conn/Native排程和cleanup后记录账本，不能并行另开场或按已启动冒PASS。
-
-
-阶段34真实场47终态：exec42404 exit1（连续验收FAIL，不是服务异常），raw SHA256 4e83c318b0f06cff06abca24b59266db5cf23259205cc2db06ec9e82660d4824，finalized true/failure null/cleanup[]；launcher6000及native51488均已不存在，48911/48916/9234无listener。ledger原round DeepSeek724→746/2000（+22计数非金额）、app70→71/null、tech0/0，不重置；不重跑未修线路。
-
-真实通过窄项：新隔离课/原forward图/8捕获API保护、Native前healthyempty、首轮provider study_quiz请求+实际新pending（问WEX出发指向谁），首轮0QA；第二ASR完整“我 的 答 案 是 WEX 指 向 NUD 。”；第三只解释箭头尖端，0QA/原题未变。三次local phrase写入均connection1完整written，不冒providerACK；provider各有audio.delta接收，但三轮Native PCM均0，无播放回执/物理/human证明，原FAIL保留。
-
-实际未过：第二轮未claim/未正式评分，仅确认答案“对吗”，grade_markers空，第二provider study_answer被受控guard拒；连续check仅健康空题/真实出题/出题不grade/追问不添grade四项true，答案链和完整Native语音失败。同conn结构check因没有accepted marker而false，不能反称三次delivery换连接。
-
-定位中：本场[study-material-audio]实际free=True且tts=True/captured=False。Core读pin/claim前置拒use_tts，因此不能仅归咎empty rearm。现host.apply_free_voice_route在launcher前调用，freshstore当时无characters.json就返回error，首次runtime之后才生成默认卡；外部TTS仍禁止，导致有provider音频但无Native排程。Main下一修fresh startup先复用官方默认角色生成再native voice/角色guidance，保留权限。独立另发现第二前缀零输入触发clear，实际_audio.clear无条件poison旧pin；两项必须分开定向offline复现，不能统统放开clear/replay守卫。尚无修后online证据。
-
-
-阶段34封版发布56b64a9（精确完整SHA待final核）codex/daily-learning-companion，9allowlist仅probe/观测测试+记录/独立report；47真实FAIL未改，raw/DB/新WAV/密钥/备份均未入Git。当前phase35为必要修后源码工作，不是全Goal已完成。
-
-阶段35源码进展：Main缺卡fresh voice先用官方get_localized_default_characters在源码Python子进程exclusive x生成默认卡，taskSilent/text-only/LOCALAPPDATA/三个storage root都指任务隔离目录，再现有yui native选择及guidance，模型asset准备移到seed后；既有角色除既定voice选择外不覆盖学习者guidance，malformed原卡拒改。实际官方seed3本地PASS，无应用/provider/audio/用户数据。原C32/41/47均未改数据。仅修voice启动，其他first text onboarding仍不冒通过。
-
-clear窄修：canonical grade patch只有AUTO1 + _rearm_empty_study_question_pin严格同driver/delivery/epoch/connection/token/scope/authority/scoped且真实boundary结束的healthyempty，静音clear才保留原槽，仍发送clear并reset resampler，不读新题/不造ASR身份；unknown/pending/poison/featureOFF仍毒化，未送完PCM仍被原protect拦。实际clear/protect AST与Core/SDK/tempSQLite38本地PASS含clear后不同新sealed batch才grade；模型/outertransport double，只SOURCE/OFFLINE。独立fresh-voice-clear-review进行中。
-
-重要交接：neko_native_grade_patch已变，真实host_audio源及manifest仍阶段33；不得启动host/在线，须独立审后oldSHA备份部署_audio.py及helper manifest、SourceGate。当前无live进程/exec，ledger746/2000/app71/null/tech0/0原round，不重试未修线路。下一继续审查→部署→必要修后场，既有47原FAIL保留；必要speaker4%不调整，mic/capture/loopback禁，完整A–F继续。
-
-
-阶段35部署完成：Main+独立首次voice3/Native route38 PASS，无新P1/P2；审报告fresh-voice-clear-review冻结。两实际host _audio旧SHA8cd3cdd8bfd960ea7919342f218385d54c1d34da6606d109024d94c5468d9bac核对后exclusive phase35-before备份，canonical仅窄clear hunk改至cee4583d4d2513ae07d65a3ea1758cd823c1b5cd53a8bd1f154e2429683872d1，重复apply already patched；manifest_audio及grade-patch helper同步，完整SourceGate PASS。host控制脚本4b3a4eba40908eae61f57d274d9cec229ac52ccccbd80aeea0370f2f681889ba、gradepatch0e9a8054860690ec3675b567507453d07c2c93fb150fde492db94cc987afec99。
-
-必要修后场48已启动，唯一exec21739，不另开并行场；全新neko-daily-speech-acceptance-20261015-48验证first launch，不修改47/旧史，复用原forwardPNG/47三WAV（不重做材料），参数与47相同output-only/phrase/speech-gate/grade-chain/prepare-picture/verify，output daily-companion-20261015-continuous48.json。本场起步ledger746/71/0，运行中未判PASS，须等同一exec终态与source/runtime/Native/SQLite/cleanup。禁mic/capture/loopback，speaker仅用户4%不调音量。47原FAIL及source/offline与真实层差异继续保留；全部A–F Goal active。
+下一阶段37先本地：复用neko_native_telemetry的500ring观测，在既有probe观察循环逐轮积累有本地sequence的events，严格身份/容量/缺号拒绝，保留actual earlier sourceended与其后无新同token PCM的回执，将30s后空队列cleanup单独记诊断；不裁历史/重置binary计数来冒fresh、不把本地seq当provider utterance。新量具不改49原FAIL。另精确追正式reply完整feedback→owned relay文本→provider transcript→Core publish的截断边界（当前不能唯一说模型或UI），必要先无内容的len/hash诊断和离线fixture，先不在线重试/不盲改音频协议。daily AUTO OFF，Avatar typed、其他A–F仍继续。当前无live host/exec，账本785/74/0。

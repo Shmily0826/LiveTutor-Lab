@@ -48,3 +48,29 @@
 | scripts/test_neko_native_grade_route.py | `a013f81210d0f35e0edba7ff1ffd18f1708b1b4604cabcc3bc7b968522e9e15d` |
 
 本报告冻结；未启动任何需要清理的服务、浏览器、Native 或音频进程。
+
+## 场48原件独立复核（追加，2026-10-15）
+
+只读 `benchmarks/raw/evidence/daily-companion-20261015-continuous48.json`，SHA256 **`6ae4df57741b31c6ec5e93c6618b418fb07d508e7ad25d1121a232949c644aa7`**，与 Main 提供值一致，未改原件。原件 finalized=True，failure 为 `RuntimeError: role quiz has no valid pending pin; stop before answer input`，cleanup_errors=[]。Main 报告唯一 exec21739 exit1、无 listener；本次未另行启动或轮询进程。
+
+底层数据支持如下分层结论：
+
+- 初始 readonly snapshot ok=True，当前题四字段为空，QA/formal 各0；独立 empty pin 有完整 course/session。该起始状态是真健康空题，不应因为异常路径的汇总 acceptance 各项 False 就改称不存在。
+- 唯一一轮 ASR 明确要求当前图片、从 WEX 出发的箭头方向题、不要公布答案。wire 实际 `response.function_call_arguments.done` 的工具名是 **study_explain**，未出现实际 study_quiz。角色只回复 **“这道题可以这样出：”**，没有给出可作答题干。
+- 第一轮后 question 仍空，QA/formal 仍0、last_answer_evaluation={}，`grade_next_input_pin=None`；turns 长度恰1。probe 第591–594行在验证该 pin 失败后立即 raise，原件没有第二答案或第三追问输入。停止边界正确，没有捏造 pending 来继续评分。
+- 本轮 binding admission 实际 `trusted=True current=True free=True tts=False route=native lease=core`，随后 `captured=True`、result binding valid=True/reply=True。因此已越过场47的 ttsTrue 前置阻断，可靠工具结果的 Native 输出窄链有真实证据。
+- **PCM计数精确更正：5条 audio_frame 中仅4条正bytes**（16600、26560、39840、83000，合计166000 bytes），末条bytes=0。均同新 Native token。首帧 wall1792003275.252，首次 chunk_scheduled wall1792003275.794；最终 playback 同 token、active=False、remainingSeconds=0、reason=source_ended，updatedAt1792003278048。无需编造 queue 字段或将空终止帧计作正 PCM。
+- 原件记录 output_only=True、room_microphone=False、capture_devices=False、loopback_enabled=False、volume_changed=False。Native 接收与播放排程/结束是本场证据，物理可听仍 **UNVERIFIED_NO_LOOPBACK**，human **PENDING**。
+- 账本原件同一 round：DS746→757、app71→72、tech上限0且无新增 tech spent；本审查无调用。Main另核 fresh actual card voice=yui、guidance=canonical；该配置逐字验证由 Main 执行，raw本身的启动日志路径对应文件为空，本审查不冒称独立核了角色卡完整 bytes。
+
+整体仍为 **FAIL_OR_PARTIAL：实际未出题，连续答题链未开始**。本次只能增加 fresh 首次 voice 修复的真实 ttsFalse/capture/Native接收排程窄证据，不能证明 clear 例外在第二输入被真实使用。
+
+定向源码核查发现原 `TUTOR_ROLE_GUIDANCE` 第547–550行先无条件要求 Study 图片调用 study_material→study_explain，随后又要求明确 quiz 调用 study_quiz；图片出题同时命中两条，存在指令歧义。与场48实际 explain 调用相符，但无法仅凭一次模型场断言唯一因果。Main拟将通用规则限为 image explanation，并明确 current-picture quiz 应调用 study_quiz、不口头草拟题；此处仅记录设计，未审查或认领尚未执行的修改/模型结果。不重试场48，不改原47/48失败记录。
+
+追加复核后再次冻结。本审查仅改本报告，无服务、设备、模型或预算动作。
+
+### 阶段36 prompt 最小增量源码复核
+
+随后只读核 host SHA256 `475d60ff20c3f9f81f41bdd2c120be26b5d1145f4d46253ee354bca5bcdee280`：通用 image 分支现限定 **explanation of an image**；明确 quiz（含出一道题/方向题例子）指向 study_quiz，排除 study_explain；current-picture quiz 继续 omit topic，以保存的 pixels 为依据；只说 actual returned question、不草拟、不止于出题前缀。本范围未发现新增 P1/P2，也未发现与既有静默调用、课程语言、禁止扩写工具结果、证据/箭头方向规则的新冲突。先前用户自写 guidance 的保留行为没有在此段更改。
+
+此为 **SOURCE ONLY** 关闭已定位的指令歧义；Main报告 fresh3仍过，本次不重复测试、不声称模型必定选对工具或下一场已通过。仍须用实际 role quiz 与保存 pending 证据判断，不能以该文本或 Native 播放一句话代替。报告再次冻结。
