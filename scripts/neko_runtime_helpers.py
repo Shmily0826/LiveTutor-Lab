@@ -1,4 +1,4 @@
-"""Deploy and verify the two standard-library phrase helpers in the actual host.
+"""Deploy and verify the standard-library voice helpers in the actual host.
 
 Tests started from scripts/ used to hide their absence from launcher.py's path.
 """
@@ -8,7 +8,7 @@ import hashlib
 from pathlib import Path
 import subprocess
 
-_HELPERS={'neko_phrase_input_buffer.py','neko_phrase_input_transport.py'}
+_HELPERS={'neko_phrase_input_buffer.py','neko_phrase_input_transport.py','neko_study_answer_intent.py'}
 
 def helper_plan(project_root: Path, manifest: dict):
     plan=[]
@@ -59,10 +59,10 @@ def verify_runtime_helpers(project_root: Path, host_root: Path, manifest: dict, 
     # Reproduce launcher's cwd/import path. No scripts/ injection or app imports.
     check='''import importlib,pathlib,sys
 root=pathlib.Path(sys.argv[1]).resolve()
-for name in ('neko_phrase_input_buffer','neko_phrase_input_transport'):
+for name in ('neko_phrase_input_buffer','neko_phrase_input_transport','neko_study_answer_intent'):
     module=importlib.import_module(name)
     assert pathlib.Path(module.__file__).resolve()==root/(name+'.py'), name
-assert module.NativePhraseUplink.__module__=='neko_phrase_input_transport'
+assert callable(module.answer_intent) and callable(module.read_question_pin)
 '''
     try:
         subprocess.run([str(python),'-E','-B','-c',check,str(host_root)],cwd=host_root,

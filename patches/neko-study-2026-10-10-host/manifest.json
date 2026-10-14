@@ -24,7 +24,7 @@
     {
       "path": "main_logic/core/turn.py",
       "base_sha256": "d667800c79cac68989fa388efa3a12734baa133e86ef156e173d44e6cfa04add",
-      "patched_sha256": "d002bbd796c7e86be9a08a18223dfdd97ede93435ade289345b034119b0db37f"
+      "patched_sha256": "4513a0a76f94e39097a2fce7e0be5b66aaf3d59baecbc8e4e907f2e221b93f1e"
     },
     {
       "path": "main_logic/tts_client/__init__.py",
@@ -39,7 +39,7 @@
     {
       "path": "main_logic/omni_realtime_client/_transport.py",
       "base_sha256": "2d6c058206c1beafc3e1d35a8f5111042ff509a31f398053ce7b97a825242423",
-      "patched_sha256": "042af91f557431e981ce588565f1dc827bb466109a8155c6c2179fdd83f7b3c8",
+      "patched_sha256": "b0fef76951a7305bcfa815f5a8bc2aedda76a410cb27882f6f4bb31ad016d556",
       "resealed_utc": "2026-10-13T14:38:47.980810+00:00",
       "resealed_reason": "Bounded free-route late-ASR raw tool dispatch, pinned original connection/session, one expected scope advance, foreign retirement rejects; onset, PCM, response lifecycle unchanged; 6 candidate, 5 existing tool lifecycle and 19 barge guards passed; actual role/voice not yet verified.",
       "verified_by": {
@@ -121,7 +121,7 @@
       "path": "main_logic/core/session_lifecycle.py",
       "base_sha256": null,
       "pre_native_handoff_sha256": "356ebc0e5bbcb87514b34594856d9425d56793ea88d47b986a160d90195ef326",
-      "patched_sha256": "47561debfef3aea5fbf8d5a8557043c7502eed5b1a591c6e97972667694670c2",
+      "patched_sha256": "49044243490c261114d6f8726721313dabbdf54f61a178e290cd0848e96d1a5a",
       "resealed_utc": "2026-10-12T07:18:29.850643+00:00",
       "resealed_reason": "Native free-proxy barge-in connection isolation, bounded PCM replay, selective old-connection playback cancellation.",
       "verified_by": {
@@ -232,7 +232,7 @@
     {
       "path": "main_logic/core/tool_calling.py",
       "base_sha256": "f33ce8396ba6a1dbc8d39cd8db34e312fea2a7e1ec6cf62395b040ee275b5faa",
-      "patched_sha256": "05737010792086a92c8cf98d9122f4bd71b29d59e1103a8c8212cff51af3cea8",
+      "patched_sha256": "e8868288771773b495daedca030210a33cba9bb4ce5029975c43b6d5fac39e08",
       "material_audio_update": {
         "proof": "SOURCE/OFFLINE and fixed-input replacement14 cross-process/native-token/loopback/fresh reverse-picture reply passed; human, long-quiet recovery, other teaching output provenance pending",
         "offline": "28 host/event/owner/delivery tests including current role independent of native capture and host-private stripping without capture; 11 producer SQLite/push tests; 14 UI checks; 4 host fresh-LF replay/deployed/idempotence/AST matched, unknown edits refused; real Core registry/remote dispatcher plus SDK local-model-stub probe passed; current-picture native13 preserves literal image identifiers/negative-picture requests",
@@ -266,7 +266,7 @@
     {
       "path": "main_logic/omni_realtime_client/_audio.py",
       "base_sha256": "f82fe6723947868195b09e015823cc65ae0d3929be6cf5dbc9cf3e9f5dfb4372",
-      "patched_sha256": "1a00099aa9ab848ffe9f43a3573e36b91bef281f9d68225644b03a578d29eaef",
+      "patched_sha256": "8cd3cdd8bfd960ea7919342f218385d54c1d34da6606d109024d94c5468d9bac",
       "daily_phrase_resealed_utc": "2026-10-13T23:22:42.753804+00:00"
     },
     {
@@ -309,7 +309,7 @@
     "live_acceptance": "2026-10-13 18:22-18:23 NZDT ordinary physical-microphone barge-in PASS for this trial: two handoffs 1->2->3, actual old-owner playback retired with queued time remaining, replacement audio, and user-confirmed old sound stopped/new question answered. Cross-end human boundary and teaching correctness remain unverified.",
     "live_quota_impact": "one new provider CONNECT per admitted interruption; none consumed by offline work",
     "source_scripts": {
-      "scripts/neko_voice_host_patch.py": "59562395e25f4f8f7ae291406d4130e7a59c1e255af5985ee587b896fbe7aa21",
+      "scripts/neko_voice_host_patch.py": "f4cfca496b5b360fa7d590ec9597e3873ed0e4e046d82eda6cf3f93d06a095ad",
       "scripts/neko_native_barge_in_patch.py": "de1fa65c30e0699d34623f83192ac4d56974f69a503aa0d09771d12743bc6b6f"
     },
     "owner_accessor_fix": "Reuse production read_current_speech_id() contract; fixture no longer invents manager.speech_id. 12 focused offline scenarios PASS; no real-mic PASS.",
@@ -372,7 +372,16 @@
     },
     {
       "path": "scripts/neko_runtime_helpers.py",
-      "sha256": "c4e411e48b231e607631dca16620d8ce2d597c3de6b7fe14dc6e38b993c14fd6"
+      "sha256": "d1d26c8eb1c28338cd5a903ddf1539dfa1a23922d43eaeccac6b1a5ab77189c0"
+    },
+    {
+      "path": "scripts/neko_study_answer_intent.py",
+      "sha256": "515fab3f66ba7c33fc72871ff399644d820c92eccba776dc35d1582ae537083c",
+      "deployed_path": "neko_study_answer_intent.py"
+    },
+    {
+      "path": "scripts/neko_native_grade_patch.py",
+      "sha256": "88486379352e021604e93aa250fb59364363b90172fa6cc01c243e24f8f0565b"
     }
   ],
   "daily_phrase_input_update": {
@@ -385,5 +394,11 @@
     "prior_failure": "voice34 runtime log repeated ModuleNotFoundError at22:20:10..30; source-only script checks missed missing deployed helpers",
     "report": "docs/evidence/daily-companion-phase20-phrase-helper-deployment-2026-10-14.md",
     "runtime": "Source/deployed fingerprint and actual launcher cwd imports PASS; online phrase after repair pending; preserve voice34 FAIL"
+  },
+  "daily_native_grade_update": {
+    "gate": "NEKO_STUDY_AUTO_GRADE=1; default OFF",
+    "proof": "SOURCE/OFFLINE ONLY: 17 Main and independent cases, not provider/device/human",
+    "report": "docs/evidence/daily-companion-phase24-native-grade-draft-2026-10-15.md",
+    "limits": "typed speech_active=True ingress only; legacy/replay/ambiguous input fail closed; one controlled reconnect; original failed human route not accepted"
   }
 }

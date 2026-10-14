@@ -1170,6 +1170,8 @@ class _StudyAvatarToolsMixin:
             tool="study_answer",
             reply=feedback,
             verdict=payload.get("verdict", ""),
+            question_id=str(held.get("question_id") or ""),
+            attempt_id=str(held.get("attempt_id") or ""),
             score=payload.get("score", ""),
             error_type=payload.get("error_type", ""),
             degraded=bool(payload.get("degraded")),

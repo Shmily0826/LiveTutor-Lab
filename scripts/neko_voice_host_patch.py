@@ -766,6 +766,10 @@ from neko_phrase_input_patch import normalize_phrase_helpers, normalize_phrase_t
 TARGETS, _PHRASE_INPUT_REPLAY = _phrase_input_targets(TARGETS)
 _OWNER_TRACE_REPLAY += _PHRASE_INPUT_REPLAY
 
+from neko_native_grade_patch import upgrade_targets as _native_grade_targets
+TARGETS, _NATIVE_GRADE_REPLAY = _native_grade_targets(TARGETS)
+_OWNER_TRACE_REPLAY += _NATIVE_GRADE_REPLAY
+
 
 def hunks_for(path: Path):
     """The replacement list that belongs to this file."""

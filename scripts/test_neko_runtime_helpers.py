@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from neko_runtime_helpers import deploy_runtime_helpers,verify_runtime_helpers
 ROOT=Path(__file__).resolve().parents[1]
-NAMES=('neko_phrase_input_buffer.py','neko_phrase_input_transport.py')
+NAMES=('neko_phrase_input_buffer.py','neko_phrase_input_transport.py','neko_study_answer_intent.py')
 
 class RuntimeHelpers(unittest.TestCase):
     def setUp(self):
