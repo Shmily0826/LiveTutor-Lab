@@ -32,9 +32,9 @@
 
 ## 发布与下一步
 
-Root dirty master保留、index未stage；managed `C:/Users/Shmily/.codex/worktrees/daily-companion/LiveTutor-Lab`，分支 `codex/daily-learning-companion`。最新代码35abae0edd11e9e5569e3e220113969d8460cace、元数据39f98bac833db95939cfb0bfb7ba181c2f3aaa7d，candidate本阶段前clean；remote master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb（发布时再核）。26 observer/validator/证据尚待精确发布，产品Core/runtime此次未变。
+Root dirty master保留、index未stage；managed `C:/Users/Shmily/.codex/worktrees/daily-companion/LiveTutor-Lab`，分支 `codex/daily-learning-companion`。最新代码35abae0edd11e9e5569e3e220113969d8460cace、元数据39f98bac833db95939cfb0bfb7ba181c2f3aaa7d，candidate本阶段前clean；remote master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb（发布时再核）。26 observer/validator/证据已review/commit/push `3016a30a8910f6e21efbf63c6b94725f276b87f4`，12 allowlist文件；candidate clean、remote同SHA、master未改。产品Core/runtime此次未变，Root index未stage。
 
-当前没有running场/host需要轮询。既有screen_guidance已完成量具两文件及其review窄审/只读派生后冻结，无provider权限；learning_memory容量失败冻结，不换模型、不新建Agent。先收尾本阶段发布，再分析已存在phrase日志把输入结束→ASR前段定位；随后日常启用范围、语言/自然短答/全A–F继续。无全局阻塞或complete依据。
+当前没有running场/host需要轮询。既有screen_guidance已完成量具两文件及其review窄审/只读派生后冻结，无provider权限；learning_memory容量失败冻结，不换模型、不新建Agent。本阶段已发布；下一步补已存在phrase日志的自动分段观测，把输入结束→ASR前段定位；随后日常启用范围、语言/自然短答/全A–F继续。无全局阻塞或complete依据。
 
 ## 归档
 

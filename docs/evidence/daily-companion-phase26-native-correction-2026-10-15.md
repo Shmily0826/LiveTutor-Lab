@@ -27,3 +27,5 @@ speech end→观察ASR10.602s；accepted→正式grade4.308s；grade→relay0.57
 真实偏好公开preferences、cfg.language及材料前后相同；RPC整个对象含_seconds差异不等于偏好变更。任务coreApi恢复deepseek。总DS685→691(+6)、app65→67(+2初始/受控relay)，tech0；原round及额度不变，不把全部DS请求都说成评分调用。48911/48916/9234实查无listener，无running exec待轮询。
 
 本轮仅observer/量具及测试/文档修改，产品Core、runtime部署未变，日常AUTO_GRADE继续默认OFF。Main+独立preflight8、acceptance21通过；只读derived及语义通过不追认原exit0。Goal实查active，不局部完成；自然短答/legacy/replay/日常启用范围、语言术语/历史实际取用/源码引用/受控指示及完整A–F继续，暂不占用本人再验。精简的plan/status/blockers之前完整bytes已独占归档并记SHA，contract未动。
+
+发布：本阶段12 allowlist文件已review/commit/push `3016a30a8910f6e21efbf63c6b94725f276b87f4`；remote codex同SHA、candidate clean，remote master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。Root index未stage/原脏树保留，raw音频/DB/密钥未提交。下一轮先四文件，再补既有phrase日志的自动分段观测/定位延迟，随后完整A–F，不以本阶段结束整个Goal。
