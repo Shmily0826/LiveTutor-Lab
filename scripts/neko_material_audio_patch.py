@@ -390,6 +390,11 @@ def normalize_material_audio(text):
     grade_helpers = HELPERS.replace(
         '    def _study_material_native_output_held(self):\n',
         '    def _study_material_native_output_held(self):\n        if self._study_grade_output_held(): return True\n')
+    # Older replay inserted the identical grade-aware bundle twice.
+    # Keep its last definitions; unknown or merely similar code is untouched.
+    if grade_helpers in text:
+        text = text.replace(HELPERS, '') # An older replay may reinsert the exact pre-grade bundle.
+        text = text.replace(grade_helpers, '', text.count(grade_helpers) - 1)
     if HELPERS in text or grade_helpers in text or '    def _valid_study_material_record' not in text:
         return text
     start = text.index('    @staticmethod\n    def _valid_study_material_record')

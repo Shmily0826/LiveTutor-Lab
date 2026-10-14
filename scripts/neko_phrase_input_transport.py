@@ -189,6 +189,7 @@ class NativePhraseUplink:
         client = self.client
         started_monotonic = time.monotonic()
         report = {'connection_generation': snapshot[0].connection_generation,
+                  'input_sequence': sequence,
                   'source_samples': batch.source_samples, 'output_samples': batch.output_samples,
                   'compressed_zero_samples': batch.compressed_zero_samples, 'written_samples': 0,
                   'input_timebase': 'arrival_derived_sample_estimate',

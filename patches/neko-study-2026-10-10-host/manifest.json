@@ -39,7 +39,7 @@
     {
       "path": "main_logic/omni_realtime_client/_transport.py",
       "base_sha256": "2d6c058206c1beafc3e1d35a8f5111042ff509a31f398053ce7b97a825242423",
-      "patched_sha256": "b0fef76951a7305bcfa815f5a8bc2aedda76a410cb27882f6f4bb31ad016d556",
+      "patched_sha256": "12f8a1180de26ce67990f522ce5c8474346922f35ebf43c7a3ccd898e6e59950",
       "resealed_utc": "2026-10-13T14:38:47.980810+00:00",
       "resealed_reason": "Bounded free-route late-ASR raw tool dispatch, pinned original connection/session, one expected scope advance, foreign retirement rejects; onset, PCM, response lifecycle unchanged; 6 candidate, 5 existing tool lifecycle and 19 barge guards passed; actual role/voice not yet verified.",
       "verified_by": {
@@ -58,7 +58,10 @@
         "offline": "19 barge-in tests (including passive owner trace) + 5 tool lifecycle tests passed; no live audio verification",
         "reproduce": "python scripts/neko_voice_host_patch.py"
       },
-      "daily_phrase_resealed_utc": "2026-10-13T23:22:42.753804+00:00"
+      "daily_phrase_resealed_utc": "2026-10-13T23:22:42.753804+00:00",
+      "phase28_prior_sha256": "b0fef76951a7305bcfa815f5a8bc2aedda76a410cb27882f6f4bb31ad016d556",
+      "phase28_resealed_utc": "2026-10-14T16:35:36.485010+00:00",
+      "phase28_verified_by": "28 offline Core/SDK/SQLite route and migration tests; 15 intent + 1 symlink privilege skip; 20 phrase tests; independent review. Real post-fix session pending; default AUTO_GRADE remains OFF."
     },
     {
       "path": "app/agent_server/capabilities.py",
@@ -121,7 +124,7 @@
       "path": "main_logic/core/session_lifecycle.py",
       "base_sha256": null,
       "pre_native_handoff_sha256": "356ebc0e5bbcb87514b34594856d9425d56793ea88d47b986a160d90195ef326",
-      "patched_sha256": "49044243490c261114d6f8726721313dabbdf54f61a178e290cd0848e96d1a5a",
+      "patched_sha256": "fbf5afff6aa7eb8525a18f94680760a98ca75481199c75f2d0de630a898a93f5",
       "resealed_utc": "2026-10-12T07:18:29.850643+00:00",
       "resealed_reason": "Native free-proxy barge-in connection isolation, bounded PCM replay, selective old-connection playback cancellation.",
       "verified_by": {
@@ -129,7 +132,10 @@
         "live_real_microphone": "UNVERIFIED; no network, provider, microphone or CONNECT use.",
         "reproduce": "python -B scripts/neko_voice_host_patch.py; python -B scripts/test_neko_native_barge_in.py; node scripts/test_neko_native_barge_in_playback.js"
       },
-      "daily_phrase_resealed_utc": "2026-10-13T23:22:42.753804+00:00"
+      "daily_phrase_resealed_utc": "2026-10-13T23:22:42.753804+00:00",
+      "phase28_prior_sha256": "49044243490c261114d6f8726721313dabbdf54f61a178e290cd0848e96d1a5a",
+      "phase28_resealed_utc": "2026-10-14T16:35:36.485010+00:00",
+      "phase28_verified_by": "28 offline Core/SDK/SQLite route and migration tests; 15 intent + 1 symlink privilege skip; 20 phrase tests; independent review. Real post-fix session pending; default AUTO_GRADE remains OFF."
     },
     {
       "path": "main_logic/core/lifecycle.py",
@@ -232,7 +238,7 @@
     {
       "path": "main_logic/core/tool_calling.py",
       "base_sha256": "f33ce8396ba6a1dbc8d39cd8db34e312fea2a7e1ec6cf62395b040ee275b5faa",
-      "patched_sha256": "a7be54b9509d6155f26dfc633062f2defbe738b4eed6a8a1de536d53cf9de5eb",
+      "patched_sha256": "7d91949b61449679916a4489bca09bf68788d6475078d5ba6105cff96a3ec07d",
       "material_audio_update": {
         "proof": "SOURCE/OFFLINE and fixed-input replacement14 cross-process/native-token/loopback/fresh reverse-picture reply passed; human, long-quiet recovery, other teaching output provenance pending",
         "offline": "28 host/event/owner/delivery tests including current role independent of native capture and host-private stripping without capture; 11 producer SQLite/push tests; 14 UI checks; 4 host fresh-LF replay/deployed/idempotence/AST matched, unknown edits refused; real Core registry/remote dispatcher plus SDK local-model-stub probe passed; current-picture native13 preserves literal image identifiers/negative-picture requests",
@@ -244,7 +250,10 @@
         "tests": "31 actual patched host owner/event/native delivery/swap methods; trusted exact tool allowlist; quiz question field, answer/summary reply; private metadata stripping, unchanged original model args",
         "scope": "reuses prior exact native-token cancellation algorithm; not new human/barge-in acceptance",
         "sealed_utc": "2026-10-13T20:29:59.040671+00:00"
-      }
+      },
+      "phase28_prior_sha256": "a7be54b9509d6155f26dfc633062f2defbe738b4eed6a8a1de536d53cf9de5eb",
+      "phase28_resealed_utc": "2026-10-14T16:35:36.485010+00:00",
+      "phase28_verified_by": "28 offline Core/SDK/SQLite route and migration tests; 15 intent + 1 symlink privilege skip; 20 phrase tests; independent review. Real post-fix session pending; default AUTO_GRADE remains OFF."
     },
     {
       "path": "app/main_server/character_runtime.py",
@@ -359,7 +368,7 @@
     },
     {
       "path": "scripts/neko_phrase_input_transport.py",
-      "sha256": "79cff29ca529ebc2e2e421288f48f0a384ed6d88399707d24711223ecfa324bb",
+      "sha256": "58bfe9f9513d45b6cb92a4adcedb4d81014e5a85c02870a3f712ac5407f5d07b",
       "deployed_path": "neko_phrase_input_transport.py"
     },
     {
@@ -376,16 +385,16 @@
     },
     {
       "path": "scripts/neko_study_answer_intent.py",
-      "sha256": "515fab3f66ba7c33fc72871ff399644d820c92eccba776dc35d1582ae537083c",
+      "sha256": "9d1fa1135c49cf4185683fa4efbe850e76ab2678f00b0e5434752e70410f4a71",
       "deployed_path": "neko_study_answer_intent.py"
     },
     {
       "path": "scripts/neko_native_grade_patch.py",
-      "sha256": "edd578137c6d81b81a61e4510f24224172aa798cb55ca3f73bb9156b016ca192"
+      "sha256": "54d9b7e1b8cf49afeae01b4231288751261e1c37dcd48c3236e69d06ff1f12e4"
     },
     {
       "path": "scripts/neko_material_audio_patch.py",
-      "sha256": "8146c7c79256a20ec30a6f953bf5aa32fd8c88bc94d49c650dea6ed24a3ab7fe"
+      "sha256": "08f1501a508b632f88ca584ae786a68a948ac9d3595dccef932b0085f087e6fd"
     }
   ],
   "daily_phrase_input_update": {

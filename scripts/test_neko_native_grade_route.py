@@ -6,6 +6,7 @@ import __future__
 import ast
 import asyncio
 import contextlib
+import hashlib
 from dataclasses import dataclass,field
 import importlib
 import json
@@ -30,13 +31,13 @@ HOST=ROOT/'benchmarks/raw/neko-product-host'
 LOGGER=logging.getLogger('native-grade-test')
 
 def replay(relative):
-    text=(HOST/relative).read_text(encoding='utf-8')
-    for upgrades in (grade_patch.UPGRADES,grade_patch.TRACE_UPGRADES):
-        for old,new in upgrades.get(relative,()):
-            if new not in text:
-                assert text.count(old)==1,(relative,old[:60])
-                text=text.replace(old,new)
-    return ast.parse(text)
+    import neko_voice_host_patch as patcher
+    with tempfile.TemporaryDirectory() as directory:
+        path=Path(directory)/relative;path.parent.mkdir(parents=True,exist_ok=True)
+        path.write_text((HOST/relative).read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
+        patcher.apply_to(path)
+        assert patcher.state(path)=='patched',relative
+        return ast.parse(path.read_text(encoding='utf-8'))
 
 def methods(tree,names):
     found=[n for n in ast.walk(tree) if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)) and n.name in names]
@@ -56,15 +57,30 @@ records=[n for n in record_tree.body if isinstance(n,ast.ClassDef) and n.name in
 exec(compile(ast.Module(body=records,type_ignores=[]),'tool records','exec',flags=__future__.annotations.compiler_flag),record_ns)
 ToolCall,ToolResult=record_ns['ToolCall'],record_ns['ToolResult']
 tools_tree=ast.parse((HOST/'main_logic/omni_realtime_client/_tools.py').read_text(encoding='utf-8'))
-tools_ns={'asyncio':asyncio,'logger':LOGGER,'dataclass':dataclass,'Any':Any}
+tools_ns={'asyncio':asyncio,'logger':LOGGER,'dataclass':dataclass,'Any':Any,'hashlib':hashlib}
 owner=next(n for n in tools_tree.body if isinstance(n,ast.ClassDef) and n.name=='_ToolTaskOwner')
 exec(compile(ast.Module(body=[owner],type_ignores=[]),'actual tool owner','exec',flags=__future__.annotations.compiler_flag),tools_ns)
 tool_names={'_capture_tool_task_owner','_tool_task_owner_is_current','_tool_task_connection_is_current',
     '_track_tool_task','_create_tool_task','_retired_tool_task_registry',
-    '_tool_batch_entries_by_task','_tool_batch_by_collector_task'}
-client_nodes=methods(tools_tree,tool_names)+methods(replay('main_logic/omni_realtime_client/_transport.py'),
-    {'_capture_study_grade_pin','_take_study_grade_asr','_advance_study_grade_ingress_scope'})
+    '_tool_batch_entries_by_task','_tool_batch_by_collector_task','_advance_tool_scope','note_user_turn_started','_drop_line'}
+transport_tree=replay('main_logic/omni_realtime_client/_transport.py')
+client_nodes=methods(tools_tree,tool_names)+methods(transport_tree,
+    {'_capture_study_grade_pin','_take_study_grade_asr','_advance_study_grade_ingress_scope',
+     '_current_study_grade_phrase','_consume_study_grade_tail','_raw_transcript_was_already_scoped',
+     '_note_voice_handoff_input_open'})
 ClientBase=compile_class('ClientMethods',client_nodes,tools_ns)
+
+# The actual completed-ASR scope prefix, before its UI/transcript callbacks.
+branch=next(n for n in ast.walk(transport_tree) if isinstance(n,ast.If)
+    and isinstance(n.test,ast.Compare) and any(isinstance(x,ast.Constant)
+        and x.value=='conversation.item.input_audio_transcription.completed' for x in n.test.comparators))
+boundary=next(i for i,n in enumerate(branch.body) if isinstance(n,ast.Expr)
+    and isinstance(n.value,ast.Call) and isinstance(n.value.func,ast.Attribute)
+    and n.value.func.attr=='_begin_raw_input_transcript')
+prefix=ast.parse('def receive_scope_prefix(self,event):\n    message_ws=self.ws\n    message_generation=self._connection_generation\n    for once in (0,):\n        pass\n    return True\n')
+prefix.body[0].body[2].body=branch.body[:boundary]+[ast.Return(value=ast.Constant(value=False))]
+exec(compile(ast.fix_missing_locations(prefix),'actual completed ASR scope prefix','exec'),tools_ns)
+ClientBase.receive_scope_prefix=tools_ns['receive_scope_prefix']
 
 # Import the real pure transcript policy without importing the application.
 voice_package=types.ModuleType('grade_voice_policy')
@@ -89,6 +105,8 @@ class Client(ClientBase):
         self.wire=[];self.connects=0;self.closes=0;self.arbiters=[]
         self.before_send=None;self.before_connect=None
         self.capabilities=None
+        self._has_server_vad=False;self._raw_speech_started_scope_pending_transcript=False
+        self._raw_speech_started_scoped_item_ids=[]
     async def send_event(self,event,*,send_guard=None):
         if self.before_send is not None:await self.before_send(event)
         if send_guard is not None and not send_guard():raise ConnectionError('owner retired before local wire')
@@ -111,6 +129,7 @@ class Client(ClientBase):
 
 core_tree=replay('main_logic/core/tool_calling.py')
 core_names={
+    '_accept_study_grade_tail',
     '_record_study_grade_event',
     '_read_study_question_pin','_study_input_authority','_make_study_input_handler','_study_grade_claim_current',
     '_study_grade_output_held','_start_study_grade_claim','_study_grade_payload',
@@ -155,13 +174,46 @@ class Core(CoreBase):
 class GradePatchMigration(unittest.TestCase):
     def test_only_exact_material_grade_helper_variant_is_preserved(self):
         from neko_material_audio_patch import normalize_material_audio
-        source=(HOST/'main_logic/core/tool_calling.py').read_text(encoding='utf-8')
+        source=normalize_material_audio((HOST/'main_logic/core/tool_calling.py').read_text(encoding='utf-8'))
         self.assertEqual(normalize_material_audio(source),source)
         needle='        if self._study_grade_output_held(): return True\n'
         self.assertEqual(source.count(needle),1)
         unknown=source.replace(needle,'        if self._study_grade_output_held(): return False\n')
         with self.assertRaisesRegex(RuntimeError,'unknown material audio helper'):
             normalize_material_audio(unknown)
+
+    def test_only_identical_grade_bundles_are_deduplicated_idempotently(self):
+        from neko_material_audio_patch import HELPERS,normalize_material_audio
+        bundle=HELPERS.replace('    def _study_material_native_output_held(self):\n',
+            '    def _study_material_native_output_held(self):\n        if self._study_grade_output_held(): return True\n')
+        source=bundle+'    # keep this marker\n'+bundle+'    def _make_tool_call_handler(self): pass\n'
+        canonical=normalize_material_audio(source)
+        self.assertEqual(canonical.count(bundle),1)
+        self.assertIn('# keep this marker',canonical)
+        self.assertEqual(normalize_material_audio(canonical),canonical)
+        mixed=normalize_material_audio(bundle+HELPERS+bundle+'    def _make_tool_call_handler(self): pass\n')
+        self.assertEqual(mixed.count(bundle),1)
+        self.assertNotIn(HELPERS,mixed)
+
+    def test_canonical_patcher_detects_and_cleans_known_reinserted_bundles(self):
+        import neko_voice_host_patch as patcher
+        from neko_material_audio_patch import HELPERS,normalize_material_audio
+        relative='main_logic/core/tool_calling.py'
+        with tempfile.TemporaryDirectory() as temp:
+            path=Path(temp)/relative;path.parent.mkdir(parents=True)
+            path.write_bytes((HOST/relative).read_bytes());patcher.apply_to(path)
+            canonical=path.read_text(encoding='utf-8')
+            bundle=HELPERS.replace('    def _study_material_native_output_held(self):\n',
+                '    def _study_material_native_output_held(self):\n        if self._study_grade_output_held(): return True\n')
+            self.assertEqual(canonical.count(bundle),1)
+            mixed=canonical.replace(bundle,HELPERS+bundle+bundle)
+            path.write_text(mixed,encoding='utf-8',newline='\n')
+            self.assertEqual(patcher.state(path),'partial(reviewed-material-helper)')
+            patcher.apply_to(path)
+            self.assertEqual(path.read_text(encoding='utf-8'),canonical)
+            self.assertEqual(patcher.state(path),'patched')
+            once=path.read_bytes();patcher.apply_to(path)
+            self.assertEqual(path.read_bytes(),once)
 
 
 class NativeGradeRoute(unittest.IsolatedAsyncioTestCase):
@@ -426,6 +478,120 @@ class NativeGradeRoute(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([event['stage'] for event in events],['accepted','grade_complete','relay_written'])
         self.assertTrue(all(isinstance(event['wall'],float) and event['old_token']=='native_connection_original' for event in events))
         self.assertFalse(any('answer' in key or 'rubric' in key or 'text' in key for event in events for key in event))
+
+    async def declared_pending(self):
+        from neko_phrase_input_transport import NativePhraseUplink
+        self.client.get_native_phrase_input_authority=lambda:('fixture-input',
+            (self.core.activation,self.core.websocket),self.client._connection_generation)
+        driver=NativePhraseUplink(self.client);driver.snapshot=driver.read_snapshot()
+        driver.waiting=(time.monotonic(),self.client._voice_handoff_input_sequence)
+        self.client._native_phrase_uplink=driver
+        self.client._native_phrase_last_delivery={'connection_generation':1,'input_sequence':10,
+            'output_samples':109782,'written_samples':109782,'completed_wall':time.time(),
+            'result':'written_waiting_provider_boundary'}
+        self.client.consume_study_grade_tail=lambda text,provider,generation:self.core._accept_study_grade_tail(
+            self.client,text,provider,generation)
+        text='当 前 题 , 我 的 答 案 是 WEX 指 向 NUD 。'
+        self.client._capture_study_grade_pin(True,10)
+        self.assertFalse(self.client.receive_scope_prefix({'transcript':text}))
+        receipt=self.client._take_study_grade_asr(self.client.ws,1)
+        self.assertIsNotNone(receipt['sealed_phrase'])
+        entered=asyncio.Event();release=asyncio.Event();model=self.h.model
+        async def delayed(**kwargs):
+            entered.set();await release.wait();return await model(**kwargs)
+        self.h._agent.answer_evaluate.side_effect=delayed
+        self.assertTrue(self.core._start_study_grade_claim(text,self.client,receipt,self.core.activation))
+        await asyncio.wait_for(entered.wait(),1)
+        return release,self.core._study_grade_claim,text
+
+    async def test_real_39_declaration_and_tail_keep_scope_one_formal_grade_and_original_text(self):
+        release,claim,text=await self.declared_pending();scope=self.client._tool_scope_generation
+        # Actual scene39's response.done occurs between the two ASR records.
+        self.client._native_phrase_uplink.note_boundary(self.client._voice_handoff_input_sequence)
+        self.assertIsNone(self.client._current_study_grade_phrase(require_waiting=True))
+        self.assertTrue(self.client.receive_scope_prefix({'transcript':'点 评 分 。'}))
+        self.assertEqual(self.client._tool_scope_generation,scope)
+        self.assertFalse(claim['task'].cancelling());self.assertTrue(self.core._study_grade_output_held())
+        # Both actual provider calls share the formal result, never a fabricated call ID.
+        joined=[asyncio.create_task(self.core._on_tool_call(ToolCall(name='study_answer',
+            arguments={'answer':'provider rewrite'},call_id=f'provider-{n}'),invoking_session=self.client)) for n in (1,2)]
+        await asyncio.sleep(0);release.set();await asyncio.gather(*joined);await self.settle()
+        self.h._agent.answer_evaluate.assert_awaited_once()
+        rows=self.store.list_qa_records();self.assertEqual(len(rows),1)
+        self.assertEqual(rows[0]['user_answer'],text)
+        self.assertTrue(claim.get('relay_written'));self.assertEqual(self.client.connects,1)
+
+    async def test_new_pcm_marker_or_early_pin_alone_cannot_be_a_redundant_tail(self):
+        release,claim,_=await self.declared_pending();sequence=self.client._voice_handoff_input_sequence
+        self.client._capture_study_grade_pin(True,11) # Before a possible early return or await.
+        self.assertFalse(self.client._consume_study_grade_tail('点评分',self.client.ws,1))
+        self.client._study_grade_pin=None
+        self.client._note_voice_handoff_input_open() # Actual positive-frame marker method.
+        self.assertGreater(self.client._voice_handoff_input_sequence,sequence)
+        self.assertFalse(self.client.receive_scope_prefix({'transcript':'点评分'}))
+        self.assertTrue(claim['task'].cancelling());release.set();await self.settle()
+        self.assertEqual(self.client.wire,[]);self.assertEqual(self.client.connects,0)
+
+    async def test_tail_cannot_hide_denial_or_changed_answer_and_original_scope_retires(self):
+        release,claim,_=await self.declared_pending();scope=self.client._tool_scope_generation
+        for text in ('不要评分','我改为REZ','请评分，我的答案改为REZ','“请评分”'):
+            self.assertFalse(self.client._consume_study_grade_tail(text,self.client.ws,1))
+        self.assertFalse(self.client.receive_scope_prefix({'transcript':'不要评分'}))
+        self.assertEqual(self.client._tool_scope_generation,scope+1)
+        self.assertTrue(claim['task'].cancelling());release.set();await self.settle()
+        self.assertEqual(self.client.wire,[])
+
+    async def test_cancel_requested_expired_or_second_tail_is_not_swallowed(self):
+        release,claim,_=await self.declared_pending();deadline=claim['tail_deadline']
+        claim['tail_deadline']=time.monotonic()-1
+        self.assertFalse(self.client._consume_study_grade_tail('点评分',self.client.ws,1))
+        claim['tail_deadline']=deadline
+        claim['task'].cancel() # Still not done: cancellation intent must already win.
+        self.assertFalse(claim['task'].done())
+        self.assertFalse(self.client._consume_study_grade_tail('点评分',self.client.ws,1))
+        release.set();await self.settle()
+
+    async def test_only_one_tail_and_exact_live_delivery_driver_epoch_and_question(self):
+        release,claim,_=await self.declared_pending();original=self.client._native_phrase_last_delivery
+        self.client._native_phrase_last_delivery=dict(original)
+        self.assertFalse(self.client._consume_study_grade_tail('点评分',self.client.ws,1))
+        self.client._native_phrase_last_delivery=original
+        driver=self.client._native_phrase_uplink;driver.epoch+=1
+        self.assertFalse(self.client._consume_study_grade_tail('点评分',self.client.ws,1));driver.epoch-=1
+        waiting=driver.waiting;driver.waiting=(time.monotonic(),999)
+        self.assertFalse(self.client._consume_study_grade_tail('点评分',self.client.ws,1));driver.waiting=waiting
+        self.assertFalse(self.client._consume_study_grade_tail('点评分',object(),1))
+        self.assertFalse(self.client._consume_study_grade_tail('点评分',self.client.ws,True))
+        old=self.h._state.current_question['question_id'];self.h._state.current_question['question_id']='new-question'
+        await self.h._persist_state()
+        self.assertFalse(self.client._consume_study_grade_tail('点评分',self.client.ws,1))
+        self.h._state.current_question['question_id']=old;await self.h._persist_state()
+        self.assertTrue(self.client._consume_study_grade_tail('点评分',self.client.ws,1))
+        self.assertFalse(self.client._consume_study_grade_tail('点评分',self.client.ws,1))
+        release.set();await self.settle()
+
+    async def test_tail_callback_must_be_sync_literal_true_and_feature_enabled(self):
+        self.client.consume_study_grade_tail=lambda *args:1
+        self.assertFalse(self.client._consume_study_grade_tail('点评分',self.client.ws,1))
+        def failing(*args):raise RuntimeError('callback lookup failed')
+        self.client.consume_study_grade_tail=failing
+        self.assertFalse(self.client._consume_study_grade_tail('点评分',self.client.ws,1))
+        async def asynchronous(*args):raise AssertionError('must not create or await callback coroutine')
+        self.client.consume_study_grade_tail=asynchronous
+        self.assertFalse(self.client._consume_study_grade_tail('点评分',self.client.ws,1))
+        self.client.consume_study_grade_tail=lambda *args:True
+        with patch.dict(os.environ,{'NEKO_STUDY_AUTO_GRADE':'0'}):
+            self.assertFalse(self.client._consume_study_grade_tail('点评分',self.client.ws,1))
+
+    async def test_origin_cannot_be_reacquired_after_boundary_and_logging_failure_keeps_valid_scope(self):
+        release,claim,_=await self.declared_pending();driver=self.client._native_phrase_uplink
+        driver.note_boundary(self.client._voice_handoff_input_sequence)
+        self.assertIsNone(self.client._current_study_grade_phrase(require_waiting=True))
+        self.assertIsNotNone(claim['sealed_phrase']) # Only the earlier actual pending capture authorizes the tail.
+        with patch.object(LOGGER,'info',side_effect=RuntimeError('log sink unavailable')):
+            self.assertTrue(self.client.receive_scope_prefix({'transcript':'点评分'}))
+        self.assertFalse(claim['task'].cancelling())
+        release.set();await self.settle()
 
 
 if __name__=='__main__':unittest.main(verbosity=2)

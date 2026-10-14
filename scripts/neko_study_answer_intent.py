@@ -20,16 +20,17 @@ _CORRECTION_EN = re.compile(r"\bi(?: (?:want to |would like to |will |am )?|'m )
 _JUDGE_EN = re.compile(r"(?:^|[.!?;,:]\s*|\b(?:and|then)\s+)(?:(?:please\s+)?(?:grade|score|judge|check|evaluate|mark)\b|(?:can|could|would|will) you (?:please )?(?:grade|score|judge|check|evaluate|mark)\b)|\b(?:is|was) my (?:answer|response|choice) (?:right|correct|wrong)\b|\b(?:am|was) i (?:right|correct|wrong)\b")
 _REFUSE = re.compile(
     r"(?:不要|别|不用|不需要|无需|暂不|拒绝)[^。！？]{0,16}(?:评分|判断|评判|批改|打分|检查|核对)|不评分|"
-    r"(?:假设|假如|如果|比如|例如|引用|转述|复述|原话|他说|她说|他们说|别人|同学的|老师的|老师说|同学说|旧答案|解释旧)|你(?:的)?(?:答案|回答)|(?:出题|生成题|再给.{0,6}题)|"
+    r"(?:假设|假如|如果|比如|例如|引用|转述|复述|原话|他说|她说|他们说|别人|同学的|老师的|老师说|同学说|旧答案|解释旧)|你(?:的)?(?:答案|回答)|(?:出题|生成题|再给.{0,6}题|再出.{0,6}题)|"
     r"\b(?:don't|do not|no need to|without)\b[^.!?]{0,24}\b(?:grade|score|judge|evaluate|mark|check)\b|"
     r"\b(?:suppose|assuming|hypothetical|if|quote|quoted|quoting|he said|she said|they said|the teacher said|someone else's|another student's|old answer|your answer|your response)\b|"
     r"\b(?:generate|create|give|ask)\b[^.!?]{0,24}\b(?:question|quiz)\b|"
     r"^(?:请)?(?:解释|翻译|分析|朗读|复述)|^(?:please )?(?:explain|translate|read aloud|paraphrase)\b"
 )
 _QUOTED = re.compile(r'''"(?:\\.|[^"\\])*"|“[^”]*”|‘[^’]*’|「[^」]*」|『[^』]*』|(?<!\w)'[^'\n]*'(?!\w)''')
+_DECLARED_CURRENT_ZH = re.compile(r"^当前(?:的|这)?(?:一)?(?:道|个)?题(?:目)?[，,:：\s]*(?:我的答案|我的回答)(?:是|为)\s*(.{1,400})$")
 
 
-def answer_intent(text):
+def answer_intent(text, *, allow_declared_answer=False):
     """Return 'answer', 'correction', or None; never return a shortened answer.
 
     shortcut: explicit common phrases only; expand with reviewed real ASR examples,
@@ -42,6 +43,10 @@ def answer_intent(text):
     match_text = _QUOTED.sub(' ', match_text)  # Quoted requests cannot authorize grading.
     if _REFUSE.search(match_text):
         return None
+    declared = _DECLARED_CURRENT_ZH.fullmatch(match_text) if allow_declared_answer else None
+    if (declared and declared[1].strip(" 。.!！,，;；")
+            and not re.search(r"[?？]|什么|多少|是否|哪(?:个|里|一)", declared[1])):
+        return "answer"
     if _TARGET_ZH.search(match_text):
         if _CORRECTION_ZH.search(match_text):
             return "correction"
@@ -53,6 +58,14 @@ def answer_intent(text):
         if _PERSONAL_EN.search(match_text) and _JUDGE_EN.search(match_text):
             return "answer"
     return None
+
+
+def grade_request_tail(text):
+    """Only redundant request words; attribution is the caller's responsibility."""
+    if not isinstance(text, str):
+        return False
+    compact = re.sub(r"\s+", "", text).strip(" 。.!！,，;；")
+    return compact in {"请评分", "点评分", "请打分", "评分", "打分"}
 
 
 def _safe_db(runtime_root):

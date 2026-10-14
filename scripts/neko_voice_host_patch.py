@@ -791,6 +791,8 @@ def state(path: Path) -> str:
         return "partial(reviewed-phrase-transport-draft)"
     if path.as_posix().endswith("main_logic/omni_realtime_client/_tools.py") and normalize_ordering_helpers(text) != text:
         return "partial(reviewed-ordering-helper)"
+    if path.as_posix().endswith("main_logic/core/tool_calling.py") and normalize_material_audio(text) != text:
+        return "partial(reviewed-material-helper)"
     if path.as_posix().endswith("static/app/app-audio-playback.js") and normalize_playback_feedback(text) != text:
         return "partial(duplicate-playback-feedback)"
     replacements = hunks_for(path)
@@ -835,6 +837,8 @@ def apply_to(path: Path) -> str:
     # A later migration can activate an older overlapping replay hunk.
     if path.as_posix().endswith("main_logic/omni_realtime_client/_transport.py"):
         text = normalize_phrase_transport(text)
+    if path.as_posix().endswith("main_logic/core/tool_calling.py"):
+        text = normalize_material_audio(text)
     path.write_text(text, encoding="utf-8", newline="\n")
     return "patched"
 

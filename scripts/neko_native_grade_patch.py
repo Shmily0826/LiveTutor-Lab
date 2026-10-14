@@ -446,12 +446,121 @@ TRACE_UPGRADES = {'main_logic/core/tool_calling.py': (
 )}
 
 
+TAIL_TRANSPORT_HELPERS = '''    def _current_study_grade_phrase(self, *, require_waiting=False):
+        driver = getattr(self, "_native_phrase_uplink", None)
+        delivery = getattr(self, "_native_phrase_last_delivery", None)
+        if (driver is None or not isinstance(delivery, dict) or driver.bypass
+                or driver.buffer is not None or driver.writer is not None
+                or driver.current(driver.snapshot) is not True
+                or type(driver.epoch) is not int or driver.epoch < 0
+                or delivery.get("result") != "written_waiting_provider_boundary"
+                or type(delivery.get("input_sequence")) is not int or delivery["input_sequence"] <= 0
+                or delivery["input_sequence"] != getattr(self, "_voice_handoff_input_sequence", 0)
+                or type(delivery.get("connection_generation")) is not int
+                or delivery.get("connection_generation") != self._connection_generation
+                or type(delivery.get("output_samples")) is not int or delivery["output_samples"] <= 0
+                or type(delivery.get("written_samples")) is not int
+                or delivery["written_samples"] != delivery["output_samples"]
+                or type(delivery.get("completed_wall")) not in (int, float)
+                or not __import__("math").isfinite(delivery["completed_wall"]) or delivery["completed_wall"] <= 0):
+            return None
+        waiting = driver.waiting
+        if (waiting is None and require_waiting) or (waiting is not None and (
+                not isinstance(waiting, tuple) or len(waiting) != 2
+                or type(waiting[1]) is not int or waiting[1] != delivery["input_sequence"])):
+            return None
+        # Local sealed input identity, never a fabricated provider utterance ID.
+        return (driver, delivery, driver.epoch)
+
+    def _consume_study_grade_tail(self, transcript, provider, generation):
+        if __import__("os").environ.get("NEKO_STUDY_AUTO_GRADE") != "1": return False
+        callback = getattr(self, "consume_study_grade_tail", None)
+        if not callable(callback) or __import__("inspect").iscoroutinefunction(callback): return False
+        try:
+            return callback(transcript, provider, generation) is True
+        except Exception:
+            return False
+
+'''
+
+TAIL_CORE_HELPERS = '''    def _accept_study_grade_tail(self, source, transcript, provider, generation):
+        if os.environ.get("NEKO_STUDY_AUTO_GRADE") != "1": return False
+        claim = getattr(self, "_study_grade_claim", None)
+        if (not claim or source is not claim["client"] or provider is not source.ws
+                or type(generation) is not int or generation <= 0
+                or generation != source._connection_generation or claim.get("tail_consumed")
+                or not self._study_grade_claim_current(claim)
+                or __import__("time").monotonic() > claim["tail_deadline"]
+                or getattr(source, "_study_grade_pin", None) is not None):
+            return False
+        task = claim.get("task")
+        if (task is None or task.cancelled() or task.cancelling()
+                or (task.done() and (task.exception() is not None or not claim.get("result")))):
+            return False
+        sealed, current = claim.get("sealed_phrase"), source._current_study_grade_phrase()
+        if (sealed is None or current is None or sealed[0] is not current[0]
+                or sealed[1] is not current[1] or sealed[2] != current[2]):
+            return False
+        actual = self._read_study_question_pin(source)
+        if not actual or any(actual.get(k) != claim["pin"].get(k)
+                             for k in ("course_id", "session_id", "question_id", "attempt_id")):
+            return False
+        from neko_study_answer_intent import grade_request_tail
+        if not grade_request_tail(transcript): return False
+        claim["tail_consumed"] = True
+        try:
+            logger.info("[study-grade-tail] redundant request consumed connection=%d scope=%d",
+                        generation, source._tool_scope_generation)
+        except Exception:
+            pass # Diagnostics cannot turn a scoped duplicate into a new user turn.
+        return True
+
+'''
+
+TAIL_UPGRADES = {
+ 'main_logic/omni_realtime_client/_transport.py': (
+    ('    def _capture_study_grade_pin(self, speech, arrival, *, replay=False):',
+     TAIL_TRANSPORT_HELPERS+'    def _capture_study_grade_pin(self, speech, arrival, *, replay=False):'),
+    ('                "input_authority": authority if binding_current else None}',
+     '                "input_authority": authority if binding_current else None,\n'
+     '                "sealed_phrase": self._current_study_grade_phrase(require_waiting=True) if binding_current else None}'),
+    ('                elif event_type == "conversation.item.input_audio_transcription.completed":\n                    self._native_barge_in_candidate = None',
+     '                elif event_type == "conversation.item.input_audio_transcription.completed":\n'
+     '                    if self._consume_study_grade_tail(event.get("transcript", ""), message_ws, message_generation):\n'
+     '                        continue # Same sealed input, exact redundant request; no scope revival.\n'
+     '                    self._native_barge_in_candidate = None'),
+ ),
+ 'main_logic/core/tool_calling.py': (
+    ('    def _read_study_question_pin(self, source):',
+     TAIL_CORE_HELPERS+'    def _read_study_question_pin(self, source):'),
+    ('        intent = answer_intent(transcript)',
+     '        intent = answer_intent(transcript, allow_declared_answer=bool(\n'
+     '            receipt.get("pin") and receipt["pin"].get("attempt_evaluated") is False))'),
+    ('                 "intent": intent, "text": transcript, "released": False}',
+     '                 "intent": intent, "text": transcript, "released": False,\n'
+     '                 "tail_deadline": __import__("time").monotonic() + 3.0}'),
+ ),
+ 'main_logic/core/session_lifecycle.py': (
+    ('            session.get_study_question_pin = partial(self._read_study_question_pin, session)',
+     '            session.consume_study_grade_tail = partial(self._accept_study_grade_tail, session)\n'
+     '            session.get_study_question_pin = partial(self._read_study_question_pin, session)'),
+ ),
+}
+
+
 def upgrade_targets(targets):
     targets, replay = _upgrade_targets(targets, UPGRADES, [])
     targets, trace_replay = _upgrade_targets(targets, TRACE_UPGRADES, [])
+    targets, tail_replay = _upgrade_targets(targets, TAIL_UPGRADES, [])
     final=[]
+    for relative, old, new in trace_replay:
+        for before, after in TAIL_UPGRADES.get(relative, ()):
+            new=new.replace(before, after)
+        final.append((relative,old,new))
     for relative, old, new in replay:
         for before, after in TRACE_UPGRADES.get(relative, ()):
             new=new.replace(before, after)
+        for before, after in TAIL_UPGRADES.get(relative, ()):
+            new=new.replace(before, after)
         final.append((relative,old,new))
-    return targets, trace_replay+tuple(final)
+    return targets, tail_replay+tuple(final)

@@ -8,10 +8,30 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from neko_study_answer_intent import answer_intent, read_question_pin
+from neko_study_answer_intent import answer_intent, read_question_pin, grade_request_tail
 
 
 class AnswerIntentTests(unittest.TestCase):
+    def test_real_short_declaration_needs_explicit_pending_caller_permission(self):
+        for text in ('当 前 题 , 我 的 答 案 是 WEX 指 向 NUD 。',
+                     '当前这道题，我的回答为 return "one"。'):
+            self.assertIsNone(answer_intent(text))
+            self.assertEqual(answer_intent(text, allow_declared_answer=True), 'answer')
+        for text in ('当前题，我的答案是什么？', '当前题，我的答案是 。',
+                     '当前题，我的答案是WEX，不要评分。', '假设当前题，我的答案是WEX。',
+                     '他说当前题，我的答案是WEX。', '“当前题，我的答案是WEX。”',
+                     '当前题，我觉得WEX。', '上一题，我的答案是WEX。',
+                     '解释当前题，我的答案是WEX。', '当前题，我的答案是WEX，请再出一题。'):
+            with self.subTest(text=text):
+                self.assertIsNone(answer_intent(text, allow_declared_answer=True))
+
+    def test_tail_policy_is_exact_request_only_without_authority_or_text_merging(self):
+        for text in ('请 评 分 。', '点 评 分 。', '请打分', '评分', '打分。'):
+            self.assertTrue(grade_request_tail(text))
+        for text in ('不要评分', '请评分，我改为REZ', '点评分不是我的答案', '“请评分”',
+                     '请评分？', '改成REZ', '如果请评分', '', None, True):
+            self.assertFalse(grade_request_tail(text))
+
     def test_explicit_chinese_answers_and_spacing_original_kept(self):
         texts = ['当前这道题我的答案是一，请评分。',
                  '刚才那道题我选二，帮我判断对不对。',
