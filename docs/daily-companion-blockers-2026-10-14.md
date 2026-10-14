@@ -38,3 +38,6 @@ Native累计seq1..330全部保留；25binary中22正+3empty，不冒25正PCM。�
 阶段39新结论与下一40：完整报告evidence/daily-companion-phase39-continuous50-2026-10-15.md及continuous50-review/capture-review。50 report原SHA4b6d…7c41、sidecaree7b…09f3保留；正式20char==relay裸hash，provider6delta累积23char==Omni/Core/Native全hash，仅多3空格。第三2ASR/无证据“被调用”解释/真实输入交付失败，整体PARTIAL。终态810/2000、app76/null、tech0，无live exec/host/端口。
 Main当前actual queue fixture无需改变host turn就复现never-announcing自动响应no-owner→不触发lifecycle→response-input seq=None→waiting同seq留存→31s watch phrase_provider_boundary_timeout；50同no-owner日志支持但缺该字段不能称唯一运行时根因。此前移hostguard前boundary方案不实施，不能给旧响应绑定新input/伪造ACK；40需正当native自动响应输入归属设计，先离线，其他A–F继续。
 未来probe自动保存fresh_log内study_text_trace已实现，parser白名单/正文字段拒绝、同timestamp不去重；独立捕获坏JSON P2(巨大int clock/深递归)已修，Main/独立15离线PASS，47实际records精确保留。源码采集修与真实50证据不混为已修退出。当前Goal active/默认AUTO OFF/完整scope与集中human保留。
+
+
+阶段39发布核验：源码采集修与完整50报告/两独立复审/3原bytes归档共12精确allowlist已commit/push a1a431d004923fa2af2f1aa6e9e4173079ff251c到codex/daily-learning-companion；remote同SHA、publisher clean、master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb，Root index空。contract原SHA不变，无raw/DB/录音/密钥/备份发布。当前SourceGate再次PASS；原账本810/2000、app76/null、tech0/0，无live exec/host/自有端口。下一40先本地native自动响应/真实输入归属，不实施hostguard前挪边界的旧猜；其他A–F继续，Goal保持active，不将本阶段或原49/50 PARTIAL当完成。
