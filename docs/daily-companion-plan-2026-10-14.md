@@ -1,10 +1,12 @@
-# 日常学习伙伴执行计划（2026-10-15，阶段30收尾）
+# 日常学习伙伴执行计划（2026-10-15，阶段31收尾）
+
+当前阶段31已完成SOURCE/OFFLINE和实际SDK45同题归属窄链：两评分/中间重启、旧5QA及mastery/formal/FSRS保留，新增2QA共用一个明确question-scope归属。旧三identity未合并，不代表跨题概念统一。账本现723/2000、app70/null、tech0/0。下一优先B：directSDK入口在重启后未应用已保存课程语言；随后跨字段诊断一致性和日常连续集成。最终发布与独立证据终审见末段。
 
 完整契约：[原文](daily-companion-contract-2026-10-14.md)，169行，SHA256 `FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33`，未修改。每次上下文压缩或自动续跑先完整读取 contract、plan、status、blockers；后续用户明确指令优先，同步更新记录。Goal `01a13531-0341-7611-afc2-5c472a7ccf50` 当前实查 active，不重建、不局部标完成；完成依据实际交付和证据。局部阻塞记录失败/尝试/恢复条件，转其他任务；限流停止无效重试并退避。
 
 当前权限：必要扬声器仅用户已设约4%，不调整音量；禁止房间/物理/虚拟麦克风、捕获设备初始化和回环。已结束真人场的mic授权不延续。固定WAV只走文件→内存/WS，真实发声必须output-only及8API捕获保护；文字child `NEKO_TASK_SILENT=1`。不夜间要求本人朗读；再次集中真人体验待核心可用及本人明确在场。
 
-账本沿用 `bargein-autocheck-20261012` 不重置/换轮：最新实查 DeepSeek **721/2000**、Lanlan.app **70/null**、Lanlan.tech **0/0**；仅Main调整额度和安排在线。无其他付费供应商；连接有界超时/异常停止/退避，不无限重连，不为耗额度测试。请求计数非账单金额。
+账本沿用 `bargein-autocheck-20261012` 不重置/换轮：最新实查 DeepSeek **723/2000**、Lanlan.app **70/null**、Lanlan.tech **0/0**；仅Main调整额度和安排在线。无其他付费供应商；连接有界超时/异常停止/退避，不无限重连，不为耗额度测试。请求计数非账单金额。
 
 允许项目必要修改/隔离依赖、自有测试进程清理；保留Root脏树/.workbuddy/原历史。仅审查过allowlist commit/push `codex/`功能分支，不合并主分支、不强推/覆远端；排除密钥、用户DB、raw音频与无关修改。已有两个子Agent窄范围不冲突，无新增或换模型；Sky Scout源码/索引/已有架构图只读，复用已有两对比图。复用原SQLite和CodeGraph，不另建记忆/索引系统。
 
@@ -56,3 +58,15 @@
 
 
 阶段30发布确认：10精确allowlist文件（2源码/1测试/1manifest、3当前记录、3证据调查）已review/commit/push `f8a21cf1893265cde83d22d63c7d2e33bf46bf53` 到codex/daily-learning-companion，remote同SHA/candidate clean/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。Root index空/脏树/.workbuddy/原历史保留，raw/录音/DB/密钥未提交；contract原SHA不变。无live场/host待轮询，ledger721/70/0原round。当前轮progress（源码/默认部署/离线/真实44窄链及改变下一步的C/B失败证据），非等待或Goal完成。下轮先四文件，再读concept-identity-investigation接续已有_track_learning/_record_answer_knowledge/held topic选择链，优先稳定后续同题归属；原已三identity不能任挑/合并旧行，不建新系统。所有A–F持续，语言cfg与诊断一致性仍待修；不复跑已过指导/29语言/28声链。
+
+
+阶段31启动：稳定新评分的同题学习归属，复用question/QA/topic/internal_private_payload，不改旧历史。先固定已有topic/唯一有据历史；无identity或歧义时明确provisional同题归属，不猜跨语概念等价。ledger721/70/0，无host，静音；测试/独立审/旧SHA部署后才必要模型。详phase31-question-topic。
+
+
+阶段31进展：固定未来同题归属已实现于四既有source，Main新12离线过；既有材料14/身份4/重启3/重试10过。独立审发现known foreign scoped runtime空family被接受，已改仅known seed namespace可带非course前缀，新增正负例过；未动旧数据。明确supplied full材料scope纳入key，普通文本仍不偷读当前图。probe补真实interactions比较及恰+2mastery，不用空all冒PASS。独立终审待完成；default/manifest仍旧，禁止launch。ledger721/70/0，无host/在线。
+
+
+阶段31部署门禁更新：独立终审关闭known foreign空family P2，最终12/12及此前材料14/14过，无其余具体P1/P2阻断。四reviewed后端文件已逐一oldSHA校验、独占备份到benchmarks/raw/evidence/daily-companion-20261015-phase31-before并同步default；29canonical manifest SHA及期望default指纹/host SourceGate过。首次总核误以static/index.html应等canonical，实际manifest已有protected_html转换/固定protected SHA；未改HTML或绕保护，补量具按既定转换SHA核验，source与deployed分别记录。无host/新模型，ledger721/70/0。probe小门禁补审后仅两实际SDK grade/一次重启，复用原5QA，不制造pending；其余已过链不复跑。
+
+
+阶段31独立终审：45原件14checks已逐字段复算（非仅读flags），QA/mastery5→6→7、formal10→11→12、FSRS3→4→4，原全row保持；两新QA跨不同session仍同完整key/topic，newscope question，旧三identity不合。wrong0入边误选出边/正确100反馈窄链成立，两回复中文，English仅持久设置保留。四source/default/清单及12新/31既有离线通过；ledger723/70/0，无live场/host。新增--text-only防护只source审，不重复付费/不冒45flag运行证明。下一阶段先B directSDK语言cfg应用，再跨字段诊断/全A–F连续集成；当前待精确codex分支发布，不标Goal complete。

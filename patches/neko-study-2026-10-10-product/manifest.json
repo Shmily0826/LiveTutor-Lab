@@ -16,10 +16,12 @@
     },
     {
       "path": "payload/study_companion/entry_tutor_context_support.py",
-      "sha256": "08280ce2e8bf0077cce36b7764f9aef30b00c3c4818dba152f44509c2b512446",
+      "sha256": "0848b0574cda5c21f4098bc1355e2456bc50bea4765a4e492820db1c089ff7b7",
       "deployed_matches": true,
       "phase30_prior_sha256": "d201a761890707d9ea22a544e18a37820d9fa07a492b0dfaabd9c73209f4f49f",
-      "phase30_verification": "Independent source/offline cross-subject 820-seed routing fixture passed; actual silent SDK44 no unrelated guidance, one grade/old4QA and formal hashes preserved. Whole teaching semantics PARTIAL; not Native/human acceptance."
+      "phase30_verification": "Independent source/offline cross-subject 820-seed routing fixture passed; actual silent SDK44 no unrelated guidance, one grade/old4QA and formal hashes preserved. Whole teaching semantics PARTIAL; not Native/human acceptance.",
+      "phase31_prior_sha256": "08280ce2e8bf0077cce36b7764f9aef30b00c3c4818dba152f44509c2b512446",
+      "phase31_verification": "Reviewed source/offline same-question identity12 and related grading guards; actual silent SDK45 two grades across host restart retained old5QA/mastery/formal/FSRS and one new question identity. No old-topic merge or cross-question/Native/device/human acceptance; direct-entry language still PARTIAL."
     },
     {
       "path": "payload/study_companion/entry_tutor_question_entries.py",
@@ -68,13 +70,17 @@
     },
     {
       "path": "payload/study_companion/store.py",
-      "sha256": "838f73ab768a6adcf4f3caef75e6e3ed03680c349fdcdfc4b2b34549ea3868ad",
-      "deployed_matches": true
+      "sha256": "4c6a7cb0e87619200f79d5dc7c42d22782eaafac794772b9c16ffc0db5f982a3",
+      "deployed_matches": true,
+      "phase31_prior_sha256": "838f73ab768a6adcf4f3caef75e6e3ed03680c349fdcdfc4b2b34549ea3868ad",
+      "phase31_verification": "Reviewed source/offline same-question identity12 and related grading guards; actual silent SDK45 two grades across host restart retained old5QA/mastery/formal/FSRS and one new question identity. No old-topic merge or cross-question/Native/device/human acceptance; direct-entry language still PARTIAL."
     },
     {
       "path": "payload/study_companion/store_qa.py",
-      "sha256": "56af14506f84064a6d4f45ef2a5095de50fdc4541704e5bb65da8705ba86d56d",
-      "deployed_matches": true
+      "sha256": "554bd62f3304ee0833ce925b222c0118ae41895eb7ea57f52a795301fa65740f",
+      "deployed_matches": true,
+      "phase31_prior_sha256": "56af14506f84064a6d4f45ef2a5095de50fdc4541704e5bb65da8705ba86d56d",
+      "phase31_verification": "Reviewed source/offline same-question identity12 and related grading guards; actual silent SDK45 two grades across host restart retained old5QA/mastery/formal/FSRS and one new question identity. No old-topic merge or cross-question/Native/device/human acceptance; direct-entry language still PARTIAL."
     },
     {
       "path": "payload/study_companion/store_schema.py",
@@ -136,8 +142,10 @@
     },
     {
       "path": "payload/study_companion/entry_tutor_answer_entries.py",
-      "sha256": "e7f55f4d67680ba289f0ff69a70f668f2ea743c3ba8b6898e9f2d546e2944573",
-      "deployed_matches": true
+      "sha256": "af7a95d3ed11295651bd42e0e63e7be613f2169f15675c5a4d0a891feede64ce",
+      "deployed_matches": true,
+      "phase31_prior_sha256": "e7f55f4d67680ba289f0ff69a70f668f2ea743c3ba8b6898e9f2d546e2944573",
+      "phase31_verification": "Reviewed source/offline same-question identity12 and related grading guards; actual silent SDK45 two grades across host restart retained old5QA/mastery/formal/FSRS and one new question identity. No old-topic merge or cross-question/Native/device/human acceptance; direct-entry language still PARTIAL."
     },
     {
       "path": "payload/study_companion/entry_communication_tutor_events.py",

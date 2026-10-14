@@ -20,6 +20,61 @@ from .study_materials import material_context, material_context_current, Materia
 
 
 class _TutorAnswerEntriesMixin:
+    async def _resolve_learning_topic_binding(
+        self, question_payload, selected_topic_id, expected_material,
+        *, using_current_question, vision_image_payload,
+    ):
+        import hashlib
+        import json
+
+        course = expected_material["course_id"]
+        prefix = course + "::"
+        private = dict(question_payload.get("internal_private_payload") or {})
+        origin = dict(private.get("source_material_context") or {})
+        if origin.get("course_id") and origin["course_id"] != course:
+            raise MaterialContextChanged("the held question belongs to another course")
+        question = str(question_payload.get("question") or "").strip()
+        reference = str(question_payload.get("answer") or "").strip()
+        question_id = str(question_payload.get("question_id") or "") if using_current_question else ""
+        material = str((origin if using_current_question else expected_material).get("material_identity") or "")
+        provenance = {"course": course, "question": question, "reference": reference,
+                      "question_id": question_id, "material": material,
+                      "source": "held" if using_current_question else "supplied"}
+        if vision_image_payload:
+            provenance["image"] = hashlib.sha256(vision_image_payload.encode()).hexdigest()
+        if not question_id and not reference:
+            # Without a reference/artifact, only this session establishes sameness.
+            provenance["session"] = expected_material["session_id"]
+        key = hashlib.sha256(json.dumps(provenance, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+        previous = private.get("learning_topic_binding")
+        status = "explicit"
+        if selected_topic_id:
+            known = await asyncio.to_thread(self._store.get_topic, selected_topic_id)
+            if ("::" in selected_topic_id and not selected_topic_id.startswith(prefix)
+                    and not (known and known.get("source") == "seed"
+                             and known.get("course_family") in (None, "", course))):
+                raise MaterialContextChanged("selected topic belongs to another course")
+            topic = selected_topic_id if selected_topic_id.startswith(prefix) else prefix + selected_topic_id
+        elif (isinstance(previous, dict) and type(previous.get("v")) is int and previous["v"] == 1
+              and previous.get("key") == key and str(previous.get("topic_id") or "").startswith(prefix)):
+            return dict(previous)
+        else:
+            candidates = await asyncio.to_thread(
+                self._store.question_topic_candidates, course_id=course, question=question,
+                expected_answer=reference, question_id=question_id, material_identity=material,
+                binding_key=key, allow_legacy=not vision_image_payload and bool(reference or question_id),
+            )
+            if len(candidates) == 1:
+                topic, status = candidates[0], "unique_history"
+            else:
+                topic = prefix + "question_" + key[:24]
+                status = "ambiguous_history" if candidates else "new_question"
+            known = await asyncio.to_thread(self._store.get_topic, topic)
+        label = str((known or {}).get("name") or question_payload.get("topic") or question)[:160]
+        return {"v": 1, "key": key, "topic_id": topic, "label": label,
+                "scope": "question" if topic == prefix + "question_" + key[:24] and status != "explicit" else "concept",
+                "source": status}
+
     def _save_retry_question_checkpoint(self, snapshot) -> None:
         import json
         import time
@@ -286,9 +341,7 @@ class _TutorAnswerEntriesMixin:
                     code="QUESTION_MISMATCH",
                 )
             )
-        selected_topic_id = (
-            question_topic_id if using_current_question else client_topic_id or question_topic_id
-        )
+        selected_topic_id = question_topic_id or client_topic_id
         if selected_topic_id:
             question_payload["selected_topic_id"] = selected_topic_id
         reserved_attempt = False
@@ -306,6 +359,15 @@ class _TutorAnswerEntriesMixin:
                         or current["session_id"] != session_id):
                     raise MaterialContextChanged("course/session changed before grading context")
                 expected_material = current
+            learning_binding = await self._resolve_learning_topic_binding(
+                question_payload, selected_topic_id, expected_material,
+                using_current_question=using_current_question, vision_image_payload=vision_image_payload,
+            )
+            private = dict(question_payload.get("internal_private_payload") or {})
+            question_payload["internal_private_payload"] = {**private, "learning_topic_binding": learning_binding}
+            async with self._lock:
+                if not material_context_current(self, expected_material):
+                    raise MaterialContextChanged("course/session changed while resolving topic")
                 # Reserve only after an empty session has resumed the held quiz;
                 # that session startup correctly clears departed reservations.
                 if using_current_question and state_attempt_id:
@@ -342,6 +404,7 @@ class _TutorAnswerEntriesMixin:
                     "question_id": supplied_question_id or state_question_id,
                     "attempt_id": supplied_attempt_id or state_attempt_id,
                     "selected_topic_id": selected_topic_id,
+                    "_learning_topic_binding": learning_binding,
                     "mode": active_mode,
                     "_material_context": expected_material,
                     **(
@@ -402,7 +465,7 @@ class _TutorAnswerEntriesMixin:
             if selected_topic_id:
                 payload["selected_topic_id"] = selected_topic_id
                 if using_current_question:
-                    payload["topic"] = selected_topic_id
+                    payload["topic"] = learning_binding["topic_id"]
             scope_key = str(question_payload.get("scope_key") or "").strip()
             if scope_key:
                 payload["scope_key"] = scope_key
@@ -445,13 +508,18 @@ class _TutorAnswerEntriesMixin:
                             "attempt_evaluation_pending", None
                         )
                         self._state.current_question["attempt_evaluated"] = True
+                        private = dict(self._state.current_question.get("internal_private_payload") or {})
+                        self._state.current_question["internal_private_payload"] = {
+                            **private, "learning_topic_binding": learning_binding,
+                        }
                         self._state.current_question["answer_evaluation_cache"] = (
                             public_eval_cache
                         )
                         final_attempt_state_staged = True
                 await self._persist_state()
             topic = str(
-                selected_topic_id
+                learning_binding["topic_id"]
+                or selected_topic_id
                 or question_payload.get("selected_topic_id")
                 or question_payload.get("topic")
                 or payload.get("selected_topic_id")

@@ -196,6 +196,33 @@ def list_qa_records_for_topic(
     ]
 
 
+def question_topic_candidates(
+    self, *, course_id: str, question: str, expected_answer: str,
+    question_id: str = "", material_identity: str = "", binding_key: str = "",
+    allow_legacy: bool = False,
+) -> list[str]:
+    """At most two distinct identities: two proves ambiguity, not recency preference."""
+    prefix = course_id + "::"
+    rows = self._require_read_conn().execute(
+        """WITH candidates AS (
+            SELECT topic_id, CASE WHEN json_valid(question) THEN question ELSE '{}' END AS artifact
+            FROM qa_records WHERE session_id IN (SELECT id FROM sessions WHERE course_id = ?)
+        ) SELECT DISTINCT topic_id FROM candidates
+        WHERE substr(topic_id, 1, length(?)) = ?
+          AND json_extract(artifact, '$.question') = ?
+          AND COALESCE(json_extract(artifact, '$.answer'), '') = ?
+          AND (json_extract(artifact, '$.internal_private_payload.learning_topic_binding.key') = ?
+               OR (? AND json_extract(artifact, '$.internal_private_payload.learning_topic_binding') IS NULL
+                   AND COALESCE(json_extract(artifact, '$.question_id'), '') = ?
+                   AND COALESCE(json_extract(artifact, '$.internal_private_payload.source_material_context.course_id'), ?) = ?
+                   AND COALESCE(json_extract(artifact, '$.internal_private_payload.source_material_context.material_identity'), '') = ?))
+        LIMIT 2""",
+        (course_id, prefix, prefix, question, expected_answer, binding_key,
+         int(allow_legacy), question_id, course_id, course_id, material_identity),
+    ).fetchall()
+    return [str(row[0]) for row in rows]
+
+
 def add_wrong_question(
     self,
     *,

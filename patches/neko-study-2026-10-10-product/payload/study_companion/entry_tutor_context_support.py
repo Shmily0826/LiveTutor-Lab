@@ -1042,7 +1042,8 @@ class _TutorContextSupportMixin:
             else ""
         )
         topic = str(
-            context.get("selected_topic_id")
+            (context.get("_learning_topic_binding") or {}).get("topic_id")
+            or context.get("selected_topic_id")
             or question_payload.get("selected_topic_id")
             or question_payload.get("topic_id")
             or question_payload.get("topic")
@@ -1117,7 +1118,8 @@ class _TutorContextSupportMixin:
             or ""
         )
         topic = str(
-            context.get("selected_topic_id")
+            (context.get("_learning_topic_binding") or {}).get("topic_id")
+            or context.get("selected_topic_id")
             or question_payload.get("selected_topic_id")
             or question_payload.get("topic_id")
             or question_payload.get("topic")
@@ -1126,7 +1128,8 @@ class _TutorContextSupportMixin:
             or self._guess_track_topic(track_reply)
         ).strip()
         if topic:
-            question_payload["topic"] = topic
+            binding = context.get("_learning_topic_binding") or {}
+            question_payload["topic"] = str(binding.get("label") or topic)
         course_id = str(context.get("course_id") or self._state.study_course_id or "general").strip()
         # Mastery and FSRS use topic identity; scope it so equal labels in two
         # courses cannot share answer evidence.
@@ -1139,6 +1142,8 @@ class _TutorContextSupportMixin:
         )
         if inferred_subject:
             question_payload["subject"] = inferred_subject
+        elif (context.get("_learning_topic_binding") or {}).get("scope") == "question":
+            question_payload["subject"] = "unknown"
         eval_result = {
             **eval_payload,
             "topic": topic,

@@ -1518,6 +1518,7 @@ from .store_qa import (
     ensure_session,
     get_retry_wrong_question,
     list_qa_records,
+    question_topic_candidates,
     list_qa_records_for_topic,
     list_sessions,
     list_wrong_questions,
@@ -1573,6 +1574,7 @@ StudyStore.close_open_sessions = close_open_sessions  # type: ignore[method-assi
 StudyStore.list_sessions = list_sessions  # type: ignore[method-assign]
 StudyStore.add_qa_record = add_qa_record  # type: ignore[method-assign]
 StudyStore.list_qa_records = list_qa_records  # type: ignore[method-assign]
+StudyStore.question_topic_candidates = question_topic_candidates  # type: ignore[method-assign]
 StudyStore.list_qa_records_for_topic = list_qa_records_for_topic  # type: ignore[method-assign]
 StudyStore.add_wrong_question = add_wrong_question  # type: ignore[method-assign]
 StudyStore.get_retry_wrong_question = get_retry_wrong_question  # type: ignore[method-assign]
