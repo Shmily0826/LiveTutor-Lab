@@ -2,10 +2,10 @@
 
 | 项 | 证据/尝试 | 恢复条件与继续方向 |
 |---|---|---|
-| Goal自动续跑 | app get_goal仍paused，状态接口无active；已请求现有Goal UI恢复 | 本轮开发继续；界面恢复后核状态，不重建 |
+| Goal自动续跑 | 本轮get_goal active已核，旧paused记录仅历史 | 已恢复，不重建；自动续跑先读四文件 |
 | Native评分 | 真人口头判错，live/final SQLite仍pending/evaluation空 | 修实际角色工具选择，wrong纠正真实落库回读；并行出题及材料 |
 | 题型/篇幅 | role quiz无request字段，后台丢方向二选一；有三句/unasked question | request透传/模型回归，临时不写长期偏好 |
-| 图可见 | open_in_codex queued不证明用户看见，用户反馈看不到 | 同当前材料受控可见入口，明确Native直视不可靠 |
+| 图可见 | 阶段22当前Study图片窗口真实原入口DOM通过；旧queued/用户未见图保持历史失败 | 自动可见入口已接；本人实际看到/使用待最终集中验收，Native直视仍不可靠 |
 | phrase34 | session_started/serverDSP无ASR/reply/PCM；根层缺两个helper已source修复review9过 | 发布SourceGate/实际部署后必要固定输入，非无效旧重跑；无mic/loopback |
 | 自然停顿语言术语 | 旧backend/设备局部继承；本场无抢答只有指定试验 | 自动完整链测，再集中human，不扩大已有PASS |
 | graded接续及桌面 | pendingC33/受控指示继承；更宽graded/任意桌面待 | 实际连续及受控surface先交付，其他项不因桌面停 |
@@ -16,7 +16,7 @@
 
 完整契约：docs/daily-companion-contract-2026-10-14.md（原文169行，SHA256 FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33）。每次上下文压缩或自动续跑先完整读取 contract、plan、status、blockers；后续用户明确指令优先，同步记录。
 
-2026-10-15用户明确恢复全部开发：先自动验证到可用，再安排集中真人验收，不逐句占用本人时间。现有Goal 01a13531-0341-7611-afc2-5c472a7ccf50 不重建；应用最后读取仍paused，已请求界面恢复，当前本轮开发获明确授权。局部阻塞记录失败/证据/尝试/恢复条件并转其他项；全部依据实际证据完成，阶段、小功能、到早晨或额度不构成完成。源码/离线、真实模型、设备播放、真人体验分层。
+2026-10-15用户明确恢复全部开发：先自动验证到可用，再安排集中真人验收，不逐句占用本人时间。现有Goal 01a13531-0341-7611-afc2-5c472a7ccf50 本轮get_goal已核active，不重建；完整约束以本contract及后续明确指令为准。局部阻塞记录失败/证据/尝试/恢复条件并转其他项；全部依据实际证据完成，阶段、小功能、到早晨或额度不构成完成。源码/离线、真实模型、设备播放、真人体验分层。
 
 音频：必要speaker用户已设约4%，不调整音量。已结束真人场的mic授权不延续；禁止room/physical/virtual mic、捕获设备初始化、回环。固定WAV内存/WS允许；仅经核输出专用入口/8API捕获保护可发声，mixed启动仍拒绝。文字开发child NEKO_TASK_SILENT=1。
 
@@ -28,4 +28,8 @@
 
 阶段21当前增量：源码/离线出题request透传4、材料12、memory8过；Native语音观察修复7 Main+独立过。必要单场phrase35有真实ASR→study_explain→两句English/24NativePCM、sourceEnded/queue0，无mic/capture/loopback，8APIguard。原raw35因心跳quiet/显式zhCN假设报turn_timeout/exit1/FAIL_PARTIAL，原文件不变；修后既有事件回放59.087s可结束，仅REPLAY通过，不追认整场PASS。speechEnd→ASR11.609s→首PCM21.775s，PCM→播放schedule0.512s，实际可听未验。唯一exec60014已terminal/cleanup_errors=[]，任务ports无listener。账本675/63/0，原round不重置。stage21证据 docs/evidence/daily-companion-phase21-quiz-request-and-voice-probe-2026-10-15.md。
 
-已定位尚未修复：Native显式答当前题可以自由口头判错绕过study_answer，旧qid/attempt仍pending/evaluation空；下一步需权威ASR owner+expected qid/attempt/course/session准入和防重、结果前自由评分抑制/失败诚实，保护ordinary打断。不能只增强prompt或从口头结果倒写DB。然后材料可见/graded多轮及全A–F继续。两个Agent最终窄审冻结，Main准备stage21 exact发布；应用Goal仍paused，请界面恢复现有Goal以自动续跑，当前明确授权本轮继续。
+已定位尚未修复：Native显式答当前题可以自由口头判错绕过study_answer，旧qid/attempt仍pending/evaluation空；下一步需权威ASR owner+expected qid/attempt/course/session准入和防重、结果前自由评分抑制/失败诚实，保护ordinary打断。不能只增强prompt或从口头结果倒写DB。然后材料可见/graded多轮及全A–F继续。两个Agent最终窄审冻结，Main已完成stage21 exact发布；应用Goal已active，按contract自动接续。
+
+阶段22接续的具体边界：Core已注册study_answer，Native明确答题仍可零tool自由回复；只改prompt/转换已存在study_explain不覆盖零调用。必须固定真实pending identity与本轮ASR owner，使用原正式entry、防重复/换题；处理自由回复抑制与正式工具结果发声，不能伪造普通打断onset、复活退休scope或直接发虚构function_call_output。已核实际_tools.py要求Free返回真实call_id匹配server function_call，不能把一个local fabricated ToolCall当合法provider调用。Core turn.handle_input_transcript有既有plugin bus/缓存/显示，没有评分fallback；bus事件本身也没有当前完整voice owner，不能只按有pending题就消费每句对不对。先确定实际协议和权威快照/输出路径，再定向离线Core+SQLite测；不在不明时绕权限开mic/循环CONNECT。其它材料可见/记忆源码/受控指示继续，局部阻塞不暂停全部Goal。
+
+阶段22已交付当前Study图片默认跟随/旧指示退役、私有四身份pin、同题wrong/partial更正新attempt保留原错答、Windows保护下日常provider设置恢复。Main/独立离线与真实SDK/SQLite通过；最终原daily入口Ready/refresh/current-image DOM与原27interaction/820topic/QA0/all学习行hash、原pending题和配置偏好均保留，exit0，预算不变。初次coreApi变化失败及恢复初版竞态P2证据保留，最终锁定版7测试及实际入口通过。source/offline不冒称Native自动评分已修；完整A–F继续。证据 docs/evidence/daily-companion-phase22-material-and-correction-2026-10-15.md。scene60427已terminal，48911/48916/9234/55804无listener。六空目录清理automatic approval blocked by policy，保留且不绕。原账本675/63/0不重置，speaker用户4%仅必要output-only可用，禁止mic/capture/loopback。下一步Native真实ASR→原题正式grade→受owner保护的结果输出，再连续集成、剩余A–F和集中human。

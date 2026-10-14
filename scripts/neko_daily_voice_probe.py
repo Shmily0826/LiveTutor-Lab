@@ -24,7 +24,7 @@ from neko_lab_client import LabClient
 import neko_desktop_tutor_host as host
 import neko_native_shell as avatar
 from neko_native_telemetry import NativeTelemetry
-from neko_tutor_start import plugin_server_ready, cleanup_resources, process_creation_time
+from neko_tutor_start import plugin_server_ready, cleanup_resources, process_creation_time, CoreProviderOverride
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -184,6 +184,7 @@ async def main(args):
     startup_log = args.output.with_suffix('.host.log')
     startup_handle = startup_log.open('wb')
     report['startup_log'] = str(startup_log)
+    provider_override = CoreProviderOverride(store_path, 'free')
     process = subprocess.Popen([str(host.SOURCE_PYTHON), "-X", "utf8", str(ROOT / "scripts/neko_desktop_tutor_host.py"),
         "--source", "--voice", "--core-provider", "free", "--store", args.store,
         "--hold", str(max(360,capture_seconds+120)), "--seconds", "100", "--api-budget", "30", "--egress-budget", "2000",
@@ -204,6 +205,7 @@ async def main(args):
         if not ready: raise RuntimeError("host not ready: " + reason)
         print("隔离 Study 宿主就绪；开始一场有超时的角色语音会话。", flush=True)
         report["host_ready"] = True
+        surface.attach_study_store(store_path)
         if args.prepare_picture:
             # A fresh isolated course, reusing an existing fixture. No new diagram
             # or quiz, and no alterations to the learner's normal daily course.
@@ -576,6 +578,12 @@ async def main(args):
                 avatar.shutdown(shell)
             await asyncio.to_thread(stop_owned_host, process)
             surface.shutdown(); surface.server_close()
+        if not report.get('cleanup_errors') and process.poll() is not None:
+            try:
+                provider_override.restore()
+            except (OSError, ValueError, RuntimeError) as error:
+                report.setdefault('cleanup_errors', []).append(
+                    f'provider settings: {type(error).__name__}: {error}')
         startup_handle.close(); surface_thread.join(timeout=3)
         report["after"] = json.loads(ledger_path.read_text())
         report['surface_guide_attempts'] = surface.guide_attempts

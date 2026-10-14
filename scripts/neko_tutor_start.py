@@ -17,6 +17,7 @@ import subprocess
 import sys
 import time
 import threading
+from contextlib import contextmanager
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -246,6 +247,108 @@ def host_options(args, voice_hosts: list[str]) -> list[str]:
     if args.learning_surface:
         options += ['--study-vision']
     return options
+
+
+class CoreProviderOverride:
+    """Restore only the daily entry's temporary provider choice after its host stops."""
+    def __init__(self, store: Path, runtime_provider: str):
+        self.path = store / 'N.E.K.O/config/core_config.json'
+        self.runtime_provider = runtime_provider
+        if self.path.is_symlink() or not self.path.resolve().is_relative_to(store.resolve()):
+            raise RuntimeError('日常 provider 配置路径已改变，保留当前文件。')
+        self.existed = self.path.exists()
+        self.present = False
+        self.value = None
+        if self.existed:
+            saved = self._read()[1]
+            self.present = 'coreApi' in saved
+            self.value = saved.get('coreApi')
+
+    def _read(self):
+        if self.path.is_symlink() or not self.path.resolve().is_relative_to(self.path.parents[2].resolve()):
+            raise RuntimeError('日常 provider 配置路径已改变，保留当前文件。')
+        raw = self.path.read_bytes()
+        saved = json.loads(raw.decode('utf-8'))
+        if not isinstance(saved, dict):
+            raise ValueError('日常 provider 配置必须是对象，保留当前文件。')
+        return raw, saved
+
+    def restore(self):
+        # A new store retains its initial defaults. Never roll back all settings:
+        # the learner may have changed unrelated keys while this host was open.
+        if not self.existed:
+            return
+        with self._locked_config() as handle:
+            saved = json.loads(handle.read().decode('utf-8'))
+            if not isinstance(saved, dict):
+                raise ValueError('日常 provider 配置必须是对象，保留当前文件。')
+            if ('coreApi' in saved) == self.present and saved.get('coreApi') == self.value:
+                return
+            if saved.get('coreApi') != self.runtime_provider:
+                raise RuntimeError('provider 已被另行更改，保留当前配置，不覆盖。')
+            if self.present:
+                saved['coreApi'] = self.value
+            else:
+                saved.pop('coreApi', None)
+            # One deny-write/delete Windows handle covers read through flush. This
+            # is an in-place update, not a crash-atomic replacement; abnormal exit
+            # is reported as a limitation, never as preserved-setting proof.
+            payload = json.dumps(saved, ensure_ascii=False, indent=2).encode('utf-8')
+            handle.seek(0)
+            handle.write(payload)
+            handle.truncate()
+            handle.flush()
+            os.fsync(handle.fileno())
+
+    @contextmanager
+    def _locked_config(self):
+        if os.name != 'nt':
+            raise RuntimeError('provider 恢复需要 Windows 文件保护，保留当前配置。')
+        import ctypes
+        from ctypes import wintypes
+        import msvcrt
+        import stat
+        kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+        create = kernel.CreateFileW
+        create.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
+                           wintypes.LPVOID, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
+        create.restype = wintypes.HANDLE
+        close = kernel.CloseHandle
+        close.argtypes = [wintypes.HANDLE]
+        close.restype = wintypes.BOOL
+        final_path = kernel.GetFinalPathNameByHandleW
+        final_path.argtypes = [wintypes.HANDLE, wintypes.LPWSTR, wintypes.DWORD, wintypes.DWORD]
+        final_path.restype = wintypes.DWORD
+        self._read()  # Reject an invalid/redirected target before requesting access.
+        owned = create(str(self.path), 0xC0000000, 1, None, 3, 0x00200000, None)
+        if owned == ctypes.c_void_p(-1).value:
+            raise ctypes.WinError(ctypes.get_last_error())
+        fd = None
+        try:
+            buffer = ctypes.create_unicode_buffer(32768)
+            length = final_path(owned, buffer, len(buffer), 0)
+            if not length or length >= len(buffer):
+                raise RuntimeError('无法核对锁定配置路径，保留当前文件。')
+            resolved = buffer.value
+            if resolved.startswith('\\\\?\\UNC\\'):
+                resolved = '\\\\' + resolved[8:]
+            elif resolved.startswith('\\\\?\\'):
+                resolved = resolved[4:]
+            if Path(resolved).resolve() != self.path.absolute():
+                raise RuntimeError('锁定配置指向不同路径，保留当前文件。')
+            fd = msvcrt.open_osfhandle(owned, os.O_RDWR | os.O_BINARY)
+            owned = None  # fd now owns the Windows handle.
+            info = os.fstat(fd)
+            if info.st_nlink != 1 or getattr(info, 'st_file_attributes', 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+                raise RuntimeError('配置包含链接，保留当前文件。')
+            with os.fdopen(fd, 'r+b') as stream:
+                fd = None
+                yield stream
+        finally:
+            if fd is not None:
+                os.close(fd)
+            if owned is not None:
+                close(owned)
 
 
 def cleanup_resources(surface, shell, launcher, launcher_owner, browser, browser_record, lesson):
@@ -641,6 +744,7 @@ def main() -> int:
         if browser_args:
             browser_args = [arg for arg in browser_args if not arg.startswith("--app=")] + ["--new-window", UI_URL, surface_url]
     store.mkdir(parents=True, exist_ok=True)
+    provider_override = CoreProviderOverride(store, 'free' if args.voice else 'deepseek')
     launcher_log = store / "launcher.log"
     launcher_output = launcher_log.open("ab")
     launcher = subprocess.Popen(
@@ -657,6 +761,8 @@ def main() -> int:
             print(f"Study UI 没有就绪：{reason}（启动错误：{launcher_log}；运行日志：benchmarks/raw/neko-desktop-host.log）")
             return 1
         print(f"Study UI 已就绪：{UI_URL}")
+        if surface is not None:
+            surface.attach_study_store(store)
         if args.text_only:
             avatar.verify_output_only_host('text-only')
         if not args.learning_surface:
@@ -706,6 +812,11 @@ def main() -> int:
     finally:
         cleanup_errors = cleanup_resources(surface, shell, launcher, launcher_owner,
                                            browser, browser_record, lesson)
+        if not cleanup_errors and launcher.poll() is not None:
+            try:
+                provider_override.restore()
+            except (OSError, ValueError, RuntimeError) as error:
+                cleanup_errors.append(f'provider settings: {type(error).__name__}: {error}')
         launcher_output.close()
         audit = sorted((ROOT / "benchmarks/raw/evidence").glob("neko-desktop-host-*.json"))
         summary = {}

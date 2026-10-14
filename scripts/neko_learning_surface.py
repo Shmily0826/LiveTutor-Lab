@@ -6,6 +6,9 @@ material. No audio, provider requests, desktop capture, or source writes.
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
+from contextlib import closing
 import hashlib
 import html
 from html.parser import HTMLParser
@@ -15,6 +18,7 @@ import math
 import re
 from pathlib import Path
 import secrets
+import sqlite3
 import threading
 from urllib.parse import urlsplit
 
@@ -29,6 +33,72 @@ DEFAULT_MATERIALS = [
 ]
 TYPES = {".html": "text/html; charset=utf-8", ".htm": "text/html; charset=utf-8",
          ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
+RAW = ROOT / "benchmarks/raw"
+STUDY_SELECTION = "@study"
+
+
+class StudyPictureSnapshot:
+    """Only persisted course/session and that course's one submitted image.
+
+    Never instantiate StudyStore (its constructor can write/migrate). This is a
+    coherent SQLite read transaction, not the plugin's live/boot authority.
+    """
+    def __init__(self, store):
+        self.store = Path(store).resolve(strict=True)
+        self.db = self.store / "N.E.K.O/plugins/study_companion/data/study_companion.db"
+        self.checked_db()
+
+    def checked_db(self):
+        raw = RAW.resolve(strict=True)
+        path = self.db.resolve(strict=True)
+        if not raw.is_relative_to(ROOT.resolve()) or not self.store.is_dir() or not self.store.is_relative_to(raw) or not path.is_relative_to(self.store) or not path.is_file():
+            raise ValueError("Study store 必须是项目 benchmarks/raw 内已存在的任务目录")
+        return path
+
+    def read(self):
+        path = self.checked_db()
+        # Do not use immutable=1: an active writer's WAL contains current data.
+        with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=.25)) as db:
+            db.execute("PRAGMA query_only=ON")
+            db.execute("BEGIN")
+            row = db.execute("SELECT json_extract(value,'$.study_course_id'), json_extract(value,'$.study_session_id') FROM kv WHERE key='state'").fetchone()
+            if not row or not isinstance(row[0], str) or not row[0].strip() or len(row[0]) > 1000 or (row[1] is not None and not isinstance(row[1], str)):
+                raise ValueError("没有有效的已保存课程状态")
+            course, session = row[0], row[1] or ""
+            key = "submitted_image:" + hashlib.sha256(course.encode()).hexdigest()
+            # Bound the fetched value, and project only material fields, not history.
+            saved = db.execute("SELECT CASE WHEN length(value)<=16020000 THEN json_extract(value,'$.course_id') END, CASE WHEN length(value)<=16020000 THEN json_extract(value,'$.image') END, CASE WHEN length(value)<=16020000 THEN json_extract(value,'$.text') END FROM kv WHERE key=?", (key,)).fetchone()
+        context = {"course_id": course, "session_id": session}
+        if saved is None:
+            return {**context, "status": "empty", "message": "当前课程尚未提交图片。请在 Study 中提交后再来看。"}, None
+        image, text = saved[1], saved[2] or ""
+        if saved[0] != course or not isinstance(image, str) or not image or len(image) > 16_000_000 or not isinstance(text, str) or len(text) > 12000:
+            raise ValueError("当前课程的图片记录无效")
+        # Keep the exact stored string in the identity calculation, as Study does.
+        identity = hashlib.sha256((image + "\0" + text).encode()).hexdigest()
+        mime = None
+        if image.startswith("data:"):
+            match = re.match(r"^data:(image/(?:png|jpeg));base64,", image)
+            if not match:
+                raise ValueError("当前图片格式不受支持；请使用 PNG 或 JPEG")
+            mime = match.group(1)
+            image = image[match.end():]
+        try:
+            content = base64.b64decode(image, validate=True)
+        except (ValueError, binascii.Error):
+            raise ValueError("当前图片内容无效") from None
+        actual_mime = "image/png" if content.startswith(b"\x89PNG\r\n\x1a\n") else "image/jpeg" if content.startswith(b"\xff\xd8\xff") else None
+        if not actual_mime or (mime and mime != actual_mime):
+            raise ValueError("当前图片内容与格式不匹配")
+        digest = hashlib.sha256(content).hexdigest()
+        scope = hashlib.sha256(json.dumps([course, session, identity], ensure_ascii=False).encode()).hexdigest()
+        material_id = "study-" + scope[:24]
+        material = {"id": material_id, "name": "当前 Study 图片 · " + course[:100],
+                    "kind": "image", "source": "study_store_snapshot", "sha256": digest,
+                    "course_id": course, "session_id": session, "material_identity": identity,
+                    "url": "/material/" + material_id, "content": content, "mime": actual_mime}
+        return {**context, "status": "ready", "message": "已显示当前课程的已保存图片。",
+                "material_id": material_id, "image_sha256": digest, "material_identity": identity}, material
 
 
 class PointingTargets(HTMLParser):
@@ -57,9 +127,9 @@ class PointingTargets(HTMLParser):
 class LearningSurface(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, materials, port=48918):
+    def __init__(self, materials, port=48918, *, store=None):
         self.paths = [Path(p).resolve(strict=True) for p in materials]
-        if not self.paths:
+        if not self.paths and store is None:
             raise ValueError("请指定至少一份 HTML、PNG 或 JPEG 学习材料")
         self.token = secrets.token_urlsafe(32)
         self.lock = threading.RLock()
@@ -67,6 +137,9 @@ class LearningSurface(ThreadingHTTPServer):
         self.command = None
         self.active_material_id = None
         self.revision = 0
+        self.study_reader = StudyPictureSnapshot(store) if store is not None else None
+        self.follow_study = self.study_reader is not None
+        self.study = None
         self.reload_materials()
         super().__init__(("127.0.0.1", port), SurfaceHandler)
 
@@ -90,15 +163,53 @@ class LearningSurface(ThreadingHTTPServer):
         with self.lock:
             self.materials = materials
             if self.active_material_id not in materials:
-                self.active_material_id = next(iter(materials))
+                self.active_material_id = next(iter(materials), None)
+            self.command = None
+            self.revision += 1
+            if self.study_reader is not None:
+                self.study = None  # reload replaced the dynamic entry as well
+            self.refresh_study()
+
+    def refresh_study(self):
+        if self.study_reader is None:
+            return
+        with self.lock:
+            try:
+                status, material = self.study_reader.read()
+            except (ValueError, OSError, sqlite3.Error):
+                # No raw exception/path/data leakage; stale images fail closed.
+                status, material = {"status": "unavailable", "message": "无法读取当前课程图片。请确认 Study 已保存，恢复后会自动更新。"}, None
+            if status == self.study:
+                return
+            self.study = status
+            stale = [key for key, item in self.materials.items() if item.get("source") == "study_store_snapshot"]
+            for key in stale:
+                self.materials.pop(key)
+            if material:
+                self.materials[material["id"]] = material
+            if self.follow_study:
+                self.active_material_id = material["id"] if material else None
+            elif self.active_material_id in stale:
+                self.active_material_id = None
             self.command = None
             self.revision += 1
 
+    def attach_study_store(self, store):
+        # A fresh launch creates its database after this local server starts.
+        reader = StudyPictureSnapshot(store)
+        with self.lock:
+            self.study_reader = reader
+            self.follow_study = True
+            self.study = None
+            self.refresh_study()
+
     def state(self):
         with self.lock:
+            self.refresh_study()
             return {"materials": [{k: v for k, v in m.items() if k not in ("content", "mime")}
                                   for m in self.materials.values()],
-                    "revision": self.revision, "active_material_id": self.active_material_id, "command": self.command}
+                    "revision": self.revision, "active_material_id": self.active_material_id, "command": self.command,
+                    "study": {**self.study, "following": self.follow_study} if self.study else None}
 
     def show_code_evidence(self, payload):
         evidence = payload.get("evidence")
@@ -144,7 +255,7 @@ class LearningSurface(ThreadingHTTPServer):
             for key in stale: self.materials.pop(key)
             self.materials[material_id] = material
             if self.active_material_id in stale:
-                self.active_material_id = next(iter(self.materials))
+                self.active_material_id = material_id
                 self.command = None
             self.revision += 1
         return {"material_id": material_id, "sha256": material["sha256"],
@@ -152,15 +263,25 @@ class LearningSurface(ThreadingHTTPServer):
 
     def select(self, material_id):
         with self.lock:
+            self.refresh_study()
+            if material_id == STUDY_SELECTION and self.study_reader is not None:
+                self.follow_study = True
+                self.active_material_id = self.study.get("material_id")
+                self.command = None
+                self.revision += 1
+                return self.state()
             if material_id not in self.materials:
                 raise LookupError("材料版本已更新，请重新选择")
             self.active_material_id = material_id
+            if self.study_reader is not None:
+                self.follow_study = self.materials[material_id].get("source") == "study_store_snapshot"
             self.command = None
             self.revision += 1
             return self.state()
 
     def guide(self, command):
         with self.lock:
+            self.refresh_study()
             material = self.materials.get(command.get("material_id"))
             if material is None:
                 raise LookupError("材料已更换，请重新选择当前材料")
@@ -229,6 +350,7 @@ class SurfaceHandler(BaseHTTPRequestHandler):
                 self.reply(200, self.server.state())
         elif route.startswith("/material/"):
             with self.server.lock:
+                self.server.refresh_study()
                 material = self.server.materials.get(route.removeprefix("/material/"))
             if material:
                 self.reply(200, material["content"], material["mime"], material=True)
@@ -271,8 +393,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--material", action="append", type=Path, help="explicit trusted standalone HTML or PNG/JPEG; repeatable")
     parser.add_argument("--port", type=int, default=48918)
+    parser.add_argument("--store", type=Path, help="existing task store under project benchmarks/raw; readonly current Study image")
     args = parser.parse_args()
-    server = LearningSurface(args.material or DEFAULT_MATERIALS, args.port)
+    server = LearningSurface(args.material or DEFAULT_MATERIALS, args.port, store=args.store)
     print(f"Learning surface: http://127.0.0.1:{server.server_port}/", flush=True)
     try:
         server.serve_forever()

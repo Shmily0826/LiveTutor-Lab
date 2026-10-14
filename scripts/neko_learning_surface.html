@@ -15,6 +15,7 @@ main{display:grid;grid-template-columns:270px minmax(0,1fr);min-height:calc(100v
 <header><h1>N.E.K.O 学习材料</h1><p>一起看清正在讲的地方。材料由你操作，伙伴只做指示。</p></header>
 <main>
 <aside>
+  <p id="studyContext" class="hint" hidden></p>
   <div class="fields"><div><label for="materials">当前材料</label><select id="materials" disabled><option>正在载入…</option></select></div>
   <div><label for="targets">指向模块或连线</label><select id="targets" disabled><option>先选择材料</option></select></div></div>
   <div class="actions"><button id="point" class="primary" disabled>指向这里</button><button id="clear" disabled>清除指示</button></div>
@@ -24,7 +25,7 @@ main{display:grid;grid-template-columns:270px minmax(0,1fr);min-height:calc(100v
   <p id="status" class="status" role="status" aria-live="polite">正在准备学习窗口…</p>
 </aside>
 <section class="workspace" aria-label="只读学习材料与指示">
-  <div id="surface" class="surface"><iframe id="frame" title="原始学习材料" sandbox="allow-scripts allow-same-origin" hidden></iframe><div id="imageScroll" hidden><img id="image" alt="当前学习图片"></div>
+  <div id="surface" class="surface"><p id="empty" class="hint" style="padding:24px;max-width:65ch" hidden></p><iframe id="frame" title="原始学习材料" sandbox="allow-scripts allow-same-origin" hidden></iframe><div id="imageScroll" hidden><img id="image" alt="当前学习图片"></div>
     <svg id="overlay" aria-hidden="true"><g id="marks" hidden><rect id="marker" rx="5"></rect><path id="arrow"></path></g></svg>
   </div><p id="targetCaption">选择材料后开始。</p>
 </section>
@@ -33,7 +34,7 @@ main{display:grid;grid-template-columns:270px minmax(0,1fr);min-height:calc(100v
 'use strict';
 const BOOT = __BOOTSTRAP__;
 const $ = id => document.getElementById(id);
-const ui = Object.fromEntries(['materials','targets','point','clear','zoom','reload','status','help','surface','frame','image','imageScroll','overlay','marks','marker','arrow','targetCaption'].map(id=>[id,$(id)]));
+const ui = Object.fromEntries(['materials','targets','point','clear','zoom','reload','status','help','surface','frame','image','imageScroll','overlay','marks','marker','arrow','targetCaption','studyContext','empty'].map(id=>[id,$(id)]));
 let state=null,current=null,command=null,revision=-1,ready=false,connected=false;
 async function api(route,payload){const response=await fetch(route,{method:payload?'POST':'GET',headers:{'X-Learning-Surface-Token':BOOT.token,'Content-Type':'application/json'},body:payload?JSON.stringify(payload):undefined});const body=await response.json();if(!response.ok)throw Error(body.error||'学习窗口暂时不可用');return body}
 function say(text){if(ui.status.textContent!==text)ui.status.textContent=text}
@@ -48,27 +49,33 @@ function collectTargets(){
 function loaded(){if(!current)return;if(current.kind==='html'&&ui.frame.contentWindow.location.pathname!==current.url)return;if(current.kind==='image'&&(!ui.image.naturalWidth||new URL(ui.image.currentSrc).pathname!==current.url))return;ready=true;ui.clear.disabled=!command;say('材料已就绪。选择目标，或在图片上点击一个位置。');ui.targetCaption.textContent='已载入 '+current.name; if(current.kind==='html')collectTargets()}
 function choose(id){
   current=state.materials.find(m=>m.id===id);clearLocal();ready=false;ui.targets.disabled=true;ui.point.disabled=true;ui.zoom.disabled=true;
+  ui.empty.hidden=!!current;
+  if(!current){current=null;ui.frame.hidden=true;ui.imageScroll.hidden=true;ui.frame.removeAttribute('src');ui.image.removeAttribute('src');ui.targets.replaceChildren(new Option('暂无图片可指示',''));const message=state.study?.message||'请选择学习材料。';ui.empty.textContent=message;say(message);return}
   ui.targets.replaceChildren(new Option(current.kind==='html'?'正在读取模块…':'点击图片选择位置',''));
   ui.frame.hidden=current.kind!=='html';ui.imageScroll.hidden=current.kind!=='image';say('正在载入 '+current.name+'…');
   if(current.kind==='html'){ui.frame.onload=loaded;ui.frame.src=current.url+'?theme=dark';ui.image.removeAttribute('src')}
-  else{ui.frame.removeAttribute('src');ui.image.onload=loaded;ui.image.onerror=()=>say('图片未能载入，请重新载入材料。');ui.image.style.width='100%';ui.zoom.value='1';ui.zoom.disabled=false;ui.image.src=current.url}
+  else{ui.frame.removeAttribute('src');ui.image.onload=loaded;ui.image.onerror=()=>{ready=false;clearLocal();say('图片未能载入，请重新载入材料。')};ui.image.style.width='100%';ui.zoom.value='1';ui.zoom.disabled=false;ui.image.src=current.url}
 }
 function apply(next){
+  if(next.revision<revision)return; // A late earlier request cannot restore an old picture.
   state=next;
   const exists=current&&state.materials.some(m=>m.id===current.id);
-  if(ui.materials.options.length!==state.materials.length||[...ui.materials.options].some(option=>!state.materials.some(material=>material.id===option.value))){ui.materials.replaceChildren(...state.materials.map(m=>new Option(m.name,m.id)));ui.materials.disabled=false}
-  if(!exists){ui.materials.replaceChildren(...state.materials.map(m=>new Option(m.name,m.id)));ui.materials.disabled=false;choose(state.active_material_id)}
+  const choices=state.study?[{id:'@study',name:'跟随当前 Study 图片'},...state.materials.filter(m=>m.source!=='study_store_snapshot').map(m=>({...m,name:'参考 · '+m.name}))]:state.materials;
+  if(ui.materials.options.length!==choices.length||[...ui.materials.options].some((option,i)=>option.value!==choices[i]?.id||option.textContent!==choices[i]?.name)){ui.materials.replaceChildren(...choices.map(m=>new Option(m.name,m.id)));ui.materials.disabled=!choices.length}
+  ui.studyContext.hidden=!state.study;
+  if(state.study)ui.studyContext.textContent=(state.study.following?'跟随 Study · ':'查看参考材料 · Study 当前课程：')+(state.study.course_id||'暂不可用');
+  if(!exists){choose(state.active_material_id)}
   else if(current.id!==state.active_material_id)choose(state.active_material_id);
-  ui.materials.value=current.id;
-  if(next.revision!==revision){revision=next.revision;if(next.command&&next.command.material_id===current.id){command=next.command;ui.clear.disabled=false;ui.targetCaption.textContent=command.label}else clearLocal()}
+  ui.materials.value=state.study?.following?'@study':(current?.id||'');
+  if(next.revision!==revision){revision=next.revision;if(next.command&&next.command.material_id===current?.id){command=next.command;ui.clear.disabled=false;ui.targetCaption.textContent=command.label}else clearLocal()}
 }
 async function send(value){try{apply(await api('/api/guidance',value))}catch(error){clearLocal();say(error.message)}}
 ui.materials.onchange=async()=>{clearLocal();try{apply(await api('/api/select',{material_id:ui.materials.value}))}catch(error){say(error.message)}};
 ui.point.onclick=()=>{const selector=ui.targets.value;if(!selector)return;const target=ui.frame.contentDocument.querySelector(selector);target?.scrollIntoView({block:'center',inline:'center',behavior:'instant'});send({material_id:current.id,kind:'selector',selector,label:ui.targets.selectedOptions[0].textContent})};
-ui.image.onclick=event=>{const r=ui.image.getBoundingClientRect();const x=Math.max(0,Math.min(.96,(event.clientX-r.left)/r.width-.02));const y=Math.max(0,Math.min(.96,(event.clientY-r.top)/r.height-.02));send({material_id:current.id,kind:'rect',x,y,width:.04,height:.04,label:'你选择的图片位置'})};
+ui.image.onclick=event=>{if(!current||!ready)return;const r=ui.image.getBoundingClientRect();const x=Math.max(0,Math.min(.96,(event.clientX-r.left)/r.width-.02));const y=Math.max(0,Math.min(.96,(event.clientY-r.top)/r.height-.02));send({material_id:current.id,kind:'rect',x,y,width:.04,height:.04,label:'你选择的图片位置'})};
 ui.zoom.onchange=()=>{ui.image.style.width=(Number(ui.zoom.value)*100)+'%'};
 ui.clear.onclick=()=>send({material_id:current.id,kind:'clear'});
-ui.reload.onclick=async()=>{ui.reload.disabled=true;try{current=null;revision=-1;apply(await api('/api/reload',{}))}catch(error){say(error.message)}finally{ui.reload.disabled=false}};
+ui.reload.onclick=async()=>{ui.reload.disabled=true;try{apply(await api('/api/reload',{}))}catch(error){say(error.message)}finally{ui.reload.disabled=false}};
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&current)ui.clear.click()});
 function geometry(){
   if(!current||!command||!ready||command.material_id!==current.id)return null;
@@ -90,7 +97,8 @@ function draw(){const r=geometry();ui.marks.toggleAttribute('hidden',!r);if(r){f
 // Geometry is sampled only while a pointer is active; this includes SVG pan/zoom
 // transforms and iframe scrolling without changing the material's DOM.
 setInterval(()=>{if(command&&!document.hidden)draw()},100);
-async function poll(){try{const next=await api('/api/state');if(!connected){revision=-1;say('学习窗口连接已恢复。')}connected=true;apply(next)}catch(error){connected=false;clearLocal();say('学习窗口连接中断。恢复服务后会自动重连；也可重新载入。')}}
+let polling=false;
+async function poll(){if(polling)return;polling=true;try{const next=await api('/api/state');if(!connected)say('学习窗口连接已恢复。');connected=true;apply(next)}catch(error){connected=false;clearLocal();ready=false;ui.frame.hidden=true;ui.imageScroll.hidden=true;current=null;ui.empty.hidden=false;ui.empty.textContent='学习窗口连接中断。恢复服务后会自动重连；也可重新载入。';say(ui.empty.textContent)}finally{polling=false}}
 poll();setInterval(poll,750);
 window.learningSurface={geometry,get command(){return command},get material(){return current},get ready(){return ready},send,draw};
 </script>

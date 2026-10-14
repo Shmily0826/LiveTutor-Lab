@@ -1090,16 +1090,27 @@ class _StudyAvatarToolsMixin:
         description=(
             "Grade the learner's answer to the question currently on the table and record "
             "it in their learning history. Returns the verdict, score and the correction to "
-            "give them. Call it as soon as they answer a quiz."
+            "give them. Call it as soon as they answer a quiz. For an explicit revision "
+            "of a previously wrong or partial answer, read study_session status and pass "
+            "its current question_id and attempt_id in correction_of. This creates one "
+            "new attempt at the same question while keeping the original wrong answer. "
+            "Omit correction_of for an ordinary answer; do not generate a different question."
         ),
         parameters={
             "type": "object",
-            "properties": {"answer": {"type": "string"}},
+            "properties": {
+                "answer": {"type": "string"},
+                "correction_of": {"type": "object", "properties": {
+                    "question_id": {"type": "string", "minLength": 1},
+                    "attempt_id": {"type": "string", "minLength": 1}},
+                    "required": ["question_id", "attempt_id"], "additionalProperties": False},
+            },
             "required": ["answer"],
         },
         timeout=150.0,
     )
-    async def study_answer_tool(self, *, answer: str = "", **_):
+    async def study_answer_tool(self, *, answer: str = "", correction_of: dict[str, str] | None = None,
+                                _expected_question: dict[str, str] | None = None, **_):
         self._study_effective_language()
         from .study_materials import material_output_target, material_context_current
         target = material_output_target(self, _)
@@ -1112,9 +1123,38 @@ class _StudyAvatarToolsMixin:
             if not material_context_current(self, context):
                 return self._study_changed_native_material_result()
             held = dict(self._state.current_question)
+            # A routed ASR answer must not adopt the question installed after its snapshot.
+            if _expected_question is not None:
+                actual = {"question_id": str(held.get("question_id") or ""),
+                          "attempt_id": str(held.get("attempt_id") or ""),
+                          "course_id": context["course_id"], "session_id": context["session_id"]}
+                if (not isinstance(_expected_question, dict) or set(_expected_question) != set(actual)
+                        or not all(isinstance(value, str) and value for value in _expected_question.values())
+                        or _expected_question != actual):
+                    return {"ok": False, "code": "QUESTION_CONTEXT_CHANGED",
+                            "error": "题目或课程已变化，这次答案没有评分。 The question or course changed; this answer was not graded."}
         origin = (held.get("internal_private_payload") or {}).get("source_material_context")
         if isinstance(origin, dict) and origin.get("course_id") and origin["course_id"] != context["course_id"]:
             return self._study_changed_native_material_result()
+        if correction_of is not None:
+            previous = {key: str(held.get(key) or "") for key in ("question_id", "attempt_id")}
+            if (not isinstance(correction_of, dict) or set(correction_of) != set(previous)
+                    or not all(isinstance(value, str) and value for value in correction_of.values())
+                    or correction_of != previous):
+                return {"ok": False, "code": "QUESTION_CONTEXT_CHANGED",
+                        "error": "更正没有匹配原题，本次未评分。 The correction did not match the original question; not graded."}
+            retry = _envelope(await self.study_retry_question(**previous, course_id=context["course_id"], session_id=context["session_id"]))
+            retried = retry.get("current_question") or {}
+            if (retry.get("retried") is not True or retry.get("previous_attempt_id") != previous["attempt_id"]
+                    or retried.get("question_id") != previous["question_id"] or not retried.get("attempt_id")
+                    or retried["attempt_id"] == previous["attempt_id"]):
+                return retry
+            async with self._lock:
+                if not material_context_current(self, context):
+                    return self._study_changed_native_material_result()
+                held = dict(self._state.current_question)
+                if any(str(held.get(key) or "") != str(retried.get(key) or "") for key in previous):
+                    return self._study_changed_native_material_result()
         # A generated question carries an identity, and the entry refuses to grade
         # it without both ids echoed back - so the tool has to hold on to them.
         kwargs: dict[str, Any] = {"answer": str(answer or ""), "_material_context": context}

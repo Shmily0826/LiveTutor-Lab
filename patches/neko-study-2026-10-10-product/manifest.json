@@ -94,7 +94,7 @@
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
-      "sha256": "b43ae7e28d5ccf533652b364438a16cbe4ba5e08e34fae5ba0923822f63ca2f1",
+      "sha256": "d5e62ed86c1d06def5f46ed95accbb7cb7395786b7c4cecd1a4b1bd0aeb13d76",
       "deployed_matches": true
     },
     {
@@ -125,7 +125,7 @@
     },
     {
       "path": "payload/study_companion/entry_tutor_answer_entries.py",
-      "sha256": "7fb674fad6273d66241bbd2550bf68f8c80d3f78f7a1cdd8639df4b87d76b531",
+      "sha256": "e7f55f4d67680ba289f0ff69a70f668f2ea743c3ba8b6898e9f2d546e2944573",
       "deployed_matches": true
     },
     {
@@ -350,5 +350,10 @@
     "scope": "one-turn format, subject scope and length reach current picture, topic or targeted question; no preference persistence; missing material refuses",
     "proof": "Main actual wrapper/entry/prompt/temp SQLite4 plus existing quiz12 and memory8; independent source review; real model, Native and human request use pending",
     "report": "docs/evidence/daily-companion-quiz-request-review-2026-10-15.md"
+  },
+  "daily_answer_correction": {
+    "scope": "private exact four-field grade pin; explicit correction_of opens a new attempt at same actual wrong/partial question; existing Store/state/progress preserved",
+    "proof": "offline actual SDK callback pin4; retry10; avatar correction3; automatic Native ASR grading/voice relay pending",
+    "report": "docs/evidence/daily-companion-answer-correction-attempt-2026-10-15.md"
   }
 }

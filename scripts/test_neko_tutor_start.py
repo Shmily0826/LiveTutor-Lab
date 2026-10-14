@@ -190,6 +190,7 @@ class ProductStartTest(unittest.TestCase):
             stranger.wait(timeout=10)
 
     def test_status_retains_course(self):
+        from test_neko_study_status_question import models
         source = ROOT / "patches/neko-study-2026-10-10-product/payload/study_companion/service.py"
         tree = ast.parse(source.read_text(encoding="utf-8"))
         fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "build_status_payload")
@@ -197,7 +198,8 @@ class ProductStartTest(unittest.TestCase):
         state = SimpleNamespace(**{field: None for field in fields})
         state.study_course_id = "flutter-provider"
         config = SimpleNamespace(mode="teaching", default_mode="teaching", to_dict=lambda: {})
-        env = {"copy": copy, "StudyConfig": object, "StudyState": object, "Any": object}
+        env = {"copy": copy, "StudyConfig": object, "StudyState": object, "Any": object,
+               "public_current_question_payload": models.public_current_question_payload}
         exec(compile(ast.fix_missing_locations(ast.Module(body=[fn], type_ignores=[])), str(source), "exec"), env)
         payload = env["build_status_payload"](config=config, state=state)
         self.assertEqual(payload["study_course_id"], "flutter-provider")

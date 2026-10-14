@@ -20,6 +20,104 @@ from .study_materials import material_context, material_context_current, Materia
 
 
 class _TutorAnswerEntriesMixin:
+    def _save_retry_question_checkpoint(self, snapshot) -> None:
+        import json
+        import time
+
+        course_id = snapshot["study_course_id"]
+        progress = {"version": 1, "course_id": course_id}
+        for name in ("current_question", "last_answer_evaluation", "last_question_at", "last_answer_evaluated_at"):
+            progress[name] = snapshot.get(name, {} if name in ("current_question", "last_answer_evaluation") else "")
+        # The existing Store setters commit separately. Both existing kv records
+        # must move together before a new attempt becomes visible in memory.
+        with self._store.answer_write_lock():
+            conn = self._store._require_conn()
+            if conn.in_transaction:
+                raise RuntimeError("retry checkpoint requires an idle SQLite transaction")
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                for key, value in (("state", snapshot), ("course_teaching_progress:" + course_id, progress)):
+                    conn.execute(
+                        "INSERT INTO kv (key, value, updated_at) VALUES (?, ?, ?) "
+                        "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
+                        (key, json.dumps(value, ensure_ascii=False, sort_keys=True), time.time()),
+                    )
+                conn.commit()
+            except BaseException:
+                conn.rollback()
+                raise
+
+    @plugin_entry(
+        id="study_retry_question",
+        name=tr("entries.retry_question.name", default="Retry the Same Study Question"),
+        description="Explicitly retry the current wrong or partial question with a new attempt, preserving its original question and grades. Does not generate a question or call a model.",
+        input_schema={
+            "type": "object",
+            "properties": {name: {"type": "string", "minLength": 1} for name in
+                           ("question_id", "attempt_id", "course_id", "session_id")},
+            "required": ["question_id", "attempt_id", "course_id", "session_id"],
+            "additionalProperties": False,
+        },
+        timeout=20.0,
+    )
+    async def study_retry_question(
+        self, question_id: str = "", attempt_id: str = "", course_id: str = "", session_id: str = "", **_
+    ):
+        from copy import deepcopy
+
+        expected = {"question_id": question_id, "attempt_id": attempt_id,
+                    "course_id": course_id, "session_id": session_id}
+        if not all(isinstance(value, str) and value for value in expected.values()):
+            return Err(SdkError("retry requires the exact current question, attempt, course and session", code="QUESTION_CONTEXT_CHANGED"))
+        async with self._lock:
+            context = material_context(self, include_material=False)
+            held = self._state.current_question
+            actual = {"question_id": held.get("question_id"), "attempt_id": held.get("attempt_id"), **context}
+            if actual != expected or str(getattr(self, "_study_session_id", "") or "") != session_id:
+                return Err(SdkError("question or course changed; no retry was created", code="QUESTION_CONTEXT_CHANGED"))
+            if held.get("attempt_evaluation_pending") or held.get("attempt_evaluation_owner"):
+                return Err(SdkError("the current attempt is still being evaluated", code="ATTEMPT_IN_PROGRESS"))
+            cache = held.get("answer_evaluation_cache")
+            if (held.get("attempt_evaluated") is not True or not isinstance(cache, dict)
+                    or cache.get("question_id") != question_id or cache.get("attempt_id") != attempt_id
+                    or cache.get("degraded") or cache.get("ok") is False
+                    or cache.get("verdict") not in ("wrong", "partial")):
+                return Err(SdkError("only a scored wrong or partial attempt can be explicitly retried", code="ATTEMPT_NOT_RETRYABLE"))
+            origin = (held.get("internal_private_payload") or {}).get("source_material_context")
+            if isinstance(origin, dict) and origin.get("course_id") and origin["course_id"] != course_id:
+                return Err(SdkError("the held question belongs to another course", code="QUESTION_CONTEXT_CHANGED"))
+            retried = deepcopy(held)
+            retried["attempt_id"] = "a_" + uuid.uuid4().hex
+            retried["attempt_evaluated"] = False
+            for name in ("answer_evaluation_cache", "attempt_evaluation_pending", "attempt_evaluation_owner", "attempt_evaluation_recovery"):
+                retried.pop(name, None)
+            snapshot = self._state.to_dict()
+            snapshot["current_question"] = retried
+            worker = asyncio.create_task(asyncio.to_thread(self._save_retry_question_checkpoint, snapshot))
+            cancelled = False
+            try:
+                while True:
+                    try:
+                        await asyncio.shield(worker)
+                        break
+                    except asyncio.CancelledError:
+                        # A worker can commit after cancellation. Drain this short
+                        # local transaction before releasing the state lock.
+                        cancelled = True
+                        if worker.cancelled():
+                            raise
+            except Exception:
+                if cancelled:
+                    raise asyncio.CancelledError()
+                return Err(SdkError("could not save retry; the original attempt is unchanged", code="RETRY_PERSIST_FAILED"))
+            self._state.current_question = retried
+            if cancelled:
+                raise asyncio.CancelledError()
+            return Ok({"question_id": question_id, "attempt_id": retried["attempt_id"],
+                       "previous_attempt_id": attempt_id, **context,
+                       "current_question": public_current_question_payload(retried),
+                       "question_state": "pending", "retried": True})
+
     async def _clear_attempt_evaluation_reservation(
         self, attempt_id: str, *, reservation_owner: str, recover_cached: bool = False
     ) -> None:
