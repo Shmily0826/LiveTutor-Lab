@@ -295,10 +295,11 @@
     {
       "path": "static/app/app-audio-capture.js",
       "base_sha256": "e609d90cb6731a9edb20a41997007ebd299ad2ac911d162d0eb5a9308d9940ad",
-      "patched_sha256": "1428d0be9bb6eddf0b2710c22cf4903d62efdc08638a79cdc2011588747b7c8e",
+      "patched_sha256": "1887155c3c414237d14b77cc1b9f26fc36059c64e107da3fc6483eb925b238cc",
       "reproduce": "python scripts/neko_output_only_patch.py",
       "proof": "SOURCE_OFFLINE pending real browser/Native/output proof",
-      "fixed_input_duplicate_open": "guarded only: same socket deduplicates unchanged fingerprint to preserve queued PCM; changed state still advances, new socket resets, ordinary unchanged; JS17/router-ASR4 offline, real27 cause unresolved"
+      "fixed_input_duplicate_open": "guarded only: same socket deduplicates unchanged fingerprint to preserve queued PCM; changed state still advances, new socket resets, ordinary unchanged; JS17/router-ASR4 offline, real27 cause unresolved",
+      "fixed_input_auxiliary_scope": "guarded chat/chat_full only: never-engaged passive idle is omitted before generation; hard mute/focus/recovery and release after engagement retained; fixed source restricted to root; ordinary unchanged; local diagnosis is not provider ACK"
     }
   ],
   "native_barge_in_handoff": {

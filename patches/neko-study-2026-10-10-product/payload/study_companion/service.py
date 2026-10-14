@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .models import OcrSnapshot, StudyConfig, StudyState, TutorReply
+from .models import OcrSnapshot, StudyConfig, StudyState, TutorReply, public_current_question_payload
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -23,6 +23,7 @@ def build_status_payload(
     is_first_run: bool = False,
 ) -> dict[str, Any]:
     knowledge_payload = knowledge or {}
+    held_question = dict(state.current_question or {})
     return {
         "status": state.status,
         "is_first_run": bool(is_first_run),
@@ -30,6 +31,11 @@ def build_status_payload(
         "default_mode": config.default_mode,
         "active_mode": state.active_mode,
         "study_course_id": state.study_course_id,
+        "study_session_id": state.study_session_id,
+        "current_question": public_current_question_payload(held_question),
+        "question_state": (
+            "evaluated" if held_question.get("attempt_evaluated") else "pending"
+        ) if held_question else "none",
         "mode_started_at": state.mode_started_at,
         "recent_mode_switches": copy.deepcopy(state.recent_mode_switches),
         "suggestion_cooldowns": copy.deepcopy(state.suggestion_cooldowns),

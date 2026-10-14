@@ -64,6 +64,7 @@ const ocrSelectedWindow = $id('ocrSelectedWindow');
 const studyCourseId = $id('studyCourseId');
 const selectedStudyCourse = $id('selectedStudyCourse');
 const startCourseSessionBtn = $id('startCourseSessionBtn');
+const resumeCourseSessionBtn = $id('resumeCourseSessionBtn');
 const generateQuestionBtn = $id('generateQuestionBtn');
 const generateFromMaterialBtn = $id('generateFromMaterialBtn');
 const explainBtn = $id('explainBtn');
@@ -548,6 +549,18 @@ function beginImageSelection(kind) {
 
 function studyContextIsCurrent(revision, course) {
   return revision === studyMaterialRevision && course === String(lastStatusPayload?.study_course_id || lastStatusPayload?.state?.study_course_id || '').trim();
+}
+
+function captureStudyResultContext() {
+  return {
+    revision: studyMaterialRevision,
+    course: String(lastStatusPayload?.study_course_id || lastStatusPayload?.state?.study_course_id || '').trim(),
+    session: studySessionId(),
+  };
+}
+
+function studyResultContextIsCurrent(origin) {
+  return studyContextIsCurrent(origin.revision, origin.course) && origin.session === studySessionId();
 }
 
 function normalizeVisionMaxImagePx(value) {
@@ -1377,6 +1390,29 @@ async function chooseDeckForFirstCard() {
   return String(created.id || '');
 }
 
+function syncStatusQuestion(data, previousCourse, previousSession) {
+  const course = String(data.study_course_id || data.state?.study_course_id || '').trim();
+  const contextChanged = previousCourse !== course || previousSession !== studySessionId(data);
+  const hasQuestion = Object.prototype.hasOwnProperty.call(data, 'current_question');
+  if (!hasQuestion && !contextChanged) return; // Older status servers do not publish held questions.
+  const candidate = data.current_question;
+  const question = data.question_state !== 'none' && candidate && typeof candidate === 'object'
+    && candidate.question_id && candidate.attempt_id && typeof candidate.question === 'string'
+    && candidate.question.trim() ? candidate : null;
+  const sameQuestion = !contextChanged && question
+    && currentQuestion?.question_id === question.question_id
+    && currentQuestion?.attempt_id === question.attempt_id
+    && currentQuestion?.question === question.question
+    && JSON.stringify(currentQuestion?.options || []) === JSON.stringify(question.options || []);
+  if (!sameQuestion) {
+    if (answerInput) answerInput.value = '';
+    setImagePreview('answer', '');
+    clearFeedback();
+  }
+  if (!sameQuestion || currentQuestion.question !== question.question) setGeneratedQuestion(question || {});
+  if (questionAttemptMeta && question) questionAttemptMeta.textContent = data.question_state === 'evaluated' ? '已评分' : '待回答';
+}
+
 function setStatusLine(data) {
   const previousCourse = String(lastStatusPayload?.study_course_id || lastStatusPayload?.state?.study_course_id || '').trim();
   const course = String(data.study_course_id || data.state?.study_course_id || '').trim();
@@ -1397,6 +1433,7 @@ function setStatusLine(data) {
     const imageStatus = $id('studyImageStatus');
     if (imageStatus) imageStatus.textContent = '课程已切换。旧图片预览已清除；请为当前课程选择材料。';
   }
+  syncStatusQuestion(data, previousCourse, previousSession);
   lastStatusPayload = data || {};
   if (selectedStudyCourse) selectedStudyCourse.textContent = `当前课程：${course || '未选择'}`;
   if (!hasInitializedCourseInput && course && studyCourseId
@@ -2014,9 +2051,23 @@ async function refreshStatus(_options = {}) {
   }
   if (requestRevision !== statusRefreshRevision) return;
   studyServiceReady = true;
+  setPasteError($id('studyRefreshNotice'), '');
   applyRuntimeConfig(data);
   setStatusLine(data);
   await refreshMaterialControl(requestRevision);
+}
+
+async function refreshAfterSuccess(successStatus = t('ui.status.reply_ready', 'Reply ready')) {
+  const revision = studyMaterialRevision;
+  const course = String(lastStatusPayload?.study_course_id || '').trim();
+  const session = studySessionId();
+  try {
+    await refreshStatus({ updateReply: false });
+  } catch (_) {
+    if (!studyContextIsCurrent(revision, course) || session !== studySessionId()) return;
+    setStatus(successStatus);
+    setPasteError($id('studyRefreshNotice'), '已显示的回复已保留，但学习状态暂未刷新。请点击刷新恢复连接，无需重复提交。');
+  }
 }
 
 async function loadQuestionContext(options = {}) {
@@ -2025,12 +2076,14 @@ async function loadQuestionContext(options = {}) {
   }
   try {
     const data = await callPlugin('study_question_context');
+    if (options.isCurrent && !options.isCurrent()) return null;
     setQuestionContext(data);
     if (!options.silent) {
       setStatus(t('ui.status.ready', 'Ready'));
     }
     return data;
   } catch (error) {
+    if (options.isCurrent && !options.isCurrent()) return null;
     currentSelectionContext = null;
     if (selectionReason) {
       selectionReason.textContent = formatPluginError(error);
@@ -2089,10 +2142,18 @@ async function runOcr() {
 }
 
 async function startCourseSession() {
+  return chooseCourseSession(false);
+}
+
+async function resumeCourseSession() {
+  return chooseCourseSession(true);
+}
+
+async function chooseCourseSession(resume) {
   const course = studyCourseId.value.trim();
   if (!course) throw new Error('请输入课程 ID，例如 flutter-provider。');
-  setStatus('正在开始课程 Session…');
-  const data = await callPlugin('study_start_session', {course_id: course});
+  setStatus(resume ? '正在选择课程并接续…' : '正在新开课程 Session…');
+  const data = await callPlugin(resume ? 'study_set_course' : 'study_start_session', {course_id: course});
   previousExplanation = null;
   if (usePreviousExplanation) {
     usePreviousExplanation.checked = false;
@@ -2108,9 +2169,13 @@ async function startCourseSession() {
   setQuestionContext({no_data: true});
   currentQuestion = currentSelectionContext = null;
   clearFeedback();
-  setReply('课程 Session 已开始；可以读取学习窗口或输入问题。');
+  studyMaterialRevision += 1;
+  lastStatusPayload = {study_course_id: data.course_id || course, study_session_id: data.session_id || ''};
+  studyServiceReady = false;
+  setPasteError(studyMaterialControlNotice, '');
+  setReply(resume ? '课程已选择，正在读取原题与学习状态。' : '新 Session 已开始，原题已退役；可以选择材料或输入问题。');
   selectedStudyCourse.textContent = `当前课程：${data.course_id || course}`;
-  await refreshStatus();
+  await refreshAfterSuccess(resume ? '课程已选择，状态待刷新' : '新 Session 已开始，状态待刷新');
 }
 
 function buildFollowupText(text, previous) {
@@ -2199,32 +2264,44 @@ async function explainText(options = {}) {
       )
       : '',
   ].filter(Boolean).join('\n\n'));
-  await refreshStatus({ updateReply: false }).catch((error) => { if (!n) throw error; setStatus(t('ui.status.reply_ready', 'Reply ready')); });
+  await refreshAfterSuccess(data.degraded ? t('ui.status.reply_ready_fallback', 'Reply ready (fallback)') : t('ui.status.reply_ready', 'Reply ready'));
 }
 
 async function generateQuestion(options = {}) {
+  const origin = captureStudyResultContext();
   openPracticePanel();
   currentSelectionContext = null;
   let context = null;
-  if (!options.fromMaterial) {
-    await loadPracticeScope();
-    context = await loadQuestionContext({ silent: true });
+  let data;
+  try {
+    if (!options.fromMaterial) {
+      // Apply preparation results only while the request still belongs here.
+      const scope = await callPlugin('study_get_practice_scope');
+      if (!studyResultContextIsCurrent(origin)) return;
+      setPracticeScopeState(scope);
+      context = await loadQuestionContext({silent: true, isCurrent: () => studyResultContextIsCurrent(origin)});
+      if (!studyResultContextIsCurrent(origin)) return;
+    }
+    const targeted = context && !context.no_data && context.selection_context_id;
+    const text = studyInput.value.trim();
+    if (!targeted && !text) throw new Error('请在输入框放入代码、材料或出题要求，再点击根据输入内容出题。');
+    setStatus(t('ui.status.generating_question', 'Generating question...'));
+    clearFeedback();
+    data = targeted
+      ? await callPlugin('study_generate_targeted_question', {selection_context_id: context.selection_context_id})
+      : await callPlugin('study_generate_question', {text: buildFollowupText(text,
+        usePreviousExplanation?.checked ? previousExplanation : null), topic: ''});
+  } catch (error) {
+    if (!studyResultContextIsCurrent(origin)) return;
+    throw error;
   }
-  const targeted = context && !context.no_data && context.selection_context_id;
-  const text = studyInput.value.trim();
-  if (!targeted && !text) throw new Error('请在输入框放入代码、材料或出题要求，再点击根据输入内容出题。');
-  setStatus(t('ui.status.generating_question', 'Generating question...'));
-  clearFeedback();
-  const data = targeted
-    ? await callPlugin('study_generate_targeted_question', {selection_context_id: context.selection_context_id})
-    : await callPlugin('study_generate_question', {text: buildFollowupText(text,
-      usePreviousExplanation?.checked ? previousExplanation : null), topic: ''});
+  if (!studyResultContextIsCurrent(origin)) return;
   setStatus(data.degraded
     ? t('ui.status.reply_ready_fallback', 'Reply ready (fallback)')
     : t('ui.status.reply_ready', 'Reply ready'));
   if (data.degraded) {
     setReply(formatTutorDiagnostic(data.diagnostic));
-    await refreshStatus({ updateReply: false });
+    await refreshAfterSuccess(t('ui.status.reply_ready_fallback', 'Reply ready (fallback)'));
     return;
   }
   setGeneratedQuestion(data);
@@ -2232,10 +2309,11 @@ async function generateQuestion(options = {}) {
   if (answerInput) answerInput.value = '';
   setImagePreview('answer', '');
   setReply(data.hint || data.question || data.summary || data.reply || '');
-  await refreshStatus({ updateReply: false });
+  await refreshAfterSuccess();
 }
 
 async function evaluateAnswer() {
+  const origin = captureStudyResultContext();
   const answer = answerInput ? answerInput.value.trim() : '';
   if (!answer && !answerInputImageValue) {
     throw new Error(t('ui.error.missing_answer', 'Please enter an answer first.'));
@@ -2253,13 +2331,22 @@ async function evaluateAnswer() {
   if (answerInputImageValue) {
     args.vision_image_base64 = answerInputImageValue;
   }
-  const data = await callPlugin('study_evaluate_answer', args);
+  const stillCurrent = () => studyResultContextIsCurrent(origin)
+    && currentQuestion?.question_id === args.question_id && currentQuestion?.attempt_id === args.attempt_id;
+  let data;
+  try {
+    data = await callPlugin('study_evaluate_answer', args);
+  } catch (error) {
+    if (!stillCurrent()) return;
+    throw error;
+  }
+  if (!stillCurrent()) return;
   setStatus(data.degraded
     ? t('ui.status.reply_ready_fallback', 'Reply ready (fallback)')
     : t('ui.status.reply_ready', 'Reply ready'));
   if (data.degraded) {
     setReply(formatTutorDiagnostic(data.diagnostic));
-    await refreshStatus({ updateReply: false });
+    await refreshAfterSuccess(t('ui.status.reply_ready_fallback', 'Reply ready (fallback)'));
     return;
   }
   renderFeedback(data);
@@ -2270,19 +2357,27 @@ async function evaluateAnswer() {
     data.next_action ? `${t('ui.practice.next_action', 'Next')}: ${data.next_action}` : '',
   ].filter(Boolean);
   setReply(replyLines.join('\n\n') || data.summary || '');
-  await refreshStatus({ updateReply: false });
+  await refreshAfterSuccess();
 }
 
 async function summarizeSession() {
+  const origin = captureStudyResultContext();
   setStatus(t('ui.status.summarizing_session', 'Summarizing session...'));
-  const data = await callPlugin('study_summarize_session', {});
+  let data;
+  try {
+    data = await callPlugin('study_summarize_session', {});
+  } catch (error) {
+    if (!studyResultContextIsCurrent(origin)) return;
+    throw error;
+  }
+  if (!studyResultContextIsCurrent(origin)) return;
   setStatus(data.degraded
     ? t('ui.status.reply_ready_fallback', 'Reply ready (fallback)')
     : t('ui.status.reply_ready', 'Reply ready'));
   setReply(data.degraded
     ? formatTutorDiagnostic(data.diagnostic)
     : (data.markdown || data.summary || data.reply || ''));
-  await refreshStatus({ updateReply: false });
+  await refreshAfterSuccess(data.degraded ? t('ui.status.reply_ready_fallback', 'Reply ready (fallback)') : t('ui.status.reply_ready', 'Reply ready'));
 }
 
 async function refreshMemoryDeck() {
@@ -2456,6 +2551,7 @@ async function bootstrap() {
   bindButton(refreshBtn, refreshStatus);
   bindButton(ocrBtn, runOcr);
   bindButton(startCourseSessionBtn, startCourseSession);
+  bindButton(resumeCourseSessionBtn, resumeCourseSession);
   studyCourseId?.addEventListener('input', () => { hasInitializedCourseInput = true; });
   bindButton(generateQuestionBtn, generateQuestion);
   bindButton(generateFromMaterialBtn, () => generateQuestion({fromMaterial: true}));

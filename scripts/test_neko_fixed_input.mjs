@@ -21,6 +21,53 @@ test('unguarded ordinary mode refuses a fixed source and preserves its ordinary 
   f.S.isRecording=true;assert.equal(f.api.refreshMicLease(),'core');
   assert.equal(f.sent.at(-1).owner,'core');assert.equal(f.captured(),0);
 });
+test('guarded passive auxiliary chat never publishes its separate counter or registers input',()=>{
+  for(const pathname of ['/chat','/chat_full']){
+    const f=fixture(true,pathname);
+    assert.equal(f.sent.length,0);
+    f.api.refreshMicLease();
+    f.context.dispatchEvent({type:'voice-input-socket-open',detail:{socket:f.S.socket}});
+    assert.equal(f.sent.length,0);
+    assert.throws(()=>f.api.beginFixedInput());assert.equal(f.captured(),0);
+  }
+});
+test('ordinary chat snapshots and guarded real state changes/releases remain visible',()=>{
+  const ordinary=fixture(false,'/chat_full');assert.equal(ordinary.sent[0].lease_generation,1);
+  const f=fixture(true,'/chat_full');
+  f.S.isMicMuted=true;f.api.refreshMicLease();
+  assert.equal(f.sent.at(-1).hard_muted,true);
+  f.S.isMicMuted=false;f.api.refreshMicLease();
+  assert.equal(f.sent.at(-1).hard_muted,false);
+  assert.equal(f.sent.at(-1).lease_generation,2);
+  assert.equal(f.captured(),0);
+});
+
+test('guarded auxiliary focus and active state each retain their later release',()=>{
+  for(const state of ['focus','active']){
+    const f=fixture(true,'/chat_full');
+    if(state==='focus'){f.S.focusModeEnabled=true;f.S.isPlaying=true;}
+    else f.S.isRecording=true; // State-only fixture; no capture call.
+    f.api.refreshMicLease();
+    assert.equal(f.sent.length,1);
+    assert.equal(state==='focus'?f.sent[0].focus_suppressed:f.sent[0].engaged,true);
+    Object.assign(f.S,{focusModeEnabled:false,isPlaying:false,isRecording:false});
+    f.api.refreshMicLease();
+    assert.equal(f.sent.length,2);assert.equal(f.sent[1].lease_generation,2);
+    assert.equal(f.sent[1].owner,'none');assert.equal(f.sent[1].engaged,false);
+    assert.equal(f.sent[1].focus_suppressed,false);assert.equal(f.captured(),0);
+  }
+});
+
+test('guarded auxiliary recovery and game gate never suppress required snapshots',()=>{
+  for(const state of ['recovering','timed_out','failed','game']){
+    const f=fixture(true,'/chat');
+    if(state==='game')f.S.gameVoiceSttGateActive=true;
+    else f.S.voiceInputRecoveryState=state;
+    f.api.refreshMicLease();
+    assert.equal(f.sent.length,1,state);assert.equal(f.sent[0].lease_generation,1);
+    assert.equal(f.captured(),0);
+  }
+});
 test('duplicate guarded open deduplicates unchanged state; ordinary open behavior is retained',()=>{
   for(const guarded of [true,false]){
     const f=fixture(guarded);

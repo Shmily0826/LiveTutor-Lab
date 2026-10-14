@@ -13,23 +13,26 @@ import urllib.request
 import websockets
 
 INSTALL = r"""(() => {
-if (window.__dailyNativeTelemetry) return {installed:true,existing:true};
-const trace = {events:[],binaryFrames:0,binaryBytes:0,inputFrames:0,inputSamples:0,installedAt:Date.now()/1000};
+if (window.__dailyNativeTelemetry) { window.__dailyNativeTelemetry.refreshSocket(); return {installed:true,existing:true}; }
+const trace = {events:[],binaryFrames:0,binaryBytes:0,inputFrames:0,inputSamples:0,socketCount:0,currentSocketId:null,installedAt:Date.now()/1000};
 window.__dailyNativeTelemetry = trace;
 const put = event => { trace.events.push({wall:Date.now()/1000,...event}); if(trace.events.length>500) trace.events.shift(); };
 window.addEventListener('neko-speech-playback-state', e => {
  const p=e.detail||{};const event={direction:'device',type:'speech_playback_state'};
  for(const key of ['active','audible','correlationId','speechId','reason'])if(key in p)event[key]=p[key];put(event);
 });
-const sockets = new WeakSet();
+const sockets = new WeakMap();
 const incomingText = new Set(['gemini_response','user_transcript','input_transcript','voice_transcript','transcript']);
 const install = () => {
  const socket = window.appState?.socket;
- if (!socket || sockets.has(socket)) return;
- sockets.add(socket);
+ if (!socket) { trace.currentSocketId=null; return; }
+ if (sockets.has(socket)) { trace.currentSocketId=sockets.get(socket); return; }
+ const socketId=++trace.socketCount;
+ sockets.set(socket,socketId);trace.currentSocketId=socketId;
+ let lastNativeCorrelation=null;
  socket.addEventListener('message', e => {
-  if (typeof e.data !== 'string') { const bytes=e.data.size||e.data.byteLength||0; trace.binaryFrames++;trace.binaryBytes+=bytes;put({direction:'receive',type:'audio_frame',bytes,correlation_id:trace.lastNativeCorrelation});return; }
-  try { const p=JSON.parse(e.data);const event={direction:'receive',type:p.type,speech_id:p.speech_id,turn_id:p.turn_id,correlation_id:p.correlation_id};
+  if (typeof e.data !== 'string') { const bytes=e.data.size||e.data.byteLength||0; trace.binaryFrames++;trace.binaryBytes+=bytes;put({direction:'receive',type:'audio_frame',socket_id:socketId,bytes,correlation_id:lastNativeCorrelation});return; }
+  try { const p=JSON.parse(e.data);const event={direction:'receive',type:p.type,socket_id:socketId,speech_id:p.speech_id,turn_id:p.turn_id,correlation_id:p.correlation_id};
    if(incomingText.has(p.type))event.text=String(p.text||p.data||'').slice(0,12000);
    if(p.type==='system')event.data=String(p.data||'').slice(0,200);
    if(p.type==='session_failed'||p.type==='session_ended_by_server')event.reason=String(p.reason||p.message||'').slice(0,300);
@@ -40,7 +43,7 @@ const install = () => {
      event.code=status.code;event.reason=String(status.details?.reason||'').slice(0,120);
     }
    }
-   if(p.type==='audio_chunk'){event.correlation_id=p.sdk_speech_correlation_id;trace.lastNativeCorrelation=p.sdk_speech_correlation_id;}
+   if(p.type==='audio_chunk'){event.correlation_id=p.sdk_speech_correlation_id;lastNativeCorrelation=p.sdk_speech_correlation_id;}
    if(p.type==='game_route_speech_cancel')event.correlation_id=p.sdk_speech_correlation_id;
    put(event);
   } catch {}
@@ -49,18 +52,34 @@ const install = () => {
  socket.send = data => { try { const p=JSON.parse(data);
   if(p.action==='stream_data' && p.input_type==='audio' && Array.isArray(p.data)){trace.inputFrames++;trace.inputSamples+=p.data.length;}
   if(['voice_input_control','native_speech_playback_state','playback_feedback','audio_playback_feedback','speech_playback_feedback'].includes(p.action)) {
-   const event={direction:'send',type:p.action};for(const key of ['event','owner','lease_generation','engaged','hard_muted','focus_suppressed','active','audible','speech_id','turn_id','correlation_id','sdk_speech_correlation_id','stage','status','reason']) if(key in p)event[key]=p[key];put(event);
+   const event={direction:'send',type:p.action,socket_id:socketId};for(const key of ['event','owner','lease_generation','engaged','hard_muted','focus_suppressed','active','audible','speech_id','turn_id','correlation_id','sdk_speech_correlation_id','stage','status','reason']) if(key in p)event[key]=p[key];put(event);
   }
  }catch{} return send(data); };
 };
-install();trace.timer=setInterval(install,100);
+trace.refreshSocket=install;install();trace.timer=setInterval(install,100);
 return {installed:true,socketReady:window.appState?.socket?.readyState,url:location.href,wall:Date.now()/1000};
 })()"""
+
+BEGIN_FIXED_INPUT = r'''(() => {
+const trace=window.__dailyNativeTelemetry;
+if (!trace || typeof trace.refreshSocket!=='function') throw Error('Fixed input observer is not installed');
+trace.refreshSocket();
+const socket=window.appState?.socket;
+const socketId=trace.currentSocketId;
+const started=Date.now()/1000;
+if (!socket || !socketId) throw Error('Fixed input socket is unavailable');
+const receipt=window.appAudioCapture.beginFixedInput();
+if (socket!==window.appState?.socket) {
+    window.appAudioCapture.endFixedInput(receipt.id);
+    throw Error('Fixed input socket changed during registration');
+}
+return {...receipt,socket_id:socketId,started_wall:started};
+})()'''
 
 SNAPSHOT = r"""(() => {
 const trace=window.__dailyNativeTelemetry;
 const rows=[...document.querySelectorAll('.message-bubble,.message-text,.message-content')].map(e=>({text:(e.innerText||'').trim(),className:e.className,visible:!!(e.offsetWidth||e.offsetHeight)})).filter(e=>e.text);
-return {wall:Date.now()/1000,url:location.href,title:document.title,trace:trace?{events:trace.events,binaryFrames:trace.binaryFrames,binaryBytes:trace.binaryBytes,inputFrames:trace.inputFrames,inputSamples:trace.inputSamples,installedAt:trace.installedAt}:null,playback:window.NekoSpeechPlaybackState||null,bubbles:rows.slice(-40)};
+return {wall:Date.now()/1000,url:location.href,title:document.title,trace:trace?{events:trace.events,currentSocketId:trace.currentSocketId,binaryFrames:trace.binaryFrames,binaryBytes:trace.binaryBytes,inputFrames:trace.inputFrames,inputSamples:trace.inputSamples,installedAt:trace.installedAt}:null,playback:window.NekoSpeechPlaybackState||null,bubbles:rows.slice(-40)};
 })()"""
 
 
@@ -70,6 +89,7 @@ class NativeTelemetry:
         self.counter = 0
         self.lock = asyncio.Lock()
         self.fixed_input_id = None
+        self.fixed_input_scope = None
 
     @classmethod
     async def attach(cls, port):
@@ -121,6 +141,7 @@ class NativeTelemetry:
 
     async def snapshot(self):
         result = await self.evaluate(SNAPSHOT)
+        result['fixed_input_scope'] = self.fixed_input_scope
         if self.fixed_input_id is not None:
             result['fixed_input'] = await self.evaluate(
                 f"window.appAudioCapture.fixedInputState({self.fixed_input_id})")
@@ -129,13 +150,17 @@ class NativeTelemetry:
     async def begin_fixed_input(self):
         if self.fixed_input_id is not None:
             raise RuntimeError('Fixed input source already registered')
-        receipt = await self.evaluate('window.appAudioCapture.beginFixedInput()')
+        receipt = await self.evaluate(BEGIN_FIXED_INPUT)
         if (not isinstance(receipt, dict) or receipt.get('active') is not True
                 or receipt.get('capture_started') is not False or receipt.get('owner') != 'core'
                 or type(receipt.get('id')) is not int or receipt['id'] < 1
-                or type(receipt.get('lease_generation')) is not int or receipt['lease_generation'] < 1):
+                or type(receipt.get('lease_generation')) is not int or receipt['lease_generation'] < 1
+                or type(receipt.get('socket_id')) is not int or receipt['socket_id'] < 1
+                or type(receipt.get('started_wall')) not in (int,float) or not receipt['started_wall']>0):
             raise RuntimeError('Fixed input controller registration failed')
         self.fixed_input_id = receipt['id']
+        self.fixed_input_scope = {'ticket_id':receipt['id'],'socket_id':receipt['socket_id'],
+                                 'started_wall':receipt['started_wall']}
         return receipt
 
     async def end_fixed_input(self):

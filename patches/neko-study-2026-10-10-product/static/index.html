@@ -22,6 +22,7 @@
               <span data-i18n="ui.title">Study Companion</span>
             </h1>
             <p id="statusLine" class="hero__status" data-i18n="ui.status.starting">Starting...</p>
+            <div id="studyRefreshNotice" class="study-panel__paste-error" role="status" aria-live="polite" hidden></div>
           </div>
 
           <div class="hero__controls">
@@ -81,7 +82,8 @@
             <input id="studyCourseId" type="text" value="flutter-provider" placeholder="flutter-provider" autocomplete="off" />
           </label>
           <div class="action-row">
-            <button id="startCourseSessionBtn" class="button button-secondary" type="button">开始 / 重新开始 Session</button>
+            <button id="resumeCourseSessionBtn" class="button button-primary" type="button">选择 / 返回课程（接续原题）</button>
+            <button id="startCourseSessionBtn" class="button button-secondary" type="button">新开 Session（退役当前题）</button>
             <span id="selectedStudyCourse" aria-live="polite">当前课程：未选择</span>
           </div>
           <details id="windowCaptureOptions">

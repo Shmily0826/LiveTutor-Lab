@@ -3,7 +3,8 @@ import asyncio
 import json
 import subprocess
 import unittest
-from neko_native_telemetry import NativeTelemetry, INSTALL, SNAPSHOT
+from neko_native_telemetry import NativeTelemetry, INSTALL, SNAPSHOT, BEGIN_FIXED_INPUT
+from pathlib import Path
 from unittest.mock import AsyncMock,patch
 from types import SimpleNamespace
 
@@ -24,6 +25,50 @@ class FakeDevTools:
 
 
 class NativeTelemetryTest(unittest.IsolatedAsyncioTestCase):
+    async def test_actual_controller_trace_binds_ticket_and_late_old_status_to_socket(self):
+        fixture=(Path(__file__).parent/'neko_fixed_input_fixture.mjs').as_uri()
+        script=r'''import vm from 'node:vm';import {fixture} from FIXTURE;
+const f=fixture();
+function observable(socket){const handlers=[];socket.addEventListener=(name,fn)=>{if(name==='message')handlers.push(fn);};socket.emit=payload=>handlers.forEach(fn=>fn({data:JSON.stringify(payload)}));socket.emitBinary=()=>handlers.forEach(fn=>fn({data:{byteLength:8}}));return socket;}
+const firstSocket=observable(f.S.socket);
+vm.runInContext(process.argv[1],f.context);
+const first=vm.runInContext(process.argv[2],f.context);
+f.api.endFixedInput(first.id);
+const secondSocket=observable({readyState:1,send(){}});
+f.S.socket=secondSocket;
+const second=vm.runInContext(process.argv[2],f.context);
+firstSocket.emit({type:'status',message:JSON.stringify({code:'VOICE_INPUT_CONTROL_REJECTED',details:{reason:'old_control'}})});
+secondSocket.emit({type:'status',message:JSON.stringify({code:'VOICE_INPUT_CONTROL_REJECTED',details:{reason:'current_control'}})});
+firstSocket.emit({type:'audio_chunk',sdk_speech_correlation_id:'old-correlation'});
+secondSocket.emit({type:'audio_chunk',sdk_speech_correlation_id:'current-correlation'});
+firstSocket.emit({type:'audio_chunk',sdk_speech_correlation_id:'late-old-correlation'});
+secondSocket.emitBinary();
+const trace=f.context.__dailyNativeTelemetry;
+process.stdout.write(JSON.stringify({first,second,events:trace.events,currentSocketId:trace.currentSocketId,captureCalls:f.captured()}));'''.replace('FIXTURE',json.dumps(fixture))
+        result=json.loads(subprocess.check_output(['node','--input-type=module','-e',script,INSTALL,BEGIN_FIXED_INPUT],timeout=10))
+        self.assertEqual(result['captureCalls'],0)
+        self.assertEqual((result['first']['socket_id'],result['second']['socket_id']),(1,2))
+        self.assertNotEqual(result['first']['id'],result['second']['id'])
+        self.assertEqual(result['currentSocketId'],2)
+        binary=next(e for e in result['events'] if e.get('type')=='audio_frame')
+        self.assertEqual((binary['socket_id'],binary['correlation_id']),(2,'current-correlation'))
+        rejects=[e for e in result['events'] if e.get('code')=='VOICE_INPUT_CONTROL_REJECTED']
+        self.assertEqual([(e['socket_id'],e['reason']) for e in rejects],[(1,'old_control'),(2,'current_control')])
+        for receipt in (result['first'],result['second']):
+            controls=[e for e in result['events'] if e['direction']=='send' and e.get('owner')=='core' and e['socket_id']==receipt['socket_id']]
+            self.assertTrue(controls);self.assertEqual(controls[0]['lease_generation'],receipt['lease_generation'])
+            self.assertGreaterEqual(controls[0]['wall'],receipt['started_wall'])
+
+    async def test_python_registration_preserves_scope_and_refuses_unbound_receipt(self):
+        observer=NativeTelemetry(None)
+        receipt={'active':True,'capture_started':False,'owner':'core','id':1,'lease_generation':2,'socket_id':1,'started_wall':100.0}
+        with patch.object(observer,'evaluate',AsyncMock(return_value={k:v for k,v in receipt.items() if k!='socket_id'})):
+            with self.assertRaisesRegex(RuntimeError,'registration failed'):await observer.begin_fixed_input()
+        self.assertIsNone(observer.fixed_input_id)
+        with patch.object(observer,'evaluate',AsyncMock(return_value=receipt)):
+            self.assertEqual(await observer.begin_fixed_input(),receipt)
+        self.assertEqual(observer.fixed_input_scope,{'ticket_id':1,'socket_id':1,'started_wall':100.0})
+
     async def test_unique_ready_pet_is_selected_and_setup_failure_closes_it(self):
         targets=[{'type':'page','url':'http://localhost:48911/chat_full','webSocketDebuggerUrl':'ws://task/chat'},
                  {'type':'page','url':'http://localhost:48911/','webSocketDebuggerUrl':'ws://task/pet'}]
@@ -106,7 +151,7 @@ class NativeTelemetryTest(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(all(p["method"] == "Runtime.evaluate" and p["params"]["returnByValue"] for p in socket.sent))
 
     async def test_installed_expressions_parse_and_never_request_microphone(self):
-        for expression in (INSTALL, SNAPSHOT):
+        for expression in (INSTALL, SNAPSHOT, BEGIN_FIXED_INPUT):
             subprocess.run(["node", "-e", "new Function(process.argv[1])", expression], check=True, timeout=5)
             self.assertNotIn("getUserMedia", expression)
             self.assertNotIn("localStorage", expression)

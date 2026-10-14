@@ -11,9 +11,11 @@ import { createHash } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
+import { checkStudyResume } from './neko_study_resume_e2e.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const UP_TO_MODE = process.argv.includes('--up-to-mode');
+const RESUME_OFFLINE = process.argv.includes('--resume-offline');
 const UI = process.env.NEKO_UI_URL || 'http://127.0.0.1:48916/plugin/study_companion/ui/';
 const LESSON = 'Example 4: let u = 3x + 2, so du = 3 dx and dx = du/3. Integrate e^u with the 1/3 factor.';
 const FOLLOW_UP = '为什么 dx 要换成 du/3，而不是直接积分？';
@@ -39,6 +41,10 @@ try {
   });
   await page.goto(UI, { waitUntil: 'domcontentloaded', timeout: 45000 });
   await page.waitForSelector('#studyInput', { timeout: 60000 });
+  if (RESUME_OFFLINE) {
+    await checkStudyResume(page, steps);
+    throw STOP;
+  }
   // The shipped first-run profile dialog is created lazily (it appears when an
   // action needs a learning profile), and it covers the panel while open, so it
   // has to be dismissed through its own control before every interaction.
@@ -138,12 +144,15 @@ const report = {
   timestamp_utc: new Date().toISOString(),
   ui_url: UI,
   result: failure ? 'FAIL_DESKTOP_STUDY_UI_RUN'
-    : (UP_TO_MODE ? 'PASS_DESKTOP_STUDY_UI_FIRST_RUN_AND_MODE' : 'PASS_DESKTOP_STUDY_UI_TEXT_LOOP'),
+    : (RESUME_OFFLINE ? 'PASS_STUDY_REAL_SDK_RESUME_AND_LABELLED_OFFLINE_FAILURE'
+      : UP_TO_MODE ? 'PASS_DESKTOP_STUDY_UI_FIRST_RUN_AND_MODE' : 'PASS_DESKTOP_STUDY_UI_TEXT_LOOP'),
   failure: failure ? String(failure.message || failure).slice(0, 600) : undefined,
   steps,
   page_errors: pageErrors.slice(0, 10),
   failed_resources: [...new Set(failedResources)].slice(0, 10),
-  audio_posture: 'headless Chromium with --mute-audio; host launched with DISABLE_TTS=true and no speech credentials; the screen-capture button was never clicked',
+  audio_posture: RESUME_OFFLINE
+    ? 'task Chromium --mute-audio; installed page capture guard asserted; no capture button; host permission/ledger/cleanup verified by the outer runtime record'
+    : 'headless Chromium with --mute-audio; host launched with DISABLE_TTS=true and no speech credentials; the screen-capture button was never clicked',
 };
 const serialised = JSON.stringify(report, null, 2) + '\n';
 if (/sk-[A-Za-z0-9_-]{20,}/.test(serialised)) throw new Error('refusing to write a credential');

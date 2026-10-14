@@ -96,6 +96,11 @@ FIXED_CONTROL_HELPERS = '''    function sendFixedInputControl(id, command) {
 
 '''
 FIXED_INPUT_HELPERS += FIXED_CONTROL_HELPERS
+PRE_SURFACE_GUARD_HELPERS = FIXED_INPUT_HELPERS
+FIXED_INPUT_HELPERS = FIXED_INPUT_HELPERS.replace(
+    "return globalThis.__NEKO_OUTPUT_ONLY_CAPTURE_BLOCKED__ !== true\n",
+    "return globalThis.__NEKO_OUTPUT_ONLY_CAPTURE_BLOCKED__ !== true\n"
+    "            || window.location?.pathname !== '/'\n")
 FIXED_EXPORTS_OLD = '    mod.beginFixedInput = beginFixedInput;\n    mod.fixedInputState = fixedInputState;\n    mod.sendFixedInputFrame = sendFixedInputFrame;\n    mod.endFixedInput = endFixedInput;\n'
 FIXED_EXPORTS = FIXED_EXPORTS_OLD + '    mod.sendFixedInputControl = sendFixedInputControl;\n'
 CAPTURE_ANCHORS = (
@@ -106,6 +111,18 @@ CAPTURE_ANCHORS = (
             return sendVoiceInputControlState(false);
         }
         voiceLeaseSocket = S.socket;
+'''),
+    ("    let voiceLeaseGeneration = 0;\n", '    let voiceLeaseSentNonPassive = false;\n'),
+    ('        const state = currentVoiceInputControlState();\n        const fingerprint = JSON.stringify(state);\n',
+     '''        const passive = state.engaged === false && state.owner === MIC_LEASE.NONE
+            && state.hard_muted === false && state.focus_suppressed === false;
+        // Native chat proxies share the pet wire, but have a separate counter.
+        // A never-engaged guarded chat must not publish an idle generation there.
+        if (globalThis.__NEKO_OUTPUT_ONLY_CAPTURE_BLOCKED__ === true
+                && ['/chat', '/chat_full'].includes(window.location?.pathname)
+                && passive && !voiceLeaseSentNonPassive && S.gameVoiceSttGateActive !== true
+                && !isVoiceInputRecoveryPending() && S.voiceInputRecoveryState !== 'failed') return false;
+        if (!passive) voiceLeaseSentNonPassive = true;
 '''),
     ('    async function startMicCapture() {\n',
      '        if (globalThis.__NEKO_OUTPUT_ONLY_CAPTURE_BLOCKED__ === true) return false;\n'),
@@ -128,7 +145,7 @@ def patched_capture(text):
                                             'return sendVoiceInputControlState(true);')
     text = text.replace(sync_anchor + force_sync_draft, sync_anchor + sync_addition)
     # Exact replay of the sole local draft, retaining fail-closed base validation.
-    pre_exception_helpers = FIXED_INPUT_HELPERS.replace(
+    pre_exception_helpers = PRE_SURFACE_GUARD_HELPERS.replace(
         '        if (fixedInputSource) {\n            let blocked = true;\n            try { blocked = fixedInputBlocked(fixedInputSource.socket); } catch (_) {}\n            if (blocked) fixedInputSource = null;\n        }',
         '        if (fixedInputSource && fixedInputBlocked(fixedInputSource.socket)) fixedInputSource = null;')
     previous_helpers = pre_exception_helpers.replace(FIXED_CONTROL_HELPERS, '').replace(
@@ -140,7 +157,7 @@ def patched_capture(text):
         '        const current = fixedInputIsCurrent();\n        refreshMicLease();').replace(
         '        if (!fixedInputIsCurrent() || fixedInputSource.id !== id) return false;\n', '')
     helper_anchor = '    let microphoneSelectionGeneration = 0;\n\n'
-    for known in (pre_exception_helpers, previous_helpers, earliest_helpers):
+    for known in (PRE_SURFACE_GUARD_HELPERS, pre_exception_helpers, previous_helpers, earliest_helpers):
         text = text.replace(helper_anchor + known, helper_anchor + FIXED_INPUT_HELPERS)
     export_anchor = '    mod.refreshMicLease = refreshMicLease;\n'
     # Only the full old export block qualifies; do not match a current prefix.
