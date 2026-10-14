@@ -48,3 +48,16 @@ publisher C:/Users/Shmily/.codex/worktrees/daily-companion/LiveTutor-Lab，branc
 阶段36发布核验：11精确allowlist（1host prompt源码、3当前记录、3原bytes归档、35/36证据与独立复审）已commit/push 2fef51ade29f3087463c811eb87aa870eb0ddd5e 到codex/daily-learning-companion，remote同SHA/publisher clean/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。Root index空/原脏树/.workbuddy/原学习历史保留；无DB/raw/WAV/密钥/备份入Git，contract169行原SHA不变。完整SourceGate再次PASS，ledger785/2000/app74/null/tech0/0，所有47–49 exec已terminal/自有进程已清理，无live场待轮询。
 
 本轮为progress，现有Goal接口再次确认active/all A–F完整，不暂停/重建/标完成。下次压缩/自动续跑先完整四文件和36/49-review，再从明确37观测/完整转述边界接续，不大扫/不重跑未修线路。下一用户真人测试待核心成熟一次集中组织，当前不需本人朗读。
+
+
+阶段37启动：上一阶段发布7e3c233c204660b6401a20814896cf256ab08acc以及49实际唯一grade/同conn是progress，不是wait。已完整重读contract/plan/status/blockers，源码及ledger785/74/0当前核对，Root index空/publisher clean，无live exec/host。Main仅本地修量具，不重复付费跑49，不使用任何音频设备。
+
+Main观测草稿5文件：NativeTelemetry原500ring增加严格本地observer_sequence和device remainingSeconds/updatedAt；NativeTraceHistory逐快照积累最多12000events，同安装时间/连续seq/重叠内容/总PCM frames+bytes一致，发现漏轮/重载/容量/计数不一致立即拒绝，不补造事件/不重置binary计数。初始、sessionready、observe都接同History，3轮snapshot保留真实累计历史，仍只task renderer/8API保护，不接管用户Chrome。不是provider utterance/ASR authority。
+
+Native terminal判据保留旧final sourceended；只有新增完整seq/counters历史、实际device sourceended/queue0/正确token/done、后无PCM或文字或active状态，才把后来空队列speech_cancel与已正常结束分开记证据，不允许任意cancel冒正常结束。Main telemetry18+grade acceptance27+preflight9离线PASS（JS真实INSTALL在no-device fixture重放750events、gap/改写/counter/overflow拒、latecancel负例）；独立observation-review进行中。未重算原49，真实新采集/物理/human仍未验。
+
+正式反馈短文本根因UNKNOWN：独立feedback-boundary-review实际AST封装/relay表达式/Omni flush/Core handle/send与真实emotionregex '<(.*?)>'均完整保持22chars/hash，未复刻49异步时序；单delta数量不能证明provider原文短。Main下一补既有WIRE_TRACE受控len/hash边界（reply/实际relay/write/providerreceive/callback/Corepublish/Native），不记正文、不新routing，先offline再考虑唯一必要线上。默认AUTO_GRADE仍OFF，其他A–F和本人集中验收继续；账本不重置。
+
+
+阶段37完成SOURCE/OFFLINE窄修：6源码/测试文件，Main18 telemetry+27 acceptance+13 probe共58 PASS；独立原18/27未变、13新增重验PASS。独立发现末段observer task异常可吞P2并实际AST复现，已同步failed/ended/error再raise，每轮grace后与最后SDK/截图后fresh capture并前后核task，正常cancel/gather/置None后才end_session；独立closure无剩余具体P1/P2。详evidence/daily-companion-phase37-native-observation-2026-10-15.md及native-observation-review。500ring累积12000有严格sequence/counters/identity，不造证据；正常sourceended后的空队列cancel只在完整证据下分开诊断。
+原49/raw/PARTIAL不改，正式22chars而Native7chars的根因UNKNOWN。无模型/Native/浏览器/音频设备调用；账本原round实核DS785/2000、app74/null、tech0/0，无live host/exec。现有Goal active，完整A–F不变，不把本阶段当完成。下一38：仅既有WIRE_TRACE受控len/hash边界诊断（正式结果/relay实际write/provider原始delta/Omni callback/Core queue/WS），先离线，再必要线上；本人集中验收待核心成熟，无需逐句配合。

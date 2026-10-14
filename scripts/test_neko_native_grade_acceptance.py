@@ -290,6 +290,48 @@ class GradeEvidenceTests(unittest.TestCase):
         report=deepcopy(self.report);report['grade_markers'][2]['profile']='strict_default'
         self.assert_partial(report,'actual_free_profile')
 
+    def late_cancel_report(self):
+        report=deepcopy(self.report);snapshot=report['native_final'];events=snapshot['trace']['events']
+        events.extend([{'type':'system','data':'turn end','wall':106},
+            {'type':'speech_playback_state','direction':'device','wall':109,'updatedAt':109000,
+             'correlationId':'native_connection_new','active':False,'remainingSeconds':0,'reason':'source_ended'},
+            {'type':'speech_playback_state','direction':'device','wall':109.5,'updatedAt':109500,
+             'correlationId':'native_connection_new','active':False,'remainingSeconds':0,'reason':'speech_cancel'}])
+        for i,event in enumerate(events,1):event['observer_sequence']=i
+        snapshot['trace'].update(eventSequence=len(events),binaryBytes=960,
+            collection={'sequence_complete':True,'first_sequence':1,'last_sequence':len(events)})
+        snapshot['playback'].update(reason='speech_cancel',updatedAt=109500)
+        return report
+
+    def test_observed_normal_end_survives_later_empty_queue_cancel_without_human_pass(self):
+        report=self.late_cancel_report();result=subject.grade_acceptance(report)
+        self.assertTrue(all(result['checks'].values()),result)
+        self.assertEqual(result['native_terminal_evidence'],'observed_source_ended_before_late_cancel')
+        self.assertEqual(result['human'],'PENDING');self.assertEqual(result['physical_output'],'UNVERIFIED_NO_LOOPBACK')
+
+    def test_late_cancel_needs_complete_counters_terminal_receipt_and_no_resumed_output(self):
+        for kind in ('legacy','gap','counter','byte_counter','missing_zero','bool_zero','foreign','no_end',
+                     'early_end','active','more_pcm','more_text'):
+            report=self.late_cancel_report();s=report['native_final'];events=s['trace']['events'];receipt=events[-2]
+            if kind=='legacy':s['trace'].pop('collection')
+            elif kind=='gap':events[1]['observer_sequence']=1
+            elif kind=='counter':s['trace']['binaryFrames']=2
+            elif kind=='byte_counter':s['trace']['binaryBytes']=True
+            elif kind=='missing_zero':receipt.pop('remainingSeconds')
+            elif kind=='bool_zero':receipt['remainingSeconds']=False
+            elif kind=='foreign':receipt['correlationId']='native_connection_foreign'
+            elif kind=='no_end':events[-3]['data']='not an end'
+            elif kind=='early_end':receipt.update(wall=105,updatedAt=105000)
+            elif kind=='active':s['playback']['active']=True
+            else:
+                extra={'observer_sequence':len(events)+1,'wall':109.2}
+                if kind=='more_pcm':
+                    extra.update(type='audio_frame',bytes=0,correlation_id='native_connection_new')
+                    s['trace']['binaryFrames']=2
+                else:extra.update(type='gemini_response',text='late response')
+                events.append(extra);s['trace']['eventSequence']=len(events);s['trace']['collection']['last_sequence']=len(events)
+            with self.subTest(kind=kind):self.assert_partial(report,'native_terminal')
+
     def test_snapshot_missing_invalid_or_locked_fails_without_creation(self):
         missing=Path(self.fixture.temp.name)/'missing.db'
         self.assertFalse(subject.grade_snapshot(missing)['ok']);self.assertFalse(missing.exists())

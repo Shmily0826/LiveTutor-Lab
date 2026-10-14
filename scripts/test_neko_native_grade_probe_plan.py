@@ -1,15 +1,19 @@
 """Actual observer preflight, stopping before any port/host/device operation."""
 import __future__
 import ast
+import asyncio
 import json
 import math
 import os
 from pathlib import Path
 import tempfile
+import time
 from types import SimpleNamespace
 import unittest
 import wave
 from unittest.mock import Mock
+
+from neko_native_telemetry import NativeTraceHistory
 
 
 class Planned(Exception):pass
@@ -115,6 +119,90 @@ class GradeProbePlan(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(self.baseline_matches(baseline,pin))
         baseline['last_answer_evaluation']={'verdict':'correct'}
         self.assertFalse(self.baseline_matches(baseline,pin,correction=True))
+
+
+class NativeObservationErrors(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        tree=ast.parse((Path(__file__).parent/'neko_daily_voice_probe.py').read_text(encoding='utf-8'))
+        main=next(n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='main')
+        nested=next(n for n in ast.walk(main) if isinstance(n,ast.AsyncFunctionDef) and n.name=='observe_native')
+        factory=ast.parse('def factory(observer,native_history,report,failed,ended,native_changed,output_only):\n pass').body[0]
+        factory.body=[nested,ast.Return(value=ast.Name(id='observe_native',ctx=ast.Load()))]
+        progress=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='native_response_progress')
+        checked=next(n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='checked_native_snapshot')
+        namespace={'asyncio':asyncio,'time':time}
+        module=ast.fix_missing_locations(ast.Module(body=[progress,checked,factory],type_ignores=[]))
+        exec(compile(module,'actual observer and freeze','exec'),namespace)
+        self.factory=namespace['factory'];self.checked=namespace['checked_native_snapshot']
+        self.report={};self.failed=asyncio.Event();self.ended=asyncio.Event()
+        self.history=NativeTraceHistory()
+
+    def snapshot(self,sequence):
+        return {'trace':{'installedAt':1,'eventSequence':sequence,'binaryFrames':0,'binaryBytes':0,
+            'events':[{'observer_sequence':i,'wall':i+1,'type':'fixture'}
+                      for i in range(max(1,sequence-499),sequence+1)]}}
+
+    def start_observer(self,observer):
+        return asyncio.create_task(self.factory(observer,self.history,self.report,self.failed,self.ended,0,True)())
+
+    async def test_actual_observer_gap_during_trailing_grace_sets_failure_and_freeze_rejects(self):
+        second=asyncio.Event();first=asyncio.Event();calls=0
+        async def snapshot():
+            nonlocal calls
+            calls+=1
+            if calls==1:first.set();return self.snapshot(400)
+            await second.wait();return self.snapshot(1000)
+        observer=SimpleNamespace(snapshot=snapshot,fixed_input_id=None)
+        task=self.start_observer(observer)
+        try:
+            await asyncio.wait_for(first.wait(),1)
+            await asyncio.sleep(0)
+            self.assertEqual(self.report['native_final']['trace']['eventSequence'],400)
+            second.set()
+            await asyncio.wait_for(self.failed.wait(),1)
+            self.assertTrue(self.ended.is_set())
+            self.assertIn('ring lost events',self.report['native_observation_error'])
+            with self.assertRaisesRegex(RuntimeError,'ring lost events'):
+                await self.checked(observer,self.history,task)
+            self.assertEqual(len(self.history.events),400)
+        finally:
+            task.cancel();await asyncio.gather(task,return_exceptions=True)
+
+    async def test_final_fresh_capture_rejects_new_gap_even_if_observer_still_pending(self):
+        self.history.capture(self.snapshot(400))
+        async def snapshot():return self.snapshot(1000)
+        task=asyncio.create_task(asyncio.Event().wait())
+        try:
+            with self.assertRaisesRegex(RuntimeError,'ring lost events'):
+                await self.checked(SimpleNamespace(snapshot=snapshot),self.history,task)
+            self.assertEqual(len(self.history.events),400)
+        finally:
+            task.cancel();await asyncio.gather(task,return_exceptions=True)
+
+    async def test_observer_error_while_final_snapshot_awaits_cannot_be_swallowed(self):
+        fail=asyncio.Event()
+        async def broken():
+            await fail.wait();raise RuntimeError('late observer failure')
+        task=asyncio.create_task(broken())
+        async def snapshot():
+            fail.set()
+            await asyncio.gather(task,return_exceptions=True)
+            return self.snapshot(0)
+        with self.assertRaisesRegex(RuntimeError,'late observer failure'):
+            await self.checked(SimpleNamespace(snapshot=snapshot),self.history,task)
+
+    async def test_normal_cleanup_cancellation_does_not_claim_observation_failure(self):
+        ready=asyncio.Event()
+        async def snapshot():ready.set();return self.snapshot(0)
+        observer=SimpleNamespace(snapshot=snapshot,fixed_input_id=None)
+        task=self.start_observer(observer)
+        await asyncio.wait_for(ready.wait(),1)
+        await self.checked(observer,self.history,task)
+        task.cancel();await asyncio.gather(task,return_exceptions=True)
+        self.assertFalse(self.failed.is_set())
+        self.assertNotIn('native_observation_error',self.report)
+        with self.assertRaisesRegex(RuntimeError,'cancelled before evidence freeze'):
+            await self.checked(observer,self.history,task)
 
 
 if __name__=='__main__':unittest.main(verbosity=2)

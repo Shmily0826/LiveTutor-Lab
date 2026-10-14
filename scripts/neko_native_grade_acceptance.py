@@ -180,6 +180,48 @@ def _correction_origin(before, question, qa_rows, history_rows):
     return candidates[0] if len(candidates) == 1 else None
 
 
+def _native_terminal(snapshot, token, start, end, frames):
+    """A late empty-queue cancel cannot erase an already observed normal end."""
+    playback=snapshot['playback'];trace=snapshot['trace'];events=trace['events']
+    last=max((e['wall'] for e in frames),default=None)
+    if (not _native_token(token) or not _wall(last) or playback.get('active') is not False
+            or not _number(playback.get('remainingSeconds')) or playback['remainingSeconds']!=0
+            or playback.get('correlationId')!=token or not _number(playback.get('updatedAt'))
+            or not last<=playback['updatedAt']/1000<=end):
+        return None
+    if playback.get('reason')=='source_ended':
+        return 'final_playback'
+    collection=trace.get('collection') or {}
+    all_frames=[e for e in events if e.get('type')=='audio_frame']
+    if (playback.get('reason')!='speech_cancel' or collection.get('sequence_complete') is not True
+            or type(trace.get('eventSequence')) is not int or trace['eventSequence']!=len(events)
+            or type(collection.get('last_sequence')) is not int or collection['last_sequence']!=len(events)
+            or type(collection.get('first_sequence')) is not int or collection['first_sequence']!=1
+            or type(trace.get('binaryFrames')) is not int or trace['binaryFrames']!=len(all_frames)
+            or any(not _integer(e.get('bytes')) for e in all_frames)
+            or type(trace.get('binaryBytes')) is not int or trace['binaryBytes']!=sum(e['bytes'] for e in all_frames)
+            or any(type(e.get('observer_sequence')) is not int or e['observer_sequence']!=i
+                   for i,e in enumerate(events,1))):
+        return None
+    window=[e for e in events if _wall(e.get('wall')) and start<=e['wall']<=end]
+    for receipt in window:
+        if (receipt.get('type')!='speech_playback_state' or receipt.get('direction')!='device'
+                or receipt.get('reason')!='source_ended' or receipt.get('active') is not False
+                or receipt.get('correlationId')!=token or not _number(receipt.get('remainingSeconds'))
+                or receipt['remainingSeconds']!=0 or not _number(receipt.get('updatedAt'))
+                or not last<=receipt['updatedAt']/1000<=receipt['wall']<=playback['updatedAt']/1000):
+            continue
+        done=any(last<=e['wall']<=receipt['wall'] and (e.get('type')=='audio_done'
+            or e.get('type')=='system' and e.get('data')=='turn end') for e in window)
+        resumed=any(e['wall']>receipt['wall'] and (e.get('type') in ('audio_frame','audio_chunk')
+            or e.get('type')=='gemini_response' and str(e.get('text') or '').strip()
+            or e.get('type') in ('speech_playback_state','native_speech_playback_state')
+                and e.get('active') is True) for e in window)
+        if done and not resumed:
+            return 'observed_source_ended_before_late_cancel'
+    return None
+
+
 def grade_acceptance(report):
     """Check one ordinary answer or explicit same-question correction turn.
 
@@ -202,6 +244,7 @@ def grade_acceptance(report):
     checks = dict.fromkeys(names, False)
     checks['supported_grade_intent'] = intent in ('answer', 'correction')
     retirement_evidence = 'UNVERIFIED'
+    terminal_evidence = None
     try:
         before, after = report['grade_before'], report['grade_after']
         q0, q1 = before['question'], after['question']
@@ -306,11 +349,8 @@ def grade_acceptance(report):
         checks['new_token_playback_scheduled'] = bool(scheduled) and bool(pcm_frames) and min(e['wall'] for e in scheduled) >= min(e['wall'] for e in pcm_frames)
         replies = [e for e in window if e.get('type') == 'gemini_response' and isinstance(e.get('text'), str) and e['text'].strip()]
         checks['native_text_after_grade'] = bool(replies) and all(_wall(complete) and e['wall'] >= complete for e in replies)
-        playback = report['native_final']['playback']
-        checks['native_terminal'] = (playback.get('active') is False and _number(playback.get('remainingSeconds'))
-            and playback['remainingSeconds'] == 0 and playback.get('reason') == 'source_ended'
-            and playback.get('correlationId') == new and _number(playback.get('updatedAt'))
-            and bool(frames) and max(e['wall'] for e in frames) <= playback['updatedAt'] / 1000 <= end)
+        terminal_evidence = _native_terminal(report['native_final'],new,start,end,frames)
+        checks['native_terminal'] = terminal_evidence is not None
         policy, receipt = report['capture_policy'], report['capture_policy']['receipt']
         checks['output_only_capture_guard'] = (report.get('output_only') is True and report.get('room_microphone') is False
             and report.get('capture_devices') is False and report.get('loopback_enabled') is False and report.get('volume_changed') is False
@@ -323,6 +363,7 @@ def grade_acceptance(report):
         checks['schema_valid'] = False
     return {'grade_intent': intent, 'checks': checks, 'result': 'CANDIDATE_GRADE_FLOW_PASS_REQUIRES_SEMANTIC_REVIEW' if all(checks.values()) else 'FAIL_OR_PARTIAL',
             'old_output_retirement_evidence': retirement_evidence,
+            'native_terminal_evidence': terminal_evidence,
             'physical_output': 'UNVERIFIED_NO_LOOPBACK', 'human': 'PENDING'}
 
 
@@ -344,10 +385,7 @@ def _completed_native_turn(turn):
         and all(e['wall'] >= speech_end for e in (*frames,*replies,*ends))
         and all(e.get('correlation_id')==token and _integer(e.get('bytes')) for e in frames)
         and min(e['wall'] for e in schedules) >= min(e['wall'] for e in positive)
-        and playback.get('active') is False and playback.get('reason')=='source_ended'
-        and _number(playback.get('remainingSeconds')) and playback['remainingSeconds']==0
-        and _number(playback.get('updatedAt'))
-        and max(e['wall'] for e in frames) <= playback['updatedAt']/1000 <= end)
+        and _native_terminal(snapshot,token,start,end,frames) is not None)
 
 
 def grade_chain_acceptance(report):

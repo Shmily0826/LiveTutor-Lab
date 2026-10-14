@@ -3,7 +3,7 @@ import asyncio
 import json
 import subprocess
 import unittest
-from neko_native_telemetry import NativeTelemetry, NativeRendererPending, INSTALL, SNAPSHOT, BEGIN_FIXED_INPUT
+from neko_native_telemetry import NativeTelemetry, NativeRendererPending, NativeTraceHistory, INSTALL, SNAPSHOT, BEGIN_FIXED_INPUT
 import urllib.error
 import time
 from pathlib import Path
@@ -27,6 +27,24 @@ class FakeDevTools:
 
 
 class NativeTelemetryTest(unittest.IsolatedAsyncioTestCase):
+    async def test_actual_js_sequences_and_playback_receipts_survive_ring_polling(self):
+        fixture=(Path(__file__).parent/'neko_fixed_input_fixture.mjs').as_uri()
+        script=r'''import vm from 'node:vm';import {fixture} from FIXTURE;
+const f=fixture();f.S.socket.addEventListener=()=>{};
+vm.runInContext(process.argv[1],f.context);
+const snapshots=[JSON.parse(JSON.stringify(vm.runInContext(process.argv[2],f.context)))];
+function emit(n){for(let i=0;i<n;i++)f.context.dispatchEvent({type:'neko-speech-playback-state',detail:{active:false,remainingSeconds:0,updatedAt:Date.now(),correlationId:'native_connection_test',reason:'source_ended'}});}
+emit(400);snapshots.push(JSON.parse(JSON.stringify(vm.runInContext(process.argv[2],f.context))));
+emit(350);snapshots.push(vm.runInContext(process.argv[2],f.context));
+process.stdout.write(JSON.stringify({snapshots,captureCalls:f.captured()}));'''.replace('FIXTURE',json.dumps(fixture))
+        result=json.loads(subprocess.check_output(['node','--input-type=module','-e',script,INSTALL,SNAPSHOT],timeout=10))
+        self.assertEqual(result['captureCalls'],0)
+        history=NativeTraceHistory()
+        for snapshot in result['snapshots']:last=history.capture(snapshot)
+        self.assertEqual(len(last['trace']['events']),750)
+        self.assertEqual(last['trace']['events'][-1]['remainingSeconds'],0)
+        self.assertGreater(last['trace']['events'][-1]['updatedAt'],0)
+
     async def test_bounded_ready_wait_only_polls_the_same_task_port(self):
         ready=object()
         attach=AsyncMock(side_effect=[NativeRendererPending('loading'),
@@ -217,6 +235,44 @@ process.stdout.write(JSON.stringify({first,second,events:trace.events,currentSoc
             self.assertNotIn("getUserMedia", expression)
             self.assertNotIn("localStorage", expression)
             self.assertNotIn("document.cookie", expression)
+
+
+class TraceHistoryTests(unittest.TestCase):
+    def snapshot(self, count, *, installed=100):
+        events=[{'observer_sequence':i,'wall':100+i/1000,'type':'pong'} for i in range(1,count+1)]
+        if count>=3:events[2].update(type='audio_frame',bytes=960,correlation_id='native_connection_old')
+        return {'wall':101+count/1000,'trace':{'installedAt':installed,'eventSequence':count,
+            'events':events[-500:],'binaryFrames':int(count>=3),'binaryBytes':960*int(count>=3)}}
+
+    def test_multiple_ring_windows_keep_all_events_and_cumulative_pcm(self):
+        history=NativeTraceHistory();history.capture(self.snapshot(0))
+        first=history.capture(self.snapshot(400));last=history.capture(self.snapshot(750))
+        self.assertEqual(len(first['trace']['events']),400)
+        self.assertEqual(len(last['trace']['events']),750)
+        self.assertEqual([e['observer_sequence'] for e in last['trace']['events']],list(range(1,751)))
+        self.assertEqual(last['trace']['binaryFrames'],1)
+        self.assertEqual(last['trace']['events'][2]['correlation_id'],'native_connection_old')
+        self.assertEqual(history.capture(self.snapshot(750)),last)
+        last['trace']['events'][0]['type']='mutated consumer'
+        self.assertEqual(history.events[0]['type'],'pong')
+
+    def test_gap_reload_mutation_counter_drift_and_overflow_fail_without_partial_commit(self):
+        for kind in ('gap','reload','mutation','counter','bytes','overflow','boolean_sequence','missing_sequence'):
+            history=NativeTraceHistory(limit=800);history.capture(self.snapshot(400))
+            bad=self.snapshot(750)
+            if kind=='gap':bad=self.snapshot(1000);history.limit=2000
+            elif kind=='reload':bad['trace']['installedAt']=101
+            elif kind=='mutation':bad['trace']['events'][0]['type']='changed'
+            elif kind=='counter':bad['trace']['binaryFrames']=0
+            elif kind=='bytes':bad['trace']['binaryBytes']=True
+            elif kind=='overflow':history.limit=700
+            elif kind=='boolean_sequence':bad['trace']['events'][0]['observer_sequence']=True
+            else:bad['trace'].pop('eventSequence')
+            with self.subTest(kind=kind),self.assertRaises(RuntimeError):history.capture(bad)
+            self.assertEqual(len(history.events),400)
+
+    def test_first_poll_cannot_claim_an_already_evicted_prefix(self):
+        with self.assertRaisesRegex(RuntimeError,'lost events'):NativeTraceHistory().capture(self.snapshot(501))
 
 
 if __name__ == "__main__": unittest.main(verbosity=2)

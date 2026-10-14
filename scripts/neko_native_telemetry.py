@@ -7,6 +7,7 @@ from __future__ import annotations
 import base64
 import asyncio
 import json
+import math
 from pathlib import Path
 import urllib.parse
 import urllib.error
@@ -15,12 +16,12 @@ import websockets
 
 INSTALL = r"""(() => {
 if (window.__dailyNativeTelemetry) { window.__dailyNativeTelemetry.refreshSocket(); return {installed:true,existing:true}; }
-const trace = {events:[],binaryFrames:0,binaryBytes:0,inputFrames:0,inputSamples:0,socketCount:0,currentSocketId:null,installedAt:Date.now()/1000};
+const trace = {events:[],eventSequence:0,binaryFrames:0,binaryBytes:0,inputFrames:0,inputSamples:0,socketCount:0,currentSocketId:null,installedAt:Date.now()/1000};
 window.__dailyNativeTelemetry = trace;
-const put = event => { trace.events.push({wall:Date.now()/1000,...event}); if(trace.events.length>500) trace.events.shift(); };
+const put = event => { trace.events.push({wall:Date.now()/1000,...event,observer_sequence:++trace.eventSequence}); if(trace.events.length>500) trace.events.shift(); };
 window.addEventListener('neko-speech-playback-state', e => {
  const p=e.detail||{};const event={direction:'device',type:'speech_playback_state'};
- for(const key of ['active','audible','correlationId','speechId','reason'])if(key in p)event[key]=p[key];put(event);
+ for(const key of ['active','audible','correlationId','speechId','reason','remainingSeconds','updatedAt'])if(key in p)event[key]=p[key];put(event);
 });
 const sockets = new WeakMap();
 const incomingText = new Set(['gemini_response','user_transcript','input_transcript','voice_transcript','transcript']);
@@ -80,8 +81,56 @@ return {...receipt,socket_id:socketId,started_wall:started};
 SNAPSHOT = r"""(() => {
 const trace=window.__dailyNativeTelemetry;
 const rows=[...document.querySelectorAll('.message-bubble,.message-text,.message-content')].map(e=>({text:(e.innerText||'').trim(),className:e.className,visible:!!(e.offsetWidth||e.offsetHeight)})).filter(e=>e.text);
-return {wall:Date.now()/1000,url:location.href,title:document.title,trace:trace?{events:trace.events,currentSocketId:trace.currentSocketId,binaryFrames:trace.binaryFrames,binaryBytes:trace.binaryBytes,inputFrames:trace.inputFrames,inputSamples:trace.inputSamples,installedAt:trace.installedAt}:null,playback:window.NekoSpeechPlaybackState||null,bubbles:rows.slice(-40)};
+return {wall:Date.now()/1000,url:location.href,title:document.title,trace:trace?{events:trace.events,eventSequence:trace.eventSequence,currentSocketId:trace.currentSocketId,binaryFrames:trace.binaryFrames,binaryBytes:trace.binaryBytes,inputFrames:trace.inputFrames,inputSamples:trace.inputSamples,installedAt:trace.installedAt}:null,playback:window.NekoSpeechPlaybackState||null,bubbles:rows.slice(-40)};
 })()"""
+
+
+class NativeTraceHistory:
+    """Accumulate the task observer's bounded ring; sequences are local, not ASR IDs."""
+    def __init__(self, *, limit=12000):
+        self.limit=limit
+        self.installed_at=None
+        self.events=[]
+
+    def capture(self, snapshot):
+        trace=snapshot.get('trace') or {}
+        installed=trace.get('installedAt')
+        sequence=trace.get('eventSequence')
+        batch=trace.get('events')
+        if (type(installed) not in (int,float) or not math.isfinite(installed) or installed<=0
+                or self.installed_at is not None and installed!=self.installed_at
+                or type(sequence) is not int or not len(self.events)<=sequence<=self.limit
+                or not isinstance(batch,list) or len(batch)>500 or len(batch)>sequence
+                or (sequence>0 and not batch)):
+            raise RuntimeError('Native observer identity, sequence or capacity changed')
+        expected=sequence-len(batch)+1
+        added=[]
+        for event in batch:
+            if (not isinstance(event,dict) or type(event.get('observer_sequence')) is not int
+                    or event['observer_sequence']!=expected
+                    or type(event.get('wall')) not in (int,float) or not math.isfinite(event['wall'])
+                    or event['wall']<installed):
+                raise RuntimeError('Native observer sequence is incomplete')
+            if expected<=len(self.events):
+                if event!=self.events[expected-1]:
+                    raise RuntimeError('Native observer changed a retained event')
+            else:
+                if expected!=len(self.events)+len(added)+1:
+                    raise RuntimeError('Native observer ring lost events between polls')
+                added.append(dict(event))
+            expected+=1
+        all_events=self.events+added
+        frames=[e for e in all_events if e.get('type')=='audio_frame']
+        if (type(trace.get('binaryFrames')) is not int or trace['binaryFrames']!=len(frames)
+                or any(type(e.get('bytes')) is not int or e['bytes']<0 for e in frames)
+                or type(trace.get('binaryBytes')) is not int
+                or trace['binaryBytes']!=sum(e['bytes'] for e in frames)):
+            raise RuntimeError('Native observer PCM counters disagree with retained events')
+        self.installed_at=installed
+        self.events=all_events
+        return {**snapshot,'trace':{**trace,'events':[dict(e) for e in all_events],
+            'collection':{'sequence_complete':True,'first_sequence':1 if sequence else 0,
+                'last_sequence':sequence,'limit':self.limit}}}
 
 
 class NativeRendererPending(RuntimeError):

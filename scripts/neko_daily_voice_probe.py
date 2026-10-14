@@ -23,7 +23,7 @@ from neko_learning_surface import LearningSurface, DEFAULT_MATERIALS
 from neko_lab_client import LabClient
 import neko_desktop_tutor_host as host
 import neko_native_shell as avatar
-from neko_native_telemetry import NativeTelemetry
+from neko_native_telemetry import NativeTelemetry, NativeTraceHistory
 from neko_tutor_start import plugin_server_ready, cleanup_resources, process_creation_time, CoreProviderOverride
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,6 +38,18 @@ def native_response_progress(snapshot, previous=None):
              and isinstance(event.get('wall'), (int, float))]
     # The bounded trace can evict old response events as heartbeats arrive.
     return (max(prior_frames, trace.get('binaryFrames', 0)), max([prior_wall, *walls]))
+
+
+async def checked_native_snapshot(observer, history, task):
+    def check_task():
+        if task is not None and task.done():
+            if task.cancelled():raise RuntimeError('Native observer cancelled before evidence freeze')
+            task.result()
+            raise RuntimeError('Native observer stopped before evidence freeze')
+    check_task()
+    snapshot=history.capture(await observer.snapshot())
+    check_task()
+    return snapshot
 
 
 def teaching_defaults_unchanged(report):
@@ -245,6 +257,7 @@ async def main(args):
     report['host_launcher_pid'] = process.pid
     host_owner = [{'pid':process.pid, 'created_at':process_creation_time(process.pid)}]
     shell, meter, observer, observer_task, replacement_task = None, None, None, None, None
+    native_history = NativeTraceHistory()
     log_path = ROOT / "benchmarks/raw/neko-desktop-host.log"
     log_start = log_path.stat().st_size if log_path.exists() else 0
     def save():
@@ -406,7 +419,7 @@ async def main(args):
                     proof=report['capture_policy']
                     if not (proof.get('flag') and proof.get('readonly') and (proof.get('receipt') or {}).get('status')=='installed'):
                         raise RuntimeError('Native renderer capture policy not installed; no input submitted')
-                report["native_initial"] = await observer.snapshot()
+                report["native_initial"] = native_history.capture(await observer.snapshot())
             try:
                 if output_only:
                     await prepare_renderer()
@@ -416,7 +429,7 @@ async def main(args):
                 if output_only:
                     deadline=time.monotonic()+45
                     while time.monotonic()<deadline:
-                        snapshot=await observer.snapshot()
+                        snapshot=native_history.capture(await observer.snapshot())
                         events=(snapshot.get('trace') or {}).get('events',[])
                         report['native_final']=snapshot
                         if output_only and any(e.get('code') in ('VOICE_INPUT_CONTROL_REJECTED','VOICE_INPUT_LEASE_RESYNC_REQUIRED','ASR_INPUT_DELIVERY_FAILED') for e in events):
@@ -437,25 +450,30 @@ async def main(args):
                 async def observe_native():
                     nonlocal native_changed
                     progress = None
-                    while True:
-                        snapshot = await observer.snapshot()
-                        report["native_final"] = snapshot
-                        events = (snapshot.get("trace") or {}).get("events", [])
-                        if output_only and observer.fixed_input_id is not None and (snapshot.get('fixed_input') or {}).get('active') is not True:
-                            report['fixed_input_revoked'] = snapshot.get('fixed_input')
-                            failed.set();ended.set()
-                        if output_only and any(e.get('type') in ('session_failed','session_ended_by_server') for e in events):
-                            failed.set();ended.set()
-                        if output_only and any(e.get('code') in ('VOICE_INPUT_CONTROL_REJECTED','VOICE_INPUT_LEASE_RESYNC_REQUIRED','ASR_INPUT_DELIVERY_FAILED') for e in events):
-                            report['fixed_input_rejected']=[e for e in events if e.get('code')]
-                            failed.set();ended.set()
-                        current_progress = native_response_progress(snapshot, progress)
-                        if current_progress != progress:
-                            progress = current_progress; native_changed = time.monotonic()
-                        if any(e.get("type") == "system" and e.get("data") == "turn end" and
-                               e["wall"] >= report.get("input_wall", float("inf")) for e in events):
-                            ended.set()
-                        await asyncio.sleep(0.2)
+                    try:
+                        while True:
+                            snapshot = native_history.capture(await observer.snapshot())
+                            report["native_final"] = snapshot
+                            events = (snapshot.get("trace") or {}).get("events", [])
+                            if output_only and observer.fixed_input_id is not None and (snapshot.get('fixed_input') or {}).get('active') is not True:
+                                report['fixed_input_revoked'] = snapshot.get('fixed_input')
+                                failed.set();ended.set()
+                            if output_only and any(e.get('type') in ('session_failed','session_ended_by_server') for e in events):
+                                failed.set();ended.set()
+                            if output_only and any(e.get('code') in ('VOICE_INPUT_CONTROL_REJECTED','VOICE_INPUT_LEASE_RESYNC_REQUIRED','ASR_INPUT_DELIVERY_FAILED') for e in events):
+                                report['fixed_input_rejected']=[e for e in events if e.get('code')]
+                                failed.set();ended.set()
+                            current_progress = native_response_progress(snapshot, progress)
+                            if current_progress != progress:
+                                progress = current_progress; native_changed = time.monotonic()
+                            if any(e.get("type") == "system" and e.get("data") == "turn end" and
+                                   e["wall"] >= report.get("input_wall", float("inf")) for e in events):
+                                ended.set()
+                            await asyncio.sleep(0.2)
+                    except Exception as error:
+                        report['native_observation_error']=type(error).__name__+': '+str(error)
+                        failed.set();ended.set()
+                        raise
                 observer_task = asyncio.create_task(observe_native())
                 async def replace_picture_when_playing():
                     deadline = time.monotonic() + 100
@@ -563,6 +581,7 @@ async def main(args):
                         await asyncio.sleep(0.25)
                     else: report["turn_timeout"] = True
                     await asyncio.sleep(3)
+                    report['native_final']=await checked_native_snapshot(observer,native_history,observer_task)
                     report["first_socket_audio_at"] = first_audio
                     report["reply"] = "".join(e.get("text", "") for e in report["events"]
                         if e.get("type") == "gemini_response" and e["at"] >= report["input_submitted_at"])
@@ -623,7 +642,10 @@ async def main(args):
                     report['study_after_voice'] = await asyncio.to_thread(client.call, 'study_status')
                     report['material_after_voice'] = await asyncio.to_thread(call, 'study_material', {})
                 save()
+                report['native_final']=await checked_native_snapshot(observer,native_history,observer_task)
                 if failed.is_set(): raise RuntimeError("voice session ended abnormally")
+                observer_task.cancel();await asyncio.gather(observer_task,return_exceptions=True)
+                observer_task=None
                 await send({"action": "end_session", "reason": "bounded_daily_voice_probe"})
                 if output_only:
                     report['fixed_input_release'] = 'end_session_and_release_same_validated_source'
