@@ -335,6 +335,18 @@
       "base_sha256": null,
       "phase43_prior_sha256": "f041135b335a22655bffe14a0856d11f105aa50b56355a0921ec853e7be9aaff",
       "patched_sha256": "0dc4d0349d518d4bac4a8a1da034e46bde4624e9fa9aa4079af8539ca32e922e"
+    },
+    {
+      "path": "utils/llm_tool_leak_filter.py",
+      "base_sha256": "1acba9dc630dee64d5f1b005bc007054d8eef72af5442464a288d2f84a24ac4a",
+      "patched_sha256": "13471cc292190928d0a5bf59de98bddff86cac46e835290962141d0bae963a95",
+      "phase51_verification": "Main new13 plus unchanged legacy34 filter cases; actual methods with isolated stream chunks, no model/device/human proof. DSML display containment and honest empty-final fallback; no text-to-tool execution, cap increase or retries."
+    },
+    {
+      "path": "main_logic/omni_offline_client/_tools.py",
+      "base_sha256": "44d93874b56d175a53bc1c3fbaf583b126e3dd0c63f62519b5e157a5c6724c01",
+      "patched_sha256": "f832282705c7f9d7e1668eebd96c850a73633006570c6b561a6b6c9c82e90f53",
+      "phase51_verification": "Main new13 plus unchanged legacy34 filter cases; actual methods with isolated stream chunks, no model/device/human proof. DSML display containment and honest empty-final fallback; no text-to-tool execution, cap increase or retries."
     }
   ],
   "native_barge_in_handoff": {
@@ -442,6 +454,11 @@
     {
       "path": "scripts/neko_native_tool_join_patch.py",
       "sha256": "7b9098373bdfda8b14b55bc4d48de79ba776d290a1305d9df4dd1b94ed2e6907"
+    },
+    {
+      "path": "scripts/neko_dsml_output_patch.py",
+      "sha256": "3671d2f098c4d090b6f84181b229812c1244a4e6bc0e366ced1c4ef1c87b477b",
+      "reason": "Replay only exact known DSML filter/offline visible-stream source to pinned hosts before SourceGate"
     }
   ],
   "daily_phrase_input_update": {

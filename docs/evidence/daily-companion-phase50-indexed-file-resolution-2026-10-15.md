@@ -15,3 +15,5 @@
 - patches/neko-study-2026-10-10-product/payload/study_companion/study_code_tools.py: a080b174bc918e234f891403b0455d72164bc053a9441bdd6395d56ba2d75ba0
 - scripts/neko_desktop_tutor_host.py: fce5672f41a677c48b5f488f405ee2bf5aa316e76ce7f7402b4bcbeff3dee769
 - scripts/test_neko_code_file_window.py: 5f6425e2d3b25821bf191d1cba2f5d5c0741d6628cfb6bd103ff017ee44d41c2
+
+阶段50十文件精确发布已核：commit/push f4ca586ed3312afe02d2ad48784d36b8b75b9163 到codex/daily-learning-companion；remote exact/master仍f1e8f3f不变/publisher clean/Root index空，无raw/DB/密钥发布。

@@ -192,6 +192,8 @@ def apply_voice_host_patch() -> str:
             trace_path.write_text(traced, encoding="utf-8", newline="\n")
         results.append(f"{host_root.name}/_wire_trace.py=diagnostics ready")
         results.append(f"{host_root.name}/capture-bootstrap={capture_patch.apply_to(host_root)}")
+        import neko_dsml_output_patch as dsml_patch
+        results.append(f"{host_root.name}/dsml-output={dsml_patch.apply_to(host_root)}")
     return ",".join(results)
 
 
