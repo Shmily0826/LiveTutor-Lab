@@ -20,7 +20,9 @@ from test_neko_native_barge_in import ActivationGeneration, QueueSocket
 
 
 def staged_sources():
-    targets, replay = join.upgrade_targets(canonical.TARGETS, canonical._OWNER_TRACE_REPLAY)
+    targets, replay = (canonical.TARGETS, canonical._OWNER_TRACE_REPLAY)
+    if not getattr(canonical, '_NATIVE_TOOL_JOIN_PATCHED', False):
+        targets, replay = join.upgrade_targets(targets, replay)
     sources = {}
     with tempfile.TemporaryDirectory() as directory, patch.object(canonical, 'TARGETS', targets), \
             patch.object(canonical, '_OWNER_TRACE_REPLAY', replay), \

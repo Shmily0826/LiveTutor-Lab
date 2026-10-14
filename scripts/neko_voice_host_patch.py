@@ -770,6 +770,12 @@ from neko_native_grade_patch import upgrade_targets as _native_grade_targets
 TARGETS, _NATIVE_GRADE_REPLAY = _native_grade_targets(TARGETS)
 _OWNER_TRACE_REPLAY += _NATIVE_GRADE_REPLAY
 
+# The route remains opt-in; single-slot native tools must share their input lane.
+from neko_native_tool_join_patch import upgrade_targets as _native_tool_join_targets
+from neko_native_tool_join_patch import normalize_ordering_helpers
+TARGETS, _OWNER_TRACE_REPLAY = _native_tool_join_targets(TARGETS, _OWNER_TRACE_REPLAY)
+_NATIVE_TOOL_JOIN_PATCHED = True
+
 
 def hunks_for(path: Path):
     """The replacement list that belongs to this file."""

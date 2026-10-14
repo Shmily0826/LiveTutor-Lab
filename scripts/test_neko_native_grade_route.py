@@ -57,7 +57,7 @@ records=[n for n in record_tree.body if isinstance(n,ast.ClassDef) and n.name in
 exec(compile(ast.Module(body=records,type_ignores=[]),'tool records','exec',flags=__future__.annotations.compiler_flag),record_ns)
 ToolCall,ToolResult=record_ns['ToolCall'],record_ns['ToolResult']
 tools_tree=ast.parse((HOST/'main_logic/omni_realtime_client/_tools.py').read_text(encoding='utf-8'))
-tools_ns={'asyncio':asyncio,'logger':LOGGER,'dataclass':dataclass,'Any':Any,'hashlib':hashlib}
+tools_ns={'asyncio':asyncio,'logger':LOGGER,'dataclass':dataclass,'field':field,'Any':Any,'hashlib':hashlib}
 owner=next(n for n in tools_tree.body if isinstance(n,ast.ClassDef) and n.name=='_ToolTaskOwner')
 exec(compile(ast.Module(body=[owner],type_ignores=[]),'actual tool owner','exec',flags=__future__.annotations.compiler_flag),tools_ns)
 tool_names={'_capture_tool_task_owner','_tool_task_owner_is_current','_tool_task_connection_is_current',

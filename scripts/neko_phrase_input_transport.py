@@ -25,6 +25,7 @@ class NativePhraseUplink:
         self.snapshot = None
         self.preroll = []
         self.writer = None
+        self.response_waiter = None
         self.watchdog = None
         self.waiting = None
         self.failure_task = None
@@ -56,10 +57,11 @@ class NativePhraseUplink:
             self.buffer.close()
         self.buffer = self.snapshot = self.waiting = None
         self.preroll.clear()
-        for task in (self.writer, self.watchdog):
+        for task in (self.writer, self.watchdog, self.response_waiter):
             if task is not None and not task.done() and task is not asyncio.current_task():
                 task.cancel()
         self.writer = self.watchdog = None
+        self.response_waiter = None
 
     def protect_clear(self):
         pending = self.buffer is not None or self.writer is not None or self.waiting is not None
@@ -117,6 +119,9 @@ class NativePhraseUplink:
         if (speech and self.waiting is not None
                 and getattr(self.client, '_voice_handoff_input_sequence', 0) != self.waiting[1]):
             self.waiting = None  # Retire the prior deadline, not a fake provider boundary.
+            if self.response_waiter is not None:
+                self.response_waiter.cancel()
+                self.response_waiter = None
         if self.writer is not None and not self.writer.done():
             if speech:
                 self.fail('phrase_input_during_incomplete_write')
@@ -198,45 +203,69 @@ class NativePhraseUplink:
                   'queue_wait_ms': (started_monotonic - sealed_monotonic) * 1000,
                   'started_wall': time.time(), 'result': 'pending'}
         client._native_phrase_last_delivery = report
+        ticket = None
+        watching = False
+        arbiter = client._ensure_response_arbiter()
         def current():
             return epoch == self.epoch and self.current(snapshot)
+        def submission_current():
+            return current() and getattr(client, '_voice_handoff_input_sequence', 0) == sequence
         try:
             # Audio JSON must stay below the existing 256KB-family frame limit.
             limit = max(2, ((client._WS_FRAME_LIMIT - 2048) * 3 // 4) // 2 * 2)
+            events = []
+            samples = {}
+            for offset in range(0, len(batch.pcm16), limit):
+                pcm = batch.pcm16[offset:offset + limit]
+                event = {'type': 'input_audio_buffer.append', 'event_id': 'event_phrase_' + uuid.uuid4().hex,
+                         'audio': base64.b64encode(pcm).decode('ascii')}
+                events.append(event)
+                samples[event['event_id']] = len(pcm) // 2
+
+            async def send_owned(event):
+                is_audio = event.get('type') == 'input_audio_buffer.append'
+                sent = await client.send_event(event, send_guard=submission_current if is_audio else current)
+                if sent is not True:
+                    raise ConnectionError('phrase provider write refused')
+                count = samples.get(event.get('event_id'))
+                if event.get('type') != 'input_audio_buffer.append' or count is None:
+                    return  # The lane may also send its own cancellation event.
+                report['written_samples'] += count
+                report.setdefault('first_write_wall', time.time())
+                report.setdefault('first_write_completed_ms', (time.monotonic() - sealed_monotonic) * 1000)
+                if not submission_current():
+                    raise ConnectionError('phrase write owner retired')
+                client._note_voice_handoff_audio_append(samples=count, input_sequence=sequence)
+                callback = getattr(client, 'on_native_phrase_transport_written', None)
+                authority = (snapshot[0].session_id, snapshot[0].owner_token, snapshot[0].connection_generation)
+                if not callable(callback) or callback(count * 2, authority) is not True:
+                    raise ConnectionError('phrase write accounting owner retired')
+
             async with asyncio.timeout(8):
-                for offset in range(0, len(batch.pcm16), limit):
-                    if not current():
-                        report['result'] = 'retired'
-                        return
-                    pcm = batch.pcm16[offset:offset + limit]
-                    # Wire IDs identify individual requests, never a provider utterance.
-                    event = {'type': 'input_audio_buffer.append', 'event_id': 'event_phrase_' + uuid.uuid4().hex,
-                             'audio': base64.b64encode(pcm).decode('ascii')}
-                    sent = await client.send_event(event, send_guard=current)
-                    if sent is not True:
-                        raise ConnectionError('phrase provider write refused')
-                    report['written_samples'] += len(pcm) // 2
-                    report.setdefault('first_write_wall', time.time())
-                    report.setdefault('first_write_completed_ms', (time.monotonic() - sealed_monotonic) * 1000)
-                    if not current():
-                        report['result'] = 'written_then_retired'
-                        return
-                    client._note_voice_handoff_audio_append(samples=len(pcm) // 2, input_sequence=sequence)
-                    callback = getattr(client, 'on_native_phrase_transport_written', None)
-                    if not callable(callback) or callback(len(pcm), tuple((snapshot[0].session_id, snapshot[0].owner_token, snapshot[0].connection_generation))) is not True:
-                        raise ConnectionError('phrase write accounting owner retired')
-            if current():
+                ticket = await arbiter.enqueue(source='native_phrase', events_before_response=tuple(events),
+                    automatic_audio=True, native_input_sequence=sequence,
+                    event_sender=send_owned, admission_check=submission_current)
+                await asyncio.shield(ticket.sent)
+            if submission_current() and report['written_samples'] == batch.output_samples:
                 self.waiting = (time.monotonic(), sequence)
                 client._native_phrase_last_flush_wall = time.time()
                 report['result'] = 'written_waiting_provider_boundary'
+                self.response_waiter = asyncio.create_task(
+                    self.wait_response(arbiter, ticket, snapshot, sequence, epoch))
+                self.response_waiter.add_done_callback(lambda done: None if done.cancelled() else done.exception())
+                watching = True
+            else:
+                report['result'] = 'written_then_retired'
         except asyncio.CancelledError:
             report['result'] = 'cancelled_without_retry'
             raise
         except Exception:
-            report['result'] = 'failed_without_retry'
-            if current():
+            report['result'] = 'failed_without_retry' if submission_current() else 'retired'
+            if submission_current():
                 self.fail('phrase_write_failed')
         finally:
+            if ticket is not None and not watching:
+                await self.cancel_response(arbiter, ticket)
             report['completed_wall'] = time.time()
             report['write_elapsed_ms'] = (time.monotonic() - started_monotonic) * 1000
             if self.writer is asyncio.current_task():
@@ -246,3 +275,30 @@ class NativePhraseUplink:
                 logger.info('native phrase delivery %s', json.dumps(report, sort_keys=True))
             except Exception:
                 report['diagnostic_log_failed'] = True
+
+    async def cancel_response(self, arbiter, ticket):
+        try:
+            async with asyncio.timeout(2):
+                await arbiter.cancel_ticket(ticket, wait=False)
+        except Exception:
+            logger.warning('native phrase ticket cancellation did not complete')
+
+    async def wait_response(self, arbiter, ticket, snapshot, sequence, epoch):
+        def current():
+            return (epoch == self.epoch and self.current(snapshot)
+                    and getattr(self.client, '_voice_handoff_input_sequence', 0) == sequence)
+        try:
+            await asyncio.shield(ticket.done)
+            if current() and self.waiting is not None and self.waiting[1] == sequence:
+                # shortcut: only the first owned automatic response is associated;
+                # a second provider response still needs unambiguous input evidence.
+                self.client._note_voice_handoff_input_boundary(expected_sequence=sequence)
+        except asyncio.CancelledError:
+            await self.cancel_response(arbiter, ticket)
+            raise
+        except Exception:
+            if current():
+                self.fail('phrase_response_failed')
+        finally:
+            if self.response_waiter is asyncio.current_task():
+                self.response_waiter = None

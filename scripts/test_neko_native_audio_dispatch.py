@@ -23,7 +23,9 @@ HOST = ROOT / 'benchmarks/raw/neko-product-host'
 
 def staged_sources():
     result = {}
-    targets, replay = upgrade_targets(canonical.TARGETS, canonical._OWNER_TRACE_REPLAY)
+    targets, replay = (canonical.TARGETS, canonical._OWNER_TRACE_REPLAY)
+    if not getattr(canonical, '_NATIVE_TOOL_JOIN_PATCHED', False):
+        targets, replay = upgrade_targets(targets, replay)
     with tempfile.TemporaryDirectory() as directory, patch.object(canonical, 'TARGETS', targets), \
             patch.object(canonical, '_OWNER_TRACE_REPLAY', replay):
         for name in ('_response_arbiter.py', '_transport.py'):
@@ -50,7 +52,9 @@ METHODS = ('_begin_response_lifecycle', '_notify_turn_finished')
 nodes = [node for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
          and node.name in METHODS]
 exec(compile(ast.Module(body=nodes, type_ignores=[]), '_draft_transport', 'exec'), namespace)
-spec = importlib.util.spec_from_file_location('_draft_phrase_input_transport', ROOT / 'scripts/drafts/neko_phrase_input_transport_phase40.py')
+producer_path = (ROOT / 'scripts/neko_phrase_input_transport.py' if getattr(canonical, '_NATIVE_TOOL_JOIN_PATCHED', False)
+                 else ROOT / 'scripts/drafts/neko_phrase_input_transport_phase40.py')
+spec = importlib.util.spec_from_file_location('_draft_phrase_input_transport', producer_path)
 PRODUCER = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(PRODUCER)
 
@@ -343,7 +347,9 @@ class AutomaticAudio(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.written(), b'')
 
     async def test_known_blocker_tool_result_waits_for_native_owner_that_needs_its_result(self):
-        """Quarantined draft: assert the independently found blocker, not a fix."""
+        """Historical phase40 blocker, superseded by the actual tool join suite."""
+        if getattr(canonical, '_NATIVE_TOOL_JOIN_PATCHED', False):
+            self.skipTest('Historical phase40 deadlock; actual success is covered by test_neko_native_tool_join')
         await self.phrase()
         await self.finish_writer()
         arbiter = self.client._response_arbiter

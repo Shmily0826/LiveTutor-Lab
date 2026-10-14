@@ -1,4 +1,4 @@
-# 日常学习伙伴计划（阶段42离线审查通过 / 41已交付，2026-10-15）
+# 日常学习伙伴计划（阶段43集成 / 场51 PARTIAL，2026-10-15）
 
 完整原任务：[contract](daily-companion-contract-2026-10-14.md)，原169行/SHA256 FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33；完整A–F/预算权限/验收不以当前记录摘要替代，不修改contract。现有Goal 01a13531-0341-7611-afc2-5c472a7ccf50 active，GPT-6.1 Sol High不擅改，不重建/缩scope/假完成。
 
@@ -14,7 +14,7 @@
 
 ## 当前动作
 
-阶段42终态：隔离同slot续接patch/test ceb906…67474a/23070f…bc32c4；独立26、Main相关52，最终78不同SOURCE/OFFLINE PASS。实际wire-ID、pending新PCM取消P2离线关闭；无合法终态按原3s grace安全failclose，不能说不断连恢复；替换ws在取消入口/升级前核原connection，不关新socket。生产链/宿主/manifest未动、SourceGate PASS。先发布本阶段8精确allowlist，下一43准备隔离实验接线/回退与canonical+manifest+Gate必要验证，default phrase/AUTO OFF；足够安全再受控单场，不盲重连。多ASR/第二round、双30s及provider因果限制详phase42报告；若资格不足转A/C/D/E余项。原49/50 PARTIAL/全部A–F及最终集中human不变，Goal active。
+阶段43终态：canonical单次42join+exactnormalizer、producer实际d247…548b，8指定文件oldSHA备份部署，两树/manifest4226…13210/SourceGate及cwd imports独立实核；独立26，Main实际runtime2/自动phrase40+1历史skip/handoff12/helper9/grade38通过。唯一场51 exec88660已terminal/exit1，report finalized true/failure null/cleanup_errors[]；出题→唯一correct100→追问不误评分/不换题真实模型/SQLite/Native有据。原严格三轮仍PARTIAL，第三2ASR（原checker唯一失败项），尾约束晚识别；不改checker/raw，35正+5空2048440bytes/seq1..554完整。本场无50的30s输入交付异常、无本地feedback截断，不能回改49/50。原ledger实核831/2000、app78/null、tech0/0，无live host/场/自有端口；无mic/capture/loopback、未调4%音量，物理可听/human未验。详phase43-native-tool-integration与continuous51-review。下一44转C跨题概念身份/相关历史实际取用，复用store_qa/context_support/knowledge_graph_guidance，不猜合旧ID/不另造库；B多ASR/晚尾约束及其他A/D/E/F继续，default phrase/AUTO OFF，Goal active。
 
 上一轮37/38已实际改码、测试、审查、部署与发布，属于progress。37累计观测58离线；38反馈诊断50离线/独立7，SourceGate本轮再次PASS。源码发布60f4c1f，metadata最新f86d53b，均codex/daily-learning-companion，主分支不变。
 
@@ -66,3 +66,9 @@ Main当前actual queue fixture无需改变host turn就复现never-announcing自�
 
 
 阶段42发布核验：8精确allowlist已commit/push 0ec30ad7aea5ce939079a252f0e51785fabd5ab0 到codex/daily-learning-companion，remote同SHA、publisher clean、Root index空；master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。无raw/DB/WAV/密钥/备份发布；contract原SHA与SourceGate再次核验通过，原ledger810/76/0。无live host/场、音频设备与系统音量未操作。下一43从冻结patch ceb906…67474a/test23070f…bc32c4与phase42报告接续，先准备隔离实验接线/回退、canonical/normalizer/manifest/Gate一致性和必要回归，default phrase/AUTO OFF；有界安全failclose不冒连续恢复，未真实模型/声音/human验收。全部A–F与局部阻塞转线、原账本不重置、禁mic/capture/loopback、实际证据完成条件保留，Goal active。
+
+
+阶段43开始：上一42实际改码/78离线/独立closure/发布属progress。已完整重读四记录；本轮沿原ledger810/76/0，无live场。Main已独占备份6源码/manifest到benchmarks/raw/evidence/phase43-pre-integration；canonical新增42组合接线与strict normalizer，producer精确采用已审40draft d247…548b，测试staging避免双升级，旧40 deadlock断言明确历史skip由真实26新cases覆盖。宿主/manifest尚未更新，因此当前Gate预期拒绝，禁止启动；先临时复制/AST/幂等及相关验证，独立只读审查，精确oldSHA备份部署后更新manifest/helper并Gate再核。默认phrase/AUTO OFF，不动用户库/历史或音频设备。若接线失败精确回退原bytes，不绕Gate。
+
+
+阶段43已部署/唯一场51：canonical单次join+exactnormalizer、producer exact d247…548b、8oldSHA备份部署+manifest4226…13210；Main无staging runtime2 PASS、自动/phrase40 PASS+1历史skip、handoff12/helper9/grade38 PASS，独立26与实际两树8hash/Gate/cwd imports PASS。启动前账本810/2000、app76/null、tech0/0，policy真实speaker允许/mic/capture/loopback false，原47三WAV哈希与50完全一致。唯一Main exec88660已实际返回live session，fresh store neko-daily-speech-acceptance-20261015-51，report benchmarks/raw/evidence/daily-companion-20261015-continuous51.json；output-only/speech-gate/phrase/grade-chain/prepare-picture/verify-picture，不预造题。尚未终态，不冒通过；poll同handle，不因观测超时重启，不开第二场。默认日常phrase/AUTO OFF、禁mic/capture/loopback、不调4%音量；剩余A–F/原49/50 PARTIAL/Goal active保留。

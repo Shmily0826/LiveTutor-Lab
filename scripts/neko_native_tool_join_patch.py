@@ -1,4 +1,4 @@
-"""Isolated successor to phase40; never imported by the production patch chain."""
+"""Single-input Native tool continuation, used only by the opt-in phrase route."""
 from neko_native_audio_dispatch_patch import upgrade_targets as audio_targets
 from neko_native_barge_in_patch import _upgrade_targets
 

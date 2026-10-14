@@ -40,7 +40,7 @@
     {
       "path": "main_logic/omni_realtime_client/_transport.py",
       "base_sha256": "2d6c058206c1beafc3e1d35a8f5111042ff509a31f398053ce7b97a825242423",
-      "patched_sha256": "78df4190470f8d6ec43ae94c2995fa1eef9b3e30a59b3673418b32c6ddacdd65",
+      "patched_sha256": "3f15318310c75880a27f4fc1ef2ec961b5472204f36056068df30ea8043bdae8",
       "resealed_utc": "2026-10-13T14:38:47.980810+00:00",
       "resealed_reason": "Bounded free-route late-ASR raw tool dispatch, pinned original connection/session, one expected scope advance, foreign retirement rejects; onset, PCM, response lifecycle unchanged; 6 candidate, 5 existing tool lifecycle and 19 barge guards passed; actual role/voice not yet verified.",
       "verified_by": {
@@ -66,7 +66,8 @@
       "phase33_prior_sha256": "12f8a1180de26ce67990f522ce5c8474346922f35ebf43c7a3ccd898e6e59950",
       "phase33_resealed_utc": "2026-10-14T18:17:33.626769+00:00",
       "phase33_verified_by": "Main+independent Native route36; intent19 pass+1 Windows symlink skip; guarded healthy-empty rearm, explicit submission refusal, claim-required provider grading. SOURCE/OFFLINE only; actual continuous Native pending; daily AUTO_GRADE OFF.",
-      "phase38_prior_sha256": "634ec3f9a681bf0a4fc1e63a554fcae6a87ca3b5dafd7e914ec234a36ffed853"
+      "phase38_prior_sha256": "634ec3f9a681bf0a4fc1e63a554fcae6a87ca3b5dafd7e914ec234a36ffed853",
+      "phase43_prior_sha256": "78df4190470f8d6ec43ae94c2995fa1eef9b3e30a59b3673418b32c6ddacdd65"
     },
     {
       "path": "app/agent_server/capabilities.py",
@@ -197,7 +198,7 @@
     {
       "path": "main_logic/omni_realtime_client/_tools.py",
       "base_sha256": "51afd6f606a4c011b1bb1a88f35da2d443a458f335c0cbc177601c5a648b3514",
-      "patched_sha256": "41c50034fbba268f58214df34e5f167fb2f45b906d8d8bd4d854ec4922cc05cc",
+      "patched_sha256": "81a2bb42ac2ac8d264189cb648e655b9dec4097686be1366a013e2b88345489f",
       "resealed_utc": "2026-10-13T18:23:15.001215+00:00",
       "resealed_reason": "Opt-in all-Study admission, current received-ASR/quiet/ready plus at most 200ms neighboring-ASR promotion; older prefix args cannot acquire final scope. Daily default off.",
       "verified_by": {
@@ -221,7 +222,8 @@
         "tests": "31 actual patched host owner/event/native delivery/swap methods; trusted exact tool allowlist; quiz question field, answer/summary reply; private metadata stripping, unchanged original model args",
         "scope": "reuses prior exact native-token cancellation algorithm; not new human/barge-in acceptance",
         "sealed_utc": "2026-10-13T20:29:59.037665+00:00"
-      }
+      },
+      "phase43_prior_sha256": "41c50034fbba268f58214df34e5f167fb2f45b906d8d8bd4d854ec4922cc05cc"
     },
     {
       "path": "main_logic/core/tts_lifecycle.py",
@@ -327,6 +329,12 @@
       "base_sha256": null,
       "phase38_prior_sha256": "714502f39f0368132556664a92734e41ac02521d0035e0ce04ae4a6952ea2140",
       "patched_sha256": "9b30a9dfe4c314b223590f36020b09e6071da8f8a9451a4fd081a51aebb191c5"
+    },
+    {
+      "path": "main_logic/omni_realtime_client/_response_arbiter.py",
+      "base_sha256": null,
+      "phase43_prior_sha256": "f041135b335a22655bffe14a0856d11f105aa50b56355a0921ec853e7be9aaff",
+      "patched_sha256": "0dc4d0349d518d4bac4a8a1da034e46bde4624e9fa9aa4079af8539ca32e922e"
     }
   ],
   "native_barge_in_handoff": {
@@ -386,8 +394,9 @@
     },
     {
       "path": "scripts/neko_phrase_input_transport.py",
-      "sha256": "58bfe9f9513d45b6cb92a4adcedb4d81014e5a85c02870a3f712ac5407f5d07b",
-      "deployed_path": "neko_phrase_input_transport.py"
+      "sha256": "d247be713381aae91a71608441f9a06d3be0b5ccb868a8b667c9d70f44ce548b",
+      "deployed_path": "neko_phrase_input_transport.py",
+      "phase43_prior_sha256": "58bfe9f9513d45b6cb92a4adcedb4d81014e5a85c02870a3f712ac5407f5d07b"
     },
     {
       "path": "scripts/neko_output_only_runtime.py",
@@ -421,6 +430,18 @@
     {
       "path": "scripts/neko_study_text_trace_patch.py",
       "sha256": "e6bd8accfb23a9d1cc78afa21018f2e3f3cd47412d4865c87992df6dfd15480c"
+    },
+    {
+      "path": "scripts/neko_voice_host_patch.py",
+      "sha256": "5e86fd7db925d268b80a9b6957efb514f1bc49920dd0e4a6681a7adaf790dfb2"
+    },
+    {
+      "path": "scripts/neko_native_audio_dispatch_patch.py",
+      "sha256": "c2aaef9d9abde2f7b7620566b08ccb0bc914d62d99a16788919cfb293bf96dd2"
+    },
+    {
+      "path": "scripts/neko_native_tool_join_patch.py",
+      "sha256": "7b9098373bdfda8b14b55bc4d48de79ba776d290a1305d9df4dd1b94ed2e6907"
     }
   ],
   "daily_phrase_input_update": {
@@ -453,5 +474,11 @@
     "proof": "SOURCE/OFFLINE: Main 7 trace +38 route+5 spoken; independent7, no provider/device/human",
     "privacy": "length and UTF8 digests only; bounded64 identity streams; no content retained",
     "report": "docs/evidence/daily-companion-phase38-feedback-trace-2026-10-15.md"
+  },
+  "daily_native_tool_continuation": {
+    "gate": "NEKO_EXPERIMENTAL_PHRASE_INPUT=1; daily default OFF; AUTO_GRADE default OFF",
+    "proof": "SOURCE/OFFLINE only; phase42 independent26 and Main52; phase43 canonical migration/AST/idempotence and SourceGate preflight; real runtime pending",
+    "report": "docs/evidence/daily-companion-phase43-native-tool-integration-2026-10-15.md",
+    "limits": "single outstanding input, pre-content tool ingress; actual wire call ID required; no provider causal ACK; missing cancel terminal fails closed; multi-ASR/second round unsupported"
   }
 }
