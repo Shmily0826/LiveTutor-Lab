@@ -376,6 +376,7 @@ class StudyCompanionPlugin(
             self._study_session_id = ""
             # A process restart is not the learner abandoning an unanswered quiz.
             self._state.current_question.pop("attempt_evaluation_pending", None)
+            self._state.current_question.pop("attempt_evaluation_owner", None)
             await self._start_study_session(self._state.active_mode, resume_pending_question=True)
             self._start_study_idle_task()
             self._ocr_pipeline = StudyOcrPipeline(logger=self.logger, config=self._cfg)
@@ -798,7 +799,7 @@ class StudyCompanionPlugin(
         async with self._study_session_lock:
             return await self._start_study_session_locked(mode, resume_pending_question=resume_pending_question)
 
-    async def _start_study_session_locked(self, mode: str | None = None, course_id: str = "", *, resume_pending_question: bool = False) -> str:
+    async def _start_study_session_locked(self, mode: str | None = None, course_id: str = "", *, resume_pending_question: bool = False, resume_course_progress: bool = False) -> str:
         session_id = f"study-{uuid.uuid4().hex}"
         selected_mode = str(mode or self._state.active_mode or self._cfg.mode)
         selected_course = str(course_id or self._state.study_course_id or "general").strip()
@@ -807,6 +808,8 @@ class StudyCompanionPlugin(
             course_id=selected_course,
         )
         material = await asyncio.to_thread(load_material, self._store, selected_course)
+        progress = (await asyncio.to_thread(self._store.load_course_progress, selected_course)
+                    if resume_course_progress else {})
         async with self._lock:
             before_material = material_context(self)
             pending_question = dict(self._state.current_question)
@@ -814,6 +817,15 @@ class StudyCompanionPlugin(
                     and pending_question.get("question_id") and pending_question.get("attempt_id")
                     and not pending_question.get("attempt_evaluated")):
                 pending_question = {}
+            if progress:
+                saved_question = progress.get("current_question")
+                if (isinstance(saved_question, dict) and saved_question.get("question_id")
+                        and saved_question.get("attempt_id")):
+                    pending_question = dict(saved_question)
+            # A reservation from the departed session cannot remain live, also
+            # when the same course resumes after an idle-session rollover.
+            pending_question.pop("attempt_evaluation_pending", None)
+            pending_question.pop("attempt_evaluation_owner", None)
             if self._state.study_course_id != selected_course:
                 self._state.active_practice_scope = {}
                 self._state.practice_scope_revision += 1
@@ -824,7 +836,13 @@ class StudyCompanionPlugin(
             self._state.session_summary_seed = {}
             self._state.recent_learning_events = []
             self._state.current_question = pending_question
-            self._state.last_answer_evaluation = {}
+            evaluation = progress.get("last_answer_evaluation")
+            self._state.last_answer_evaluation = (dict(evaluation)
+                if pending_question and isinstance(evaluation, dict) else {})
+            self._state.last_question_at = (str(progress.get("last_question_at") or "")
+                if progress and pending_question else self._state.last_question_at if pending_question else "")
+            self._state.last_answer_evaluated_at = (str(progress.get("last_answer_evaluated_at") or "")
+                if self._state.last_answer_evaluation else "")
             self._state.last_ocr_text = str(material.get("text") or "")
             self._state.last_vision_image_base64 = str(material.get("image") or "")
             self._state.last_ocr_at = ""
@@ -834,6 +852,9 @@ class StudyCompanionPlugin(
                 self._ocr_pipeline._clear_vision_snapshot()
             material_notifications = material_changes(self, before_material, "session_started")
         await submit_material_changes(self, material_notifications)
+        # Selecting a saved course resumes its artifact; an explicit fresh start
+        # replaces that course's checkpoint, so it cannot resurrect an old quiz.
+        await asyncio.to_thread(self._store.save_course_progress, self._state.to_dict())
         await self._persist_state()
         return session_id
 
@@ -850,6 +871,7 @@ class StudyCompanionPlugin(
                 summary=self._state.last_session_summary,
             )
         async with self._lock:
+            await asyncio.to_thread(self._store.save_course_progress, self._state.to_dict())
             before_material = material_context(self)
             self._study_session_id = ""
             self._study_session_last_activity = 0.0
@@ -859,11 +881,12 @@ class StudyCompanionPlugin(
         await self._persist_state()
         return session_id
 
-    async def _restart_study_session(self, mode: str | None = None, course_id: str = "") -> str:
+    async def _restart_study_session(self, mode: str | None = None, course_id: str = "", *, resume_course_progress: bool = False) -> str:
         async with self._study_session_lock:
             if self._study_session_id:
                 await self._end_study_session_locked()
-            return await self._start_study_session_locked(mode, course_id=course_id)
+            return await self._start_study_session_locked(mode, course_id=course_id,
+                                                         resume_course_progress=resume_course_progress)
 
     async def _ensure_active_study_session(self) -> str:
         async with self._study_session_lock:

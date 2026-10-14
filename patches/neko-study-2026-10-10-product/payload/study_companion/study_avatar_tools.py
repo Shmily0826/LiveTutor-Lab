@@ -19,6 +19,7 @@ from urllib.parse import quote
 
 import httpx
 from plugin.sdk.plugin import llm_tool
+from .models import public_current_question_payload
 
 RELAY_NOTE = (
     "Pass the reply text on to the learner as spoken by you. Keep its wording, "
@@ -672,9 +673,10 @@ class _StudyAvatarToolsMixin:
         description=(
             "Report or change the study session. Call with action='status' to see "
             "the active course, session, mode and recent mistakes; action='start' "
-            "with a course_id to begin a new session for that course (this also "
-            "restores that course's earlier history); action='set_course' to switch "
-            "courses without resetting progress. Use this before teaching when the "
+            "with a course_id to explicitly begin a fresh session and retire its held quiz; "
+            "action='set_course' to switch courses and resume the saved question/attempt. "
+            "Status includes the public current_question and question_state; use those "
+            "to resume a quiz without generating another. Use this before teaching when the "
             "learner names a subject, and whenever they ask about their own progress."
         ),
         parameters={
@@ -706,6 +708,9 @@ class _StudyAvatarToolsMixin:
         active_course = str(self._state.study_course_id or "")
         state["course_id"] = active_course
         state["session_id"] = str(self._state.study_session_id or "")
+        held = dict(self._state.current_question)
+        state["current_question"] = public_current_question_payload(held)
+        state["question_state"] = ("evaluated" if held.get("attempt_evaluated") else "pending") if held else "none"
         state["material_control_submission"] = list(getattr(self, "_study_material_control_submission", []))
         if active_course:
             learning = await asyncio.to_thread(self._course_learning_state, active_course)

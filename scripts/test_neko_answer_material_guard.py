@@ -8,6 +8,7 @@ from pathlib import Path
 import tempfile
 import types
 import unittest
+import uuid
 from unittest.mock import AsyncMock
 from test_neko_explanation_language import Harness
 from test_neko_product_course_memory import SOURCE,Store,models
@@ -20,7 +21,7 @@ class EntryErrorResult(dict):
 def unexpected_entry_error(host,error,**kwargs):
     if str(error)=='isolated ensure failure':return {'error':str(error),'code':type(error).__name__}
     raise error
-scope={'asyncio':asyncio,'contextlib':contextlib,'Err':EntryErrorResult,
+scope={'asyncio':asyncio,'contextlib':contextlib,'uuid':uuid,'Err':EntryErrorResult,
        'Ok':lambda value:value,'SdkError':EntryError,'LLM_OPERATION_ANSWER_EVALUATE':'answer_evaluate',
        '_entry_exception_error':unexpected_entry_error,
        '_validate_optional_vision_image_payload':lambda host,value,**kwargs:value,
@@ -93,6 +94,14 @@ class AnswerMaterial(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.store.list_interactions(10,session_id='foreign'),[])
         h._agent.answer_evaluate.assert_not_awaited()
         self.assertNotIn('attempt_evaluation_pending',h._state.current_question)
+
+    async def test_empty_session_resumes_pending_quiz_before_reserving_its_first_grade(self):
+        h=await self.prepare();h._study_session_id='';h._state.study_session_id=''
+        result=await h.study_evaluate_answer(answer='REZ',question_id='question-owned',attempt_id='attempt-owned')
+        self.assertEqual(result['score'],0)
+        self.assertTrue(h._state.current_question['attempt_evaluated'])
+        self.assertNotIn('attempt_evaluation_owner',h._state.current_question)
+        self.assertEqual(len(self.store.list_interactions(20)),1)
     async def test_direct_grade_new_question_rejects_old_feedback_after_retaining_original_history(self):
         h=await self.prepare();original=h.model
         new={'question':'New task','answer':'NUD','question_id':'new-question','attempt_id':'new-attempt'}
@@ -147,5 +156,82 @@ class AnswerMaterial(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(output['code'],'course_context_changed');h._emit_answer_evaluated_event.assert_not_awaited()
         rows=self.store.list_interactions(10,session_id=session)
         self.assertEqual(len(rows),1);self.assertEqual(rows[0]['metadata']['material_context']['course_id'],'course-A')
+
+    async def test_old_task_cleanup_cannot_release_resumed_attempt_new_session_reservation(self):
+        h=await self.prepare();old_entered=asyncio.Event();new_entered=asyncio.Event()
+        old_release=asyncio.Event();new_release=asyncio.Event();original=h.model
+        async def controlled(**kwargs):
+            if kwargs['answer']=='old answer':
+                old_entered.set();await old_release.wait()
+            else:
+                new_entered.set();await new_release.wait()
+            return await original(**kwargs)
+        h._agent.answer_evaluate=AsyncMock(side_effect=controlled)
+        old=asyncio.create_task(h.study_evaluate_answer(answer='old answer',question_id='question-owned',attempt_id='attempt-owned'))
+        new=None
+        try:
+            await asyncio.wait_for(old_entered.wait(),2)
+            old_owner=h._state.current_question['attempt_evaluation_owner']
+            await h.study_set_course(course_id='course-B')
+            await h.study_set_course(course_id='course-A')
+            self.assertEqual(h._state.current_question['attempt_id'],'attempt-owned')
+            self.assertNotIn('attempt_evaluation_owner',h._state.current_question)
+            new_session=h._study_session_id
+            new=asyncio.create_task(h.study_evaluate_answer(answer='new answer',question_id='question-owned',attempt_id='attempt-owned'))
+            await asyncio.wait_for(new_entered.wait(),2)
+            new_owner=h._state.current_question['attempt_evaluation_owner']
+            self.assertNotEqual(old_owner,new_owner)
+            old_release.set();old_result=await asyncio.wait_for(old,2)
+            self.assertEqual(old_result['code'],'course_context_changed')
+            self.assertTrue(h._state.current_question['attempt_evaluation_pending'])
+            self.assertEqual(h._state.current_question['attempt_evaluation_owner'],new_owner)
+            self.assertFalse(h._state.current_question.get('attempt_evaluated',False))
+            new_release.set();new_result=await asyncio.wait_for(new,2)
+            self.assertEqual(new_result['score'],0)
+            self.assertNotIn('attempt_evaluation_owner',h._state.current_question)
+            rows=self.store.list_interactions(20)
+            self.assertEqual(len(rows),1);self.assertEqual(rows[0]['session_id'],new_session)
+        finally:
+            old_release.set();new_release.set()
+            await asyncio.gather(old,*([new] if new else []),return_exceptions=True)
+
+    async def test_context_change_while_waiting_for_staging_lock_cannot_write_new_attempt_cache(self):
+        h=await self.prepare();original=h._finalize_tutor_call;inner=h._lock
+        class StagingLock:
+            armed=False
+            async def __aenter__(lock):
+                if lock.armed:
+                    lock.armed=False
+                    h._study_session_id='new-course-A-session';h._state.study_session_id=h._study_session_id
+                    h._state.current_question={**h._state.current_question,'attempt_evaluation_pending':True,
+                                              'attempt_evaluation_owner':'new-reservation'}
+                    h._state.last_answer_evaluation={}
+                await inner.acquire()
+                return lock
+            async def __aexit__(lock,*args):inner.release()
+        h._lock=StagingLock()
+        async def arm(*args,**kwargs):
+            result=await original(*args,**kwargs);h._lock.armed=True;return result
+        h._finalize_tutor_call=arm
+        result=await h.study_evaluate_answer(answer='old answer',question_id='question-owned',attempt_id='attempt-owned')
+        self.assertEqual(result['code'],'course_context_changed')
+        self.assertTrue(h._state.current_question['attempt_evaluation_pending'])
+        self.assertEqual(h._state.current_question['attempt_evaluation_owner'],'new-reservation')
+        self.assertNotIn('answer_evaluation_cache',h._state.current_question)
+        self.assertFalse(h._state.current_question.get('attempt_evaluated',False))
+        h._emit_answer_evaluated_event.assert_not_awaited()
+        self.assertEqual(len(self.store.list_interactions(20)),1)
+
+    async def test_context_change_during_final_cleanup_persistence_suppresses_old_reply(self):
+        h=await self.prepare();original=h._persist_state
+        async def switch_after_cleanup():
+            await original()
+            if (h._state.current_question.get('attempt_evaluated')
+                    and 'attempt_evaluation_owner' not in h._state.current_question):
+                h._study_session_id='replacement-session';h._state.study_session_id=h._study_session_id
+        h._persist_state=switch_after_cleanup
+        result=await h.study_evaluate_answer(answer='old answer',question_id='question-owned',attempt_id='attempt-owned')
+        self.assertEqual(result['code'],'course_context_changed')
+        self.assertEqual(len(self.store.list_interactions(20)),1)
 
 if __name__=='__main__':unittest.main(verbosity=2)

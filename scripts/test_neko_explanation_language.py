@@ -12,7 +12,7 @@ from typing import Any
 import unittest
 from urllib.parse import quote
 import httpx
-from test_neko_product_course_memory import ProductHarness, Store, SOURCE
+from test_neko_product_course_memory import ProductHarness, Store, SOURCE, models
 from test_neko_learning_preferences import prefs
 
 tree=ast.parse((SOURCE/'study_avatar_tools.py').read_text(encoding='utf-8'))
@@ -20,6 +20,7 @@ nodes=[n for n in tree.body if isinstance(n,(ast.Assign,ast.FunctionDef,ast.Asyn
 for n in ast.walk(ast.Module(body=nodes,type_ignores=[])):
     if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)):n.decorator_list=[]
 scope={'asyncio':asyncio,'hashlib':hashlib,'json':json,'logging':logging,'os':os,'re':re,'Any':Any,'httpx':httpx,'quote':quote,
+       'public_current_question_payload':models.public_current_question_payload,
        '__name__':'product_study.avatar_language_test','__package__':'product_study'}
 exec(compile(ast.fix_missing_locations(ast.Module(body=nodes,type_ignores=[])),str(SOURCE/'study_avatar_tools.py'),'exec'),scope)
 

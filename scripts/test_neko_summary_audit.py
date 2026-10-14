@@ -2,9 +2,26 @@
 from pathlib import Path
 import tempfile
 import unittest
-from neko_desktop_tutor_host import PRODUCT,prepare_summary_prompt_audit
+from neko_desktop_tutor_host import PRODUCT,prepare_summary_prompt_audit,prepare_session_tool_audit
 
 class SummaryAudit(unittest.TestCase):
+    def test_session_tool_instrumentation_is_task_only_known_source_and_public_fields(self):
+        original=(PRODUCT/'payload/study_companion/study_avatar_tools.py').read_bytes()
+        with tempfile.TemporaryDirectory() as folder:
+            store=Path(folder)/'neko-daily-continuous-text-test'
+            target=store/'plugin-code/study_companion/study_avatar_tools.py'
+            target.parent.mkdir(parents=True);target.write_bytes(original)
+            result=prepare_session_tool_audit(store)
+            patched=target.read_text(encoding='utf-8')
+            self.assertIn('"current_question", "question_state"',patched)
+            self.assertNotEqual(result['canonical_sha256'],result['instrumented_sha256'])
+            edited=target.read_bytes()+b'\n# unknown'
+            target.write_bytes(edited)
+            with self.assertRaises(RuntimeError):prepare_session_tool_audit(store)
+            self.assertEqual(target.read_bytes(),edited)
+            with self.assertRaises(RuntimeError):prepare_session_tool_audit(Path(folder)/'neko-daily-companion')
+        self.assertEqual((PRODUCT/'payload/study_companion/study_avatar_tools.py').read_bytes(),original)
+
     def test_task_gateway_only_and_unknown_source_preserved(self):
         original=(PRODUCT/'payload/study_companion/study_model_gateway.py').read_bytes()
         with tempfile.TemporaryDirectory() as folder:

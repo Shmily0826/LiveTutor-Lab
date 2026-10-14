@@ -73,10 +73,12 @@ namespace["SdkError"] = SummaryFixtureError
 exec(compile(ast.fix_missing_locations(methods), str(SOURCE / "__init__.py"), "exec"), namespace)
 summary_tree = ast.parse((SOURCE / "entry_tutor_summary_entries.py").read_text(encoding="utf-8"))
 summary_class = next(node for node in summary_tree.body if isinstance(node, ast.ClassDef))
-summary_method = next(node for node in summary_class.body if isinstance(node, ast.AsyncFunctionDef) and node.name == "study_summarize_session")
-summary_method.decorator_list = []
+summary_methods = [node for node in summary_class.body if isinstance(node, ast.AsyncFunctionDef)
+                   and node.name in {"study_summarize_session", "study_start_session", "study_set_course"}]
+for method in summary_methods:
+    method.decorator_list = []
 namespace.update({"LLM_OPERATION_SUMMARIZE_SESSION": "summarize_session", "Ok": lambda value: value})
-exec(compile(ast.fix_missing_locations(ast.Module(body=[summary_method], type_ignores=[])), str(SOURCE / "entry_tutor_summary_entries.py"), "exec"), namespace)
+exec(compile(ast.fix_missing_locations(ast.Module(body=summary_methods, type_ignores=[])), str(SOURCE / "entry_tutor_summary_entries.py"), "exec"), namespace)
 
 class ProductHarness(context_module._TutorContextSupportMixin):
     def __init__(self, store):
@@ -109,7 +111,8 @@ class ProductHarness(context_module._TutorContextSupportMixin):
 
 for name in names:
     setattr(ProductHarness, name, namespace[name])
-ProductHarness.study_summarize_session = namespace["study_summarize_session"]
+for method in summary_methods:
+    setattr(ProductHarness, method.name, namespace[method.name])
 
 avatar_tree = ast.parse((SOURCE / "study_avatar_tools.py").read_text(encoding="utf-8"))
 avatar_defs = [node for node in avatar_tree.body if isinstance(node, ast.FunctionDef)
@@ -117,7 +120,8 @@ avatar_defs = [node for node in avatar_tree.body if isinstance(node, ast.Functio
 avatar_class = next(node for node in avatar_tree.body if isinstance(node, ast.ClassDef))
 session_tool = next(node for node in avatar_class.body if getattr(node, "name", "") == "study_session_tool")
 session_tool.decorator_list = []
-avatar_namespace = {"asyncio": asyncio, "Any": Any, "RELAY_NOTE": "relay"}
+avatar_namespace = {"asyncio": asyncio, "Any": Any, "RELAY_NOTE": "relay",
+                    "public_current_question_payload": models.public_current_question_payload}
 exec(compile(ast.fix_missing_locations(ast.Module(body=[*avatar_defs, session_tool], type_ignores=[])),
              str(SOURCE / "study_avatar_tools.py"), "exec"), avatar_namespace)
 ProductHarness.study_session_tool = avatar_namespace["study_session_tool"]
@@ -129,6 +133,87 @@ async def raw_status(self):
 ProductHarness.study_status = raw_status
 
 class CourseMemoryTest(unittest.IsolatedAsyncioTestCase):
+    async def test_course_selection_restores_same_pending_artifact_after_restart_and_fresh_start_retires_it(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            db = Path(temporary) / "study.db"
+            seed = Path(temporary) / "unused.json"
+            store = Store(db, seed, logging.getLogger("course-memory-test"))
+            store.open()
+            plugin = ProductHarness(store)
+            await plugin.study_set_course(course_id="course-a")
+            pending = {"question": "Which module sends the request?", "question_id": "qa",
+                       "attempt_id": "aa", "answer": "private answer", "rubric": {"accuracy": 100}}
+            plugin._state.current_question = dict(pending)
+            plugin._state.last_question_at = "question-at"
+            old_session = plugin._study_session_id
+            store.append_interaction(kind="question_generate", input_text="real fixture question",
+                                     output_text=pending["question"], metadata={"payload": pending}, session_id=old_session)
+            original_rows = store.list_interactions(50)
+            await plugin.study_set_course(course_id="course-b")
+            self.assertEqual(plugin._state.current_question, {})
+            plugin._state.current_question = {"question": "B question", "question_id": "qb", "attempt_id": "ab"}
+            await plugin._persist_state()
+            store.close()
+
+            store = Store(db, seed, logging.getLogger("course-memory-test"))
+            store.open()
+            plugin = ProductHarness(store)
+            await plugin._start_study_session_locked(resume_pending_question=True)
+            self.assertEqual(plugin._state.current_question["question_id"], "qb")
+            await plugin.study_set_course(course_id="course-a")
+            self.assertEqual(plugin._state.current_question, pending)
+            self.assertEqual(plugin._state.last_question_at, "question-at")
+            self.assertNotEqual(plugin._study_session_id, old_session)
+            self.assertEqual(store.list_interactions(50), original_rows)
+            public = models.public_current_question_payload(plugin._state.current_question)
+            self.assertNotIn("answer", public)
+            self.assertNotIn("rubric", public)
+            status = await plugin.study_session_tool()
+            self.assertEqual(status["current_question"], public)
+            self.assertEqual(status["question_state"], "pending")
+            await plugin.study_start_session(course_id="course-a")
+            self.assertEqual(plugin._state.current_question, {})
+            await plugin.study_set_course(course_id="course-b")
+            self.assertEqual(plugin._state.current_question["question_id"], "qb")
+            await plugin.study_set_course(course_id="course-a")
+            self.assertEqual(plugin._state.current_question, {})
+            store.close()
+
+    async def test_saved_course_attempt_flags_and_grade_survive_without_reviving_reservation_or_foreign_state(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            store = Store(Path(temporary)/"study.db", Path(temporary)/"unused.json", logging.getLogger("course-memory-test"))
+            store.open()
+            plugin = ProductHarness(store)
+            await plugin.study_set_course(course_id="course-a")
+            question = {"question": "Old question", "question_id": "qa", "attempt_id": "aa",
+                        "attempt_evaluated": True, "attempt_evaluation_pending": True,
+                        "answer_evaluation_cache": {"score": 0}}
+            plugin._state.current_question = question
+            plugin._state.last_answer_evaluation = {"score": 0, "feedback": "Check the direction"}
+            plugin._state.last_answer_evaluated_at = "grade-at"
+            await plugin.study_set_course(course_id="course-b")
+            self.assertEqual(plugin._state.last_answer_evaluation, {})
+            await plugin.study_set_course(course_id="course-a")
+            self.assertTrue(plugin._state.current_question["attempt_evaluated"])
+            self.assertNotIn("attempt_evaluation_pending", plugin._state.current_question)
+            self.assertEqual(plugin._state.current_question["answer_evaluation_cache"], {"score": 0})
+            self.assertEqual(plugin._state.last_answer_evaluation["score"], 0)
+            self.assertEqual(plugin._state.last_answer_evaluated_at, "grade-at")
+            status = await plugin.study_session_tool()
+            self.assertEqual(status["question_state"], "evaluated")
+            self.assertEqual(status["current_question"]["attempt_id"], "aa")
+            self.assertNotIn("answer_evaluation_cache", status["current_question"])
+            self.assertNotIn("attempt_evaluated", status["current_question"])
+            await plugin.study_set_course(course_id="course-b")
+            store.set_raw("course_teaching_progress:course-a", {"version":1, "course_id":"foreign-course", "current_question":question})
+            await plugin.study_set_course(course_id="course-a")
+            self.assertEqual(plugin._state.current_question, {})
+            self.assertEqual(plugin._state.last_answer_evaluation, {})
+            invalid = await plugin.study_set_course(course_id="x"*81)
+            self.assertEqual(invalid["code"], "INVALID_COURSE")
+            self.assertEqual(plugin._state.study_course_id, "course-a")
+            store.close()
+
     async def test_unanswered_quiz_survives_process_restart_but_not_course_switch(self):
         with tempfile.TemporaryDirectory() as temporary:
             db = Path(temporary) / "study.db"
@@ -144,6 +229,7 @@ class CourseMemoryTest(unittest.IsolatedAsyncioTestCase):
             restored_store = Store(db, seed, logging.getLogger("course-memory-test"))
             restored_store.open()
             restarted = ProductHarness(restored_store)
+            restarted._state.current_question.update(attempt_evaluation_pending=True, attempt_evaluation_owner="departed-owner")
             await restarted._start_study_session_locked(resume_pending_question=True)
             self.assertEqual(restarted._state.current_question, pending)
             restarted._state.last_vision_image_base64 = "previous-course-image"

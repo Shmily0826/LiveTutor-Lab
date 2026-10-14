@@ -44,7 +44,12 @@ class _TutorSummaryEntriesMixin:
     async def study_set_course(self, course_id: str = "", **_):
         if not str(course_id or "").strip():
             return Err(SdkError("course_id is required", code="INVALID_COURSE"))
-        return await self.study_start_session(course_id=course_id)
+        selected_course = str(course_id or "").strip()
+        if len(selected_course) > 80:
+            return Err(SdkError("course_id must be at most 80 characters", code="INVALID_COURSE"))
+        session_id = await self._restart_study_session(course_id=selected_course,
+                                                       resume_course_progress=True)
+        return Ok({"session_id": session_id, "course_id": self._state.study_course_id})
 
     @ui.action()
     @plugin_entry(

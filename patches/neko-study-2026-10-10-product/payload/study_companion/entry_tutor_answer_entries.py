@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import uuid
 
 from .entry_common import (
     asyncio,
@@ -20,13 +21,15 @@ from .study_materials import material_context, material_context_current, Materia
 
 class _TutorAnswerEntriesMixin:
     async def _clear_attempt_evaluation_reservation(
-        self, attempt_id: str, *, recover_cached: bool = False
+        self, attempt_id: str, *, reservation_owner: str, recover_cached: bool = False
     ) -> None:
         if not attempt_id:
             return
         async with self._lock:
-            if str(self._state.current_question.get("attempt_id") or "") == attempt_id:
+            if (str(self._state.current_question.get("attempt_id") or "") == attempt_id
+                    and self._state.current_question.get("attempt_evaluation_owner") == reservation_owner):
                 self._state.current_question.pop("attempt_evaluation_pending", None)
+                self._state.current_question.pop("attempt_evaluation_owner", None)
                 if (
                     recover_cached
                     and self._state.current_question.get("attempt_evaluated")
@@ -191,28 +194,8 @@ class _TutorAnswerEntriesMixin:
         if selected_topic_id:
             question_payload["selected_topic_id"] = selected_topic_id
         reserved_attempt = False
+        reservation_owner = uuid.uuid4().hex
         final_attempt_state_staged = False
-        if using_current_question and state_attempt_id:
-            async with self._lock:
-                live_question = self._state.current_question
-                if str(live_question.get("attempt_id") or "") != state_attempt_id:
-                    return Err(
-                        SdkError(
-                            "current question identity does not match",
-                            code="QUESTION_MISMATCH",
-                        )
-                    )
-                if live_question.get("attempt_evaluated") or live_question.get(
-                    "attempt_evaluation_pending"
-                ):
-                    return Err(
-                        SdkError(
-                            "attempt has already been evaluated",
-                            code="ATTEMPT_ALREADY_EVALUATED",
-                        )
-                    )
-                live_question["attempt_evaluation_pending"] = True
-                reserved_attempt = True
         run_id = self._resolve_current_run_id(kwargs)
         session_id = str(kwargs.get("session_id") or "").strip()
         try:
@@ -225,6 +208,18 @@ class _TutorAnswerEntriesMixin:
                         or current["session_id"] != session_id):
                     raise MaterialContextChanged("course/session changed before grading context")
                 expected_material = current
+                # Reserve only after an empty session has resumed the held quiz;
+                # that session startup correctly clears departed reservations.
+                if using_current_question and state_attempt_id:
+                    live_question = self._state.current_question
+                    if (str(live_question.get("question_id") or "") != state_question_id
+                            or str(live_question.get("attempt_id") or "") != state_attempt_id):
+                        return Err(SdkError("current question identity does not match", code="QUESTION_MISMATCH"))
+                    if live_question.get("attempt_evaluated") or live_question.get("attempt_evaluation_pending"):
+                        return Err(SdkError("attempt has already been evaluated", code="ATTEMPT_ALREADY_EVALUATED"))
+                    live_question["attempt_evaluation_pending"] = True
+                    live_question["attempt_evaluation_owner"] = reservation_owner
+                    reserved_attempt = True
             tutor_context = await self._build_learning_context(
                 LLM_OPERATION_ANSWER_EVALUATE,
                 input_text=answer_text,
@@ -298,7 +293,7 @@ class _TutorAnswerEntriesMixin:
                 raise MaterialContextChanged("course/session changed after grading commit")
             if reply.degraded:
                 if reserved_attempt:
-                    await self._clear_attempt_evaluation_reservation(state_attempt_id)
+                    await self._clear_attempt_evaluation_reservation(state_attempt_id, reservation_owner=reservation_owner)
                     await self._persist_state()
                 return Ok(payload)
             payload["question"] = resolved_question
@@ -341,6 +336,9 @@ class _TutorAnswerEntriesMixin:
                     }
                 }
                 async with self._lock:
+                    if (not material_context_current(self, expected_material)
+                            or self._state.current_question.get("attempt_evaluation_owner") != reservation_owner):
+                        raise MaterialContextChanged("the grading reservation or session was replaced before staging")
                     if (
                         str(self._state.current_question.get("attempt_id") or "")
                         == state_attempt_id
@@ -376,7 +374,9 @@ class _TutorAnswerEntriesMixin:
                 raise MaterialContextChanged("course/session changed before grading feedback")
             if using_current_question and (state_question_id or state_attempt_id):
                 async with self._lock:
-                    if (str(self._state.current_question.get("question_id") or "") != state_question_id
+                    if (not material_context_current(self, expected_material)
+                            or self._state.current_question.get("attempt_evaluation_owner") != reservation_owner
+                            or str(self._state.current_question.get("question_id") or "") != state_question_id
                             or str(self._state.current_question.get("attempt_id") or "") != state_attempt_id):
                         raise MaterialContextChanged("the held question was replaced before grading feedback")
             await self._emit_answer_evaluated_event(
@@ -398,14 +398,24 @@ class _TutorAnswerEntriesMixin:
                 raise MaterialContextChanged("course/session changed before grading return")
             if using_current_question and (state_question_id or state_attempt_id):
                 async with self._lock:
-                    if (str(self._state.current_question.get("question_id") or "") != state_question_id
+                    if (not material_context_current(self, expected_material)
+                            or self._state.current_question.get("attempt_evaluation_owner") != reservation_owner
+                            or str(self._state.current_question.get("question_id") or "") != state_question_id
                             or str(self._state.current_question.get("attempt_id") or "") != state_attempt_id):
                         raise MaterialContextChanged("the held question was replaced before grading return")
+            if reserved_attempt:
+                await self._clear_attempt_evaluation_reservation(state_attempt_id, reservation_owner=reservation_owner)
+                await self._persist_state()
+                if (not material_context_current(self, expected_material)
+                        or str(self._state.current_question.get("question_id") or "") != state_question_id
+                        or str(self._state.current_question.get("attempt_id") or "") != state_attempt_id):
+                    raise MaterialContextChanged("the grading context changed during reservation cleanup")
             return Ok(payload)
         except asyncio.CancelledError:
             if reserved_attempt:
                 await self._clear_attempt_evaluation_reservation(
                     state_attempt_id,
+                    reservation_owner=reservation_owner,
                     recover_cached=final_attempt_state_staged,
                 )
                 with contextlib.suppress(Exception):
@@ -415,6 +425,7 @@ class _TutorAnswerEntriesMixin:
             if reserved_attempt:
                 await self._clear_attempt_evaluation_reservation(
                     state_attempt_id,
+                    reservation_owner=reservation_owner,
                     recover_cached=final_attempt_state_staged,
                 )
                 with contextlib.suppress(Exception):

@@ -583,6 +583,25 @@ class StudyStore:
     def save_state(self, state: StudyState) -> None:
         self.set_raw(STORE_STATE, state.to_dict())
 
+    def load_course_progress(self, course_id: str) -> dict[str, Any]:
+        raw = self.get_raw("course_teaching_progress:" + course_id)
+        if not raw or raw.get("version") != 1 or raw.get("course_id") != course_id:
+            return {}
+        return raw
+
+    def save_course_progress(self, state: dict[str, Any]) -> None:
+        course_id = str(state.get("study_course_id") or "").strip()
+        if not course_id:
+            return
+        progress = {"version": 1, "course_id": course_id}
+        for name in ("current_question", "last_answer_evaluation"):
+            value = state.get(name)
+            progress[name] = value if isinstance(value, dict) else {}
+        for name in ("last_question_at", "last_answer_evaluated_at"):
+            value = state.get(name)
+            progress[name] = value if isinstance(value, str) else ""
+        self.set_raw("course_teaching_progress:" + course_id, progress)
+
     def append_interaction(
         self,
         *,

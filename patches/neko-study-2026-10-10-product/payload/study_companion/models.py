@@ -34,6 +34,8 @@ PRIVATE_CURRENT_QUESTION_FIELDS = frozenset(
         "internal_private_payload",
         "current_question_private",
         "attempt_evaluated",
+        "attempt_evaluation_owner",
+        "attempt_evaluation_pending",
     }
 )
 

@@ -6,7 +6,7 @@
   "files": [
     {
       "path": "payload/study_companion/__init__.py",
-      "sha256": "5c3a35b21c34d69f662156669f205af017e37306140d041099ca56a046fd3030",
+      "sha256": "a21504a43cfeb0900d9a6d0d2d0f5405e375cceb7dd6529b8584025d6d07c6fa",
       "deployed_matches": true
     },
     {
@@ -26,7 +26,7 @@
     },
     {
       "path": "payload/study_companion/entry_tutor_summary_entries.py",
-      "sha256": "a950b912983b02db13d692cb6f12a6dd248d23cea7fb41270b45118b0f3483a4",
+      "sha256": "f5d0a0d91316e4a3bf40334a97ebeb74c3c8580dc31b22033971a3d8a18e8766",
       "deployed_matches": true
     },
     {
@@ -46,7 +46,7 @@
     },
     {
       "path": "payload/study_companion/models.py",
-      "sha256": "dbb3fc93c19edcf10e5974c99fb2a1abe6e2d2d4b5e7842a0b39417af578c8b8",
+      "sha256": "b4bfc8e168803257ef4dca08e0e1aabb6a477aa9de43f2fe6992977debd8e945",
       "deployed_matches": true
     },
     {
@@ -61,7 +61,7 @@
     },
     {
       "path": "payload/study_companion/store.py",
-      "sha256": "787c30275f369931abd6725531d257063f31a7f61139be71963116107ab3aee4",
+      "sha256": "838f73ab768a6adcf4f3caef75e6e3ed03680c349fdcdfc4b2b34549ea3868ad",
       "deployed_matches": true
     },
     {
@@ -91,7 +91,7 @@
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
-      "sha256": "000cb5ba34bc3ae60ba43c13fedc248242623a6add97a29ca61dbf75c801eefd",
+      "sha256": "8877b74ec22722065ffc76f6d3dac7134d3cc9eed6d42c1910a867800ecb30d6",
       "deployed_matches": true
     },
     {
@@ -122,7 +122,7 @@
     },
     {
       "path": "payload/study_companion/entry_tutor_answer_entries.py",
-      "sha256": "5c886dedde451dadb24ce7187f605f74d62265a68a26dac134d4e4a02d52d140",
+      "sha256": "7fb674fad6273d66241bbd2550bf68f8c80d3f78f7a1cdd8639df4b87d76b531",
       "deployed_matches": true
     },
     {
@@ -310,5 +310,25 @@
     "scope": "one bounded same-runtime span translation; ASCII prose/numbers/code unchanged; final guard before history",
     "tests": "12 actual helper/agent/runtime/entry/SQLite + 32 related source/material/language checks",
     "report": "docs/evidence/daily-companion-english-reply-guard-2026-10-14.md"
+  },
+  "daily_course_progress": {
+    "proof": "source/offline plus limited actual SDK/role-text/SQLite pending-quiz continuation32-33; no device/human",
+    "scope": "existing SQLite per-course held question; explicit fresh start retires it; public role status; grading reservation ownership",
+    "changed_payload_files": [
+      "__init__.py",
+      "entry_tutor_answer_entries.py",
+      "entry_tutor_summary_entries.py",
+      "models.py",
+      "store.py",
+      "study_avatar_tools.py"
+    ],
+    "root_tests": {
+      "course_memory": 8,
+      "answer_guard": 14,
+      "language": 4,
+      "task_audit": 2
+    },
+    "grading_concurrency": "offline only",
+    "language": "English preface PARTIAL; later managed guidance change source only"
   }
 }

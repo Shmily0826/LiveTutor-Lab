@@ -306,6 +306,30 @@ def prepare_summary_prompt_audit(store: Path) -> dict:
             'scope':'task-only summary messages; no headers/runtime/credentials'}
 
 
+def prepare_session_tool_audit(store: Path) -> dict:
+    """Observe public session-tool results in an owned continuous-text fixture."""
+    if not store.name.startswith('neko-daily-continuous-text-'):
+        raise RuntimeError('session tool audit requires a task-owned continuous-text store')
+    source=PRODUCT/'payload/study_companion/study_avatar_tools.py'
+    target=store/'plugin-code/study_companion/study_avatar_tools.py'
+    original=source.read_bytes()
+    if target.read_bytes()!=original:
+        raise RuntimeError('unknown avatar tool source; preserve it')
+    text=original.decode('utf-8')
+    anchor='        # Only an ack has nothing to teach, so only an ack gets pre-worded: a status read\n'
+    if text.count(anchor)!=1:raise RuntimeError('session audit anchor changed')
+    audit_path=str(store/'session-tool-audit.jsonl')
+    addition=(f'        with __import__("pathlib").Path({audit_path!r}).open("a", encoding="utf-8") as receipt:\n'
+              '            receipt.write(json.dumps({"action": action, "requested_course": course_id,\n'
+              '                **{key: state.get(key) for key in ("course_id", "session_id", "current_question", "question_state")}},\n'
+              '                ensure_ascii=False) + "\\n")\n')
+    patched=text.replace(anchor,addition+anchor,1);ast.parse(patched)
+    target.write_text(patched,encoding='utf-8',newline='\n')
+    return {'canonical_sha256':hashlib.sha256(original).hexdigest(),
+            'instrumented_sha256':hashlib.sha256(target.read_bytes()).hexdigest(),
+            'scope':'task-only public session-tool receipt; no headers/runtime/private answer'}
+
+
 def ensure_react_chat_bundle() -> None:
     """Give the source host the chat window's compiled front end.
 
@@ -481,6 +505,9 @@ TUTOR_ROLE_GUIDANCE = (
     "choose the teaching language; the course preference does unless the learner "
     "explicitly requests a one-time switch. For that switch, set study_explain.language "
     "and keep the full length/quiz limits in question; never save the one-time language.\n"
+    "Call required study tools silently; do not emit a planning sentence or an English "
+    "tool-use preface before their results. Only the learner-facing answer should appear, "
+    "in the current course language unless this turn explicitly requests another.\n"
     "Spoken delivery: your answer may be read aloud by a speech model that stumbles "
     "over digits and paths. In Chinese, say a line number as 第一百四十八行 rather than "
     "148 行; in English write line 148 as one flowing phrase. Refer to a file by its last "
@@ -914,12 +941,16 @@ def main() -> int:
                         help='deny this relay external requests before spending; keep the existing shared ledger')
     parser.add_argument('--summary-prompt-audit',action='store_true',
                         help='task acceptance store only: record actual summary messages in private API audit')
+    parser.add_argument('--session-tool-audit',action='store_true',
+                        help='continuous-text task store only: record public session-tool receipts privately')
     args = parser.parse_args()
 
     if args.output_only and not args.source:
         parser.error("--output-only requires the verified source host")
     if args.summary_prompt_audit and not args.source:
         parser.error('--summary-prompt-audit requires the verified source host')
+    if args.session_tool_audit and not args.source:
+        parser.error('--session-tool-audit requires the verified source host')
     if not args.stop and args.output_only:
         require_task_speaker_output_allowed("output-only source host")
     elif not args.stop and args.voice:
@@ -964,6 +995,8 @@ def main() -> int:
         prepare_product_plugin(store, study_vision=args.study_vision)
         if args.summary_prompt_audit:
             print(json.dumps({'summary_prompt_audit':prepare_summary_prompt_audit(store)}))
+        if args.session_tool_audit:
+            print(json.dumps({'session_tool_audit':prepare_session_tool_audit(store)}))
         runtime_root = store / "N.E.K.O"
         print(prepare_tutor_conversation_defaults(runtime_root))
         print(json.dumps({"tutor_onboarding": prepare_tutor_onboarding(runtime_root)}, ensure_ascii=False))
