@@ -21,3 +21,5 @@ scripts/neko_desktop_tutor_host.py SHAa4f280772cffa5b42540bcb9debc4d9c0052bf84b4
 实际新失败证据：第2/3轮都停在 |lat，中央host.log 92433/92449（2026-10-15 11:40:46/51）分别明确“检测到第二个 | 字符，截断输出”。现_streaming.py 1475–1482和1693–1700按累计第2个竖线无条件截断，和raw两轮事件终态吻合；DSML filter逐字输入“仅当 |lat| <= 90 且 |lon| <= 180，才过范围校验。”可完整保留，不能把竖线误杀说成DSML修复已解。下一52先查该旧围栏目的/调用与相关测试，交付数学绝对值、代码 ||、正常教学不截且保留必要边界的最小修改，先离线、不重试当前付费场。两句简短和HTTP条件过断言仍需后续，不从本场截断推原模型完整后缀内容。
 
 没有本轮Native/设备播放/真人通过，不改既有59 FAIL/PARTIAL。固定中文失败提示和未闭合/未知DSML的保守抑制都有支持范围限制；无provider重试、工具执行fallback或工具轮数增加。当前无live宿主/自有listener，账本不重置。
+
+阶段51十文件精确发布已核：commit/push 5c78e7113459ff4aa644364b29b805ce38e4714a 到codex/daily-learning-companion，remote exact/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb不变/publisher clean/Root index空，原contract SHA保持；没有raw/DB/录音/密钥/备份发布。当前ledger854/78/0、无live测试场/自有端口，全部A–F/Goal active，整体未完成。下一自动续跑先完整读contract/plan/status/blockers及phase51 report，再在phase52检查_streaming.py第二个竖线围栏的原目的与调用，先离线修数学绝对值/代码逻辑或误截；不重复60、不开麦克风/捕获、未经新的output-only需要不发声。
