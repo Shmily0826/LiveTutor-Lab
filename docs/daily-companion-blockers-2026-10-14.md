@@ -24,3 +24,6 @@
 无全局阻塞或complete依据；41/42/43均terminal/无cleanup error，任务端口无listener；账本720/70/0。某项目阻塞转其他独立工作，限流停止无效重试。当前已过短答/相邻反向/成绩重启不重复付费测试。
 
 精简前blockers全文独占归档 `docs/evidence/daily-companion-blockers-history-through-phase28-and-phase29-start-2026-10-15.md` SHA `3e15d2650f3398ff39b0bc89cec2c2bc953f553de5e122eecac1a9917b019c26`；更早历史/失败/恢复条件都在归档链保留。原contract169行/SHA不变，不以摘要替代原始任务。
+
+
+阶段29发布确认：12精确allowlist文件（2源码/1测试/1manifest、3当前记录、2证据、3原bytes历史档）已审查commit/push `f9a2e5520e0a9a4fb3db3eb388afad4281caafa9` 到codex/daily-learning-companion，remote同SHA、candidate clean，master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。Root index空/脏树及.workbuddy/原历史保留，raw/录音/DB/密钥未入Git；contract原SHA未变。无live host/exec待轮询，ledger720/70/0不重置。当前轮属于progress：源码/清单/部署/离线及改变下一步的真实41–43证据，非verified wait或完成。Goal active/all A–F继续；下轮先四文件，优先既有knowledge_graph_guidance.match_topics/_query_terms相关性，不重跑已过3评分/42重启/43切换，不建新系统。

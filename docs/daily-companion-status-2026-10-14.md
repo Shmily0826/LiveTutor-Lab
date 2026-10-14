@@ -31,3 +31,6 @@
 Root dirty master/index空、.workbuddy保留；managed `C:/Users/Shmily/.codex/worktrees/daily-companion/LiveTutor-Lab`，codex/daily-learning-companion。阶段29未完成发布时不冒SHA，末段更新为准。既有screen_guidance窄审，learning_memory容量失败冻结，不换模型/不新增agent。六空目录清理曾automatic approval blocked by policy，未绕过。
 
 精简前status全文独占归档 `docs/evidence/daily-companion-status-history-through-phase28-and-phase29-start-2026-10-15.md` SHA `10e82b662d1f08afc9c12afc4a4a1c1ea00010f8b494af8aafe97dbc36b426b6`，所有旧证据/已验基线/额度历史继续保留。contract未经修改。
+
+
+阶段29发布确认：12精确allowlist文件（2源码/1测试/1manifest、3当前记录、2证据、3原bytes历史档）已审查commit/push `f9a2e5520e0a9a4fb3db3eb388afad4281caafa9` 到codex/daily-learning-companion，remote同SHA、candidate clean，master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。Root index空/脏树及.workbuddy/原历史保留，raw/录音/DB/密钥未入Git；contract原SHA未变。无live host/exec待轮询，ledger720/70/0不重置。当前轮属于progress：源码/清单/部署/离线及改变下一步的真实41–43证据，非verified wait或完成。Goal active/all A–F继续；下轮先四文件，优先既有knowledge_graph_guidance.match_topics/_query_terms相关性，不重跑已过3评分/42重启/43切换，不建新系统。

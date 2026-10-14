@@ -33,3 +33,6 @@
 阶段29代码/记录正在精确allowlist封版，最终发布SHA见status末段；已发布最新阶段28为7118f5e/107d76e。无running host/exec需轮询，账本720/70/0。Root脏master/index空/.workbuddy/原历史保留，managed codex/daily-learning-companion，master不合并/不强推。
 
 精简前本plan原bytes已独占归档 `docs/evidence/daily-companion-plan-history-through-phase28-and-phase29-start-2026-10-15.md` SHA `6d542e0f7249e1af70ed6f9fecf35234791abae9173b5cbc59021fa9cdc734c8`。所有更早归档和四份最初报告由该历史全文接续保留；旧额度/失败不能自动当当前，不从头重做已验收基线。contract原文169行及SHA不变。
+
+
+阶段29发布确认：12精确allowlist文件（2源码/1测试/1manifest、3当前记录、2证据、3原bytes历史档）已审查commit/push `f9a2e5520e0a9a4fb3db3eb388afad4281caafa9` 到codex/daily-learning-companion，remote同SHA、candidate clean，master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。Root index空/脏树及.workbuddy/原历史保留，raw/录音/DB/密钥未入Git；contract原SHA未变。无live host/exec待轮询，ledger720/70/0不重置。当前轮属于progress：源码/清单/部署/离线及改变下一步的真实41–43证据，非verified wait或完成。Goal active/all A–F继续；下轮先四文件，优先既有knowledge_graph_guidance.match_topics/_query_terms相关性，不重跑已过3评分/42重启/43切换，不建新系统。

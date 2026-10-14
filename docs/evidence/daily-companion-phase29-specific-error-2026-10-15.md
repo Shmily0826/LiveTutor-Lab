@@ -40,3 +40,6 @@ specific-error-review已独立只读41/42/43并冻结，核same question/answer�
 本阶段14总DS（706→720/2000），app70/null/tech0/0不变；非14次评分，未调上限/重置round、未换provider。无音频/Native/设备/回环/物理输出/human验收，当前纯HTTP/SDK真实模型+SQLite文字证据。Scope不外推所有语言/题型/语音自然短答。两default源码oldSHAguard+独占backup、清单全部sourcehash及host SourceGate过，保留原用户数据/Root脏树。原一次inline导入缺scripts路径的检查失败已改成只读带路径检查通过，没有因此另开host。
 
 三current记录已精简，精简前各原bytes独占归档到history-through-phase28-and-phase29-start，SHA见各current文；fullcontract169行完全不改且摘要不能替代原文，四文件接续/后续指令优先/局部阻塞转任务/证据完结条件均保留。下一步C/D指导相关性：41knowledge_guidance错误英语从句，QA实际仍同course::有向关系；从既有match_topics/_query_terms/subject证据离线定位，不改旧QA/不建另一系统，再继续全部A–F日常集成。阶段29精确allowlist发布待核，不动master。
+
+
+阶段29发布确认：12精确allowlist文件（2源码/1测试/1manifest、3当前记录、2证据、3原bytes历史档）已审查commit/push `f9a2e5520e0a9a4fb3db3eb388afad4281caafa9` 到codex/daily-learning-companion，remote同SHA、candidate clean，master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。Root index空/脏树及.workbuddy/原历史保留，raw/录音/DB/密钥未入Git；contract原SHA未变。无live host/exec待轮询，ledger720/70/0不重置。当前轮属于progress：源码/清单/部署/离线及改变下一步的真实41–43证据，非verified wait或完成。Goal active/all A–F继续；下轮先四文件，优先既有knowledge_graph_guidance.match_topics/_query_terms相关性，不重跑已过3评分/42重启/43切换，不建新系统。
