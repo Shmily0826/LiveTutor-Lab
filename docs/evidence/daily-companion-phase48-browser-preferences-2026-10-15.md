@@ -27,3 +27,6 @@ Chrome flag在56单场无popup，57复现；不追改原false，不把局部缺�
 阶段48终态：唯一58 exec61267 Enter正常exit0/cleanup[]；实际原54 profile自动翻译pref false，两次OS窗口快照相隔5.719s均仅Study+材料2主窗，无aux；actual callback同课/原PNG，退出后pref仍false。raw58 SHA29eac32101b8979f37c847629b46ee2385315e6df4fa301de94d599064886b3d。全部owned与Native40952死、48911/48916/9234/52264无listener，SourceGate PASS，原ledger835/78/0不变，本场allowed[]/direct[]。未再次截图/重跑47DOM/模型/音频/真人，原55/57false保留；不能推所有Chrome永久无popup，actualtask点击/fullasyncReady仍无新证。独立58原件复核/精确发布pending；下一49 B基于51原协议与尾约束建立离线分轮方案，不盲开新在线场，全部A–F/Goal active。
 
 58是实际任务profile和OS窗口证据，未操作个人Chrome，未重跑未变DOM/图关系批次。没有新model教学、物理声音、指示渲染、真人体验通过。原57复现不擦除；若未来popup再现，保留新raw并沿实际设置/版本继续，不能用count重分类掩盖。
+
+
+阶段48已独立58原件复核冻结，8精确allowlist commit/push d2ff794b20a3e76361d14134c90c1e9e38bd8da0 至codex/daily-learning-companion，remote exact/master原f1e8f3f不变/publisher clean/Root index空/contract原SHA/原ledger835-78-0均核。无raw/DB/WAV/Preferences/密钥/备份发布，product/host manifest不变。无live场/自有端口；下一49 B按51既有输入/ASR/tool协议核晚尾约束离线设计，不盲新付费场、不重做已过材料/普通打断，完整A–F/Goal active。
