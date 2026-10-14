@@ -54,3 +54,7 @@ Main当前actual queue fixture无需改变host turn就复现never-announcing自�
 
 
 阶段41实质交付：main.js在原尺寸/1M字符预算内保留PNG，超预算原JPEG三档不变；7纯encoder cases+实际共享browser桌面flow13/races7/mobileflow13/encoding3共36checks通过，原三图bytes不变。encoding首fixture CSP fetch(data:)失败原件保留，仅test解码改atob→Blob后定向3过，不改CSP。独立Node7/成功raw复核，无P1/P2；default仅static精确oldSHA备份部署acde…3b25，product manifest49bfb…8eb7，SourceGate PASS、host manifest不变。详phase41-lossless-png与png-review；不冒dense-text模型/声音/human通过。原ledger810/76/0、contract原SHA、Root脏树/空index/用户历史保持，无live场。40草稿仍隔离/工具续接P2留恢复条件，下一先发布本轮安全allowlist再推进A–F集成，不盲重连。
+
+
+阶段41发布核验：16精确allowlist（无损PNG+测试/审查/当前记录、可重放隔离producer/patcher与40失败证据）已commit/push 70de00c0fd36aff082ebbf48f677c8d86d496fa1 到codex/daily-learning-companion，remote同SHA、publisher clean、master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb，Root index空。未发布raw/DB/录音/密钥/unused grade完整备份；contract原SHA、SourceGate、default static exact均再核通过，ledger810/76/0。无live exec/host/在线场，麦克风/capture/loopback及音量均未操作。
+下一42先本地收窄真实tooltask→native sealed origin的同lane continuation设计，从actual _capture_tool_task_owner/_start_raw_tool_call/_send_tool_results_openai_realtime与隔离测试接续，不能只按connection/时间或当前seq认父输入；先实际工具callback、并行/新PCM/旧conn/取消fixture及独立review，不接生产/盲开模型。若归属资格仍无足够证据，记录缺口并转A/C/D/E其余集成，不把40局部阻塞当Goal终止；本轮PNG不重复验证，密集字/语义/物理可听/human仍独立待验。

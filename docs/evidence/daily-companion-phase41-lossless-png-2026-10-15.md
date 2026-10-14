@@ -44,3 +44,7 @@ main.js SHA acde4db25cdcd7195853a1a2a477bb28ae4f99d2e1d8f1e6a1b0ce5c45953b25；U
 Main在48911/48916/9234无listener后，仅对default `plugin-code/study_companion/static/main.js`核旧38cb…6185、独占phase41-before备份、替换为canonical acde…3b25并逐字验证；产品manifest仅static项保留prior SHA并更新当前SHA/窄证据，manifest新SHA49bfbf9047b99e9c3554d2abde15955ea1b320b2c3b04ba2ee807ffa29618eb7。未改base plugin、用户库、host源码或host manifest；后者原SHA40c8…3da71保持。SourceGate实际再PASS。
 
 契约原169行SHA FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33保持，原ledger810/76/0，仍无live host/online scene。未为这5行编码修复重新付费跑旧图片闭环。发布只允许代码/测试/阶段文档/隔离草稿，排除raw/DB/录音/密钥/backup；commit与remote终态由后续记录追加。
+
+
+阶段41发布核验：16精确allowlist（无损PNG+测试/审查/当前记录、可重放隔离producer/patcher与40失败证据）已commit/push 70de00c0fd36aff082ebbf48f677c8d86d496fa1 到codex/daily-learning-companion，remote同SHA、publisher clean、master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb，Root index空。未发布raw/DB/录音/密钥/unused grade完整备份；contract原SHA、SourceGate、default static exact均再核通过，ledger810/76/0。无live exec/host/在线场，麦克风/capture/loopback及音量均未操作。
+下一42先本地收窄真实tooltask→native sealed origin的同lane continuation设计，从actual _capture_tool_task_owner/_start_raw_tool_call/_send_tool_results_openai_realtime与隔离测试接续，不能只按connection/时间或当前seq认父输入；先实际工具callback、并行/新PCM/旧conn/取消fixture及独立review，不接生产/盲开模型。若归属资格仍无足够证据，记录缺口并转A/C/D/E其余集成，不把40局部阻塞当Goal终止；本轮PNG不重复验证，密集字/语义/物理可听/human仍独立待验。
