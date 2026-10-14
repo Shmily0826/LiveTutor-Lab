@@ -2,11 +2,13 @@
 import __future__
 import ast
 import json
+import math
 import os
 from pathlib import Path
 import tempfile
 from types import SimpleNamespace
 import unittest
+import wave
 from unittest.mock import Mock
 
 
@@ -21,13 +23,18 @@ class GradeProbePlan(unittest.IsolatedAsyncioTestCase):
         self.store.mkdir(parents=True)
         self.provenance=self.store/'task-provenance.json'
         self.provenance.write_text(json.dumps({'fresh':True}),encoding='utf-8')
-        self.wav=self.root/'fixed.wav';self.wav.write_bytes(b'not opened during preflight')
+        self.wav=self.root/'fixed.wav'
+        with wave.open(str(self.wav),'wb') as wav:
+            wav.setparams((1,2,48000,0,'NONE','not compressed'));wav.writeframes(b'\0\0'*480)
         self.host=SimpleNamespace(require_task_speaker_output_allowed=Mock(),require_task_audio_allowed=Mock(),
             MAIN_PORT=48911,PLUGIN_PORT=48916)
         self.ports=Mock(side_effect=Planned('preflight complete; no port opened'))
         tree=ast.parse((Path(__file__).parent/'neko_daily_voice_probe.py').read_text(encoding='utf-8'))
         node=next(node for node in tree.body if isinstance(node,ast.AsyncFunctionDef) and node.name=='main')
-        namespace={'host':self.host,'ROOT':self.root,'json':json,'os':os,'sockets':SimpleNamespace(socket=self.ports)}
+        namespace={'host':self.host,'ROOT':self.root,'json':json,'os':os,'wave':wave,'math':math,
+            'sockets':SimpleNamespace(socket=self.ports)}
+        duration=next(node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name=='teaching_capture_seconds')
+        exec(compile(ast.Module(body=[duration],type_ignores=[]),'actual duration preflight','exec'),namespace)
         exec(compile(ast.Module(body=[node],type_ignores=[]),'actual voice probe preflight','exec',
             flags=__future__.annotations.compiler_flag),namespace)
         self.main=namespace['main']
@@ -65,6 +72,18 @@ class GradeProbePlan(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(Planned):await self.main(self.args(prepare_grade_quiz=True))
         self.host.require_task_speaker_output_allowed.assert_called_once()
         self.ports.assert_called_once()
+
+    async def test_continuous_scene_requires_owned_output_only_three_wavs_without_preparation(self):
+        changes=dict(grade_current=False,grade_chain=True,teaching_wav=[self.wav]*3,wav=None)
+        for invalid in ({'output_only':False},{'grade_current':True},{'teaching_wav':None},
+                {'verify_picture_state':False},{'prepare_grade_quiz':True},{'grade_correction':True},
+                {'followup_wav':self.wav},{'store':'neko-daily-companion'}):
+            with self.subTest(invalid=invalid):await self.reject(**{**changes,**invalid})
+        with self.assertRaises(Planned):await self.main(self.args(**changes))
+        self.ports.reset_mock()
+        with self.assertRaises(Planned):
+            await self.main(self.args(**{**changes,'prepare_picture':True,'store':'neko-daily-speech-acceptance-fresh'}))
+        self.assertFalse((self.root/'benchmarks/raw/neko-daily-speech-acceptance-fresh').exists())
 
     async def test_actual_rich_quiz_receipt_does_not_require_nonexistent_ok_flag(self):
         value={'is_error':False,'output':{'tool':'study_quiz','degraded':False,

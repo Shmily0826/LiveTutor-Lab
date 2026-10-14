@@ -324,3 +324,94 @@ def grade_acceptance(report):
     return {'grade_intent': intent, 'checks': checks, 'result': 'CANDIDATE_GRADE_FLOW_PASS_REQUIRES_SEMANTIC_REVIEW' if all(checks.values()) else 'FAIL_OR_PARTIAL',
             'old_output_retirement_evidence': retirement_evidence,
             'physical_output': 'UNVERIFIED_NO_LOOPBACK', 'human': 'PENDING'}
+
+
+def _completed_native_turn(turn):
+    start, speech_end, end = (turn[k] for k in ('input_wall','fixed_speech_end_wall','observation_end_wall'))
+    if not all(_wall(w) for w in (start,speech_end,end)) or not start <= speech_end < end:
+        return False
+    snapshot=turn['native_snapshot'];playback=snapshot['playback'];token=playback.get('correlationId')
+    window=[e for e in snapshot['trace']['events'] if _wall(e.get('wall')) and start <= e['wall'] <= end]
+    asr=[e for e in window if e.get('type') in _ASR and isinstance(e.get('text'),str) and e['text'].strip()]
+    frames=[e for e in window if e.get('type')=='audio_frame']
+    positive=[e for e in frames if _integer(e.get('bytes')) and e['bytes']>0]
+    replies=[e for e in window if e.get('type')=='gemini_response' and isinstance(e.get('text'),str) and e['text'].strip()]
+    ends=[e for e in window if e.get('type')=='system' and e.get('data')=='turn end']
+    schedules=[e for e in window if e.get('type')=='native_speech_playback_state' and e.get('active') is True
+        and e.get('sdk_speech_correlation_id')==token]
+    return bool(not turn.get('turn_timeout') and len(asr)==1 and asr[0]['wall'] >= speech_end
+        and _native_token(token) and positive and replies and ends and schedules
+        and all(e['wall'] >= speech_end for e in (*frames,*replies,*ends))
+        and all(e.get('correlation_id')==token and _integer(e.get('bytes')) for e in frames)
+        and min(e['wall'] for e in schedules) >= min(e['wall'] for e in positive)
+        and playback.get('active') is False and playback.get('reason')=='source_ended'
+        and _number(playback.get('remainingSeconds')) and playback['remainingSeconds']==0
+        and _number(playback.get('updatedAt'))
+        and max(e['wall'] for e in frames) <= playback['updatedAt']/1000 <= end)
+
+
+def grade_chain_acceptance(report):
+    """Observe request -> generated quiz -> answer -> non-answer follow-up.
+
+    Reuse the one-grade receipt on the answer's own snapshot/window. No writes,
+    fabricated pending state, provider ACK inference, or physical-audio verdict.
+    """
+    checks = dict.fromkeys(('healthy_empty_start', 'quiz_from_actual_role_tool',
+        'quiz_did_not_grade', 'same_connection_first_two_inputs', 'answer_grade_flow',
+        'followup_did_not_grade_or_replace_question', 'three_completed_native_turns'), False)
+    answer_receipt = None
+    try:
+        first, answer, followup = report['turns']
+        before, quiz, graded, after = (report['chain_before'], first['grade_after_turn'],
+            answer['grade_after_turn'], followup['grade_after_turn'])
+        pin, empty = first['grade_next_input_pin'], report['chain_empty_pin']
+        checks['healthy_empty_start'] = (before.get('ok') is True
+            and empty.get('_question_empty') is True and report.get('native_grade_chain') is True
+            and not report.get('grade_quiz_preparation')
+            and all(empty.get(k) == before.get(k) == quiz.get(k) for k in ('course_id','session_id'))
+            and all(before['question'].get(k) is None for k in ('question_id','attempt_id','attempt_evaluated')))
+        calls = [e for e in report['wire_trace'] if e.get('dir') == 'recv'
+            and e.get('type') == 'response.function_call_arguments.done'
+            and e.get('name') == 'study_quiz' and _wall(e.get('t'))
+            and first['fixed_speech_end_wall'] <= e['t'] <= first['observation_end_wall']]
+        checks['quiz_from_actual_role_tool'] = (len(calls) == 1 and quiz.get('ok') is True
+            and quiz['question'].get('attempt_evaluated') is False
+            and all(isinstance(pin.get(k), str) and pin[k].strip() for k in _IDS)
+            and all(pin[k] == quiz.get(k) for k in ('course_id','session_id'))
+            and all(pin[k] == quiz['question'].get(k) for k in ('question_id','attempt_id')))
+        checks['quiz_did_not_grade'] = (before.get('ok') is True and quiz.get('ok') is True
+            and before['qa_records'] == quiz['qa_records']
+            and before['grade_interactions'] == quiz['grade_interactions'])
+        view = {**report, 'grade_before': quiz, 'grade_after': graded, 'grade_input_pin': pin,
+            'turns': [answer], 'native_final': answer['native_snapshot']}
+        answer_receipt = grade_acceptance(view)
+        checks['answer_grade_flow'] = all(answer_receipt['checks'].values())
+        deliveries = [[d for d in report['phrase_deliveries'] if _wall(d.get('started_wall'))
+            and turn['input_wall'] <= d['started_wall'] <= turn['observation_end_wall']]
+            for turn in (first, answer)]
+        accepted = [m for m in report['grade_markers'] if m.get('stage') == 'accepted']
+        written = all(len(ds)==1 and ds[0].get('result')=='written_waiting_provider_boundary'
+            and ds[0].get('input_timebase')=='arrival_derived_sample_estimate'
+            and type(ds[0].get('connection_generation')) is int and ds[0]['connection_generation']>0
+            and all(_integer(ds[0].get(k)) and ds[0][k]>0 for k in ('source_samples','output_samples','written_samples'))
+            and ds[0]['source_samples'] >= ds[0]['output_samples'] == ds[0]['written_samples']
+            and all(_wall(ds[0].get(k)) for k in ('sealed_wall','first_write_wall','completed_wall'))
+            and turn['input_wall'] <= ds[0]['sealed_wall'] <= ds[0]['started_wall'] <= ds[0]['first_write_wall']
+                <= ds[0]['completed_wall'] <= turn['observation_end_wall']
+            for ds,turn in zip(deliveries,(first,answer)))
+        checks['same_connection_first_two_inputs'] = (written
+            and len(accepted) == 1 and type(accepted[0].get('connection')) is int
+            and all(ds[0].get('connection_generation') == accepted[0]['connection'] for ds in deliveries))
+        checks['followup_did_not_grade_or_replace_question'] = (graded.get('ok') is True and after.get('ok') is True
+            and all(graded.get(k) == after.get(k) for k in ('course_id','session_id','question',
+                'qa_records','grade_interactions','last_answer_evaluation')))
+        checks['three_completed_native_turns'] = (not report.get('failure') and not report.get('turn_timeout')
+            and report.get('cleanup_errors') == []
+            and all(_completed_native_turn(t) for t in report['turns'])
+            and first['observation_end_wall'] < answer['input_wall']
+            and answer['observation_end_wall'] < followup['input_wall'])
+    except (KeyError, ValueError, TypeError, IndexError, AttributeError):
+        pass
+    return {'checks':checks,'answer_receipt':answer_receipt,
+        'result':'CANDIDATE_CONTINUOUS_GRADE_PASS_REQUIRES_SEMANTIC_REVIEW' if all(checks.values()) else 'FAIL_OR_PARTIAL',
+        'physical_output':'UNVERIFIED_NO_LOOPBACK','human':'PENDING'}

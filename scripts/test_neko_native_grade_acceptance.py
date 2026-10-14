@@ -302,6 +302,92 @@ class GradeEvidenceTests(unittest.TestCase):
         self.assertFalse(subject.grade_snapshot(self.fixture.db)['ok'])
 
 
+class ContinuousGradeEvidenceTests(unittest.TestCase):
+    def setUp(self):
+        self.fixture=Fixture();self.addCleanup(self.fixture.close)
+        before,after=self.fixture.before_and_after();report=make_report(before,after)
+        empty=deepcopy(before);empty['question']=dict(question_id=None,attempt_id=None,question=None,attempt_evaluated=None)
+        first=dict(input_wall=80,fixed_speech_end_wall=84,observation_end_wall=95,
+            grade_after_turn=before,grade_next_input_pin={**PIN,'attempt_evaluated':False},
+            native_reply='Which arrow?',native_pcm_frames=1)
+        answer={**report['turns'][0],'grade_after_turn':after,'native_snapshot':deepcopy(report['native_final']),
+            'native_reply':'Grade feedback','native_pcm_frames':1}
+        followup=dict(input_wall=120,fixed_speech_end_wall=123,observation_end_wall=130,
+            grade_after_turn=deepcopy(after),native_reply='Explanation only',native_pcm_frames=1)
+        report.update(native_grade_chain=True,chain_before=empty,
+            chain_empty_pin={k:PIN[k] for k in ('course_id','session_id')},turns=[first,answer,followup],
+            wire_trace=[dict(dir='recv',type='response.function_call_arguments.done',name='study_quiz',t=85)],
+            phrase_deliveries=[dict(connection_generation=3,started_wall=90),dict(connection_generation=3,started_wall=101.5)])
+        report['chain_empty_pin']['_question_empty']=True
+        def native_turn(start,token):
+            return {'trace':{'events':[
+                {'type':'user_transcript','wall':start+4.1,'text':'Synthetic stimulus'},
+                {'type':'audio_frame','wall':start+5,'bytes':960,'correlation_id':token},
+                {'type':'native_speech_playback_state','wall':start+5.1,'active':True,'sdk_speech_correlation_id':token},
+                {'type':'gemini_response','wall':start+5.2,'text':'Synthetic reply'},
+                {'type':'system','wall':start+6,'data':'turn end'}]},
+                'playback':{'active':False,'remainingSeconds':0,'reason':'source_ended',
+                    'correlationId':token,'updatedAt':(start+8)*1000}}
+        first['native_snapshot']=native_turn(80,'native_connection_quiz')
+        followup['native_snapshot']=native_turn(120,'native_connection_followup')
+        answer['native_snapshot']['trace']['events'].append({'type':'system','wall':106,'data':'turn end'})
+        for d in report['phrase_deliveries']:
+            d.update(source_samples=48000,output_samples=47000,written_samples=47000,
+                result='written_waiting_provider_boundary',input_timebase='arrival_derived_sample_estimate',
+                sealed_wall=d['started_wall']-.1,first_write_wall=d['started_wall']+.01,completed_wall=d['started_wall']+.02)
+        self.report=report
+
+    def test_continuous_candidate_reuses_actual_one_grade_receipt_without_mutation(self):
+        before=deepcopy(self.report);result=subject.grade_chain_acceptance(self.report)
+        self.assertTrue(all(result['checks'].values()),result)
+        self.assertTrue(all(result['answer_receipt']['checks'].values()),result)
+        self.assertEqual(result['physical_output'],'UNVERIFIED_NO_LOOPBACK');self.assertEqual(result['human'],'PENDING')
+        self.assertEqual(self.report,before)
+
+    def test_prepared_or_nonempty_or_unobserved_quiz_is_not_continuous_proof(self):
+        for kind in ('preparation','pending','no_tool','early_tool','no_pin'):
+            r=deepcopy(self.report)
+            if kind=='preparation':r['grade_quiz_preparation']={'ok':True}
+            elif kind=='pending':r['chain_before']['question']['question_id']='already-pending'
+            elif kind=='no_tool':r['wire_trace']=[]
+            elif kind=='early_tool':r['wire_trace'][0]['t']=82
+            else:r['turns'][0].pop('grade_next_input_pin')
+            with self.subTest(kind=kind):self.assertFalse(all(subject.grade_chain_acceptance(r)['checks'].values()))
+
+    def test_reconnect_or_duplicate_delivery_or_extra_followup_grade_is_partial(self):
+        for kind in ('reconnect','duplicate','extra_grade','changed_question','missing_answer_trace','timeout'):
+            r=deepcopy(self.report)
+            if kind=='reconnect':r['phrase_deliveries'][1]['connection_generation']=4
+            elif kind=='duplicate':r['phrase_deliveries'].append(deepcopy(r['phrase_deliveries'][0]))
+            elif kind=='extra_grade':r['turns'][2]['grade_after_turn']['qa_records'].append({'id':'unexpected'})
+            elif kind=='changed_question':r['turns'][2]['grade_after_turn']['question']['question_id']='new-question'
+            elif kind=='missing_answer_trace':r['turns'][1]['native_snapshot']['trace']['events']=[]
+            else:r['turns'][2]['turn_timeout']=True
+            with self.subTest(kind=kind):self.assertFalse(all(subject.grade_chain_acceptance(r)['checks'].values()))
+        self.assertFalse(all(subject.grade_chain_acceptance({})['checks'].values()))
+
+    def test_failed_partial_or_bool_delivery_and_missing_turn_receipts_fail(self):
+        for changes in ({'result':'failed'},{'written_samples':0},{'written_samples':True},
+                {'connection_generation':True},{'completed_wall':115}):
+            r=deepcopy(self.report);r['phrase_deliveries'][1].update(changes)
+            self.assertFalse(subject.grade_chain_acceptance(r)['checks']['same_connection_first_two_inputs'])
+        for index in (0,2):
+            for kind in ('no_snapshot','no_asr','no_end','no_pcm','bool_pcm','active_playback','wrong_token'):
+                r=deepcopy(self.report);t=r['turns'][index]
+                if kind=='no_snapshot':t.pop('native_snapshot')
+                else:
+                    s=t['native_snapshot']
+                    if kind=='no_asr':s['trace']['events']=[e for e in s['trace']['events'] if e['type']!='user_transcript']
+                    elif kind=='no_end':s['trace']['events']=[e for e in s['trace']['events'] if e['type']!='system']
+                    elif kind in ('no_pcm','bool_pcm'):
+                        for e in s['trace']['events']:
+                            if e['type']=='audio_frame':e['bytes']=0 if kind=='no_pcm' else True
+                    elif kind=='active_playback':s['playback']['active']=True
+                    else:s['playback']['correlationId']='native_connection_other'
+                with self.subTest(index=index,kind=kind):
+                    self.assertFalse(subject.grade_chain_acceptance(r)['checks']['three_completed_native_turns'])
+
+
 class CorrectionEvidenceTests(unittest.TestCase):
     def setUp(self):
         self.fixture = Fixture()

@@ -135,6 +135,8 @@ def material_retirement_observed(replacement, snapshot):
 async def main(args):
     output_only = getattr(args, 'output_only', False)
     grade_current = getattr(args, 'grade_current', False)
+    grade_chain = getattr(args, 'grade_chain', False)
+    grade_enabled = grade_current or grade_chain
     grade_correction = getattr(args, 'grade_correction', False)
     prepare_grade_quiz = getattr(args, 'prepare_grade_quiz', False)
     if output_only:
@@ -145,6 +147,9 @@ async def main(args):
     if args.teaching_text_chain:
         raise ValueError('fixed text on a superseded controller is intentionally unauthorized; use --teaching-wav')
     teaching_chain = bool(args.teaching_wav)
+    if grade_chain and (grade_current or not output_only or not teaching_chain
+            or not args.verify_picture_state or prepare_grade_quiz or grade_correction):
+        raise ValueError('continuous grade scene requires output-only three WAV teaching chain, no prepared quiz')
     if prepare_grade_quiz and not grade_current:
         raise ValueError('quiz preparation belongs only to the explicit grade scene')
     if grade_correction and (not grade_current or prepare_grade_quiz):
@@ -176,9 +181,9 @@ async def main(args):
     if args.prepare_picture and (not args.store.startswith('neko-daily-speech-acceptance-') or store_path.exists()):
         raise ValueError('picture preference preparation requires a new isolated speech-acceptance store')
     if args.verify_picture_state and not (args.store.startswith(('neko-daily-speech-acceptance-','neko-daily-silent-vision-'))
-            or (grade_current and args.store.startswith('neko-daily-continuous-text-'))):
+            or (grade_enabled and args.store.startswith('neko-daily-continuous-text-'))):
         raise ValueError('picture constraint probe must use an isolated speech-acceptance store')
-    if grade_current:
+    if grade_enabled and not (grade_chain and args.prepare_picture):
         provenance = json.loads((store_path/'task-provenance.json').read_text(encoding='utf-8'))
         if provenance.get('fresh') is not True:
             raise ValueError('grade scene needs an existing task-owned fixture; preserve user history')
@@ -216,10 +221,17 @@ async def main(args):
     if getattr(args, 'phrase_input', False):
         env['NEKO_EXPERIMENTAL_PHRASE_INPUT'] = '1'
         report['experimental_phrase_input'] = True
-    if grade_current:
+    if grade_enabled:
         env['NEKO_STUDY_AUTO_GRADE'] = '1'
         report['native_grade_opt_in'] = True
         report['grade_intent'] = 'correction' if grade_correction else 'answer'
+        if grade_chain:
+            report['native_grade_chain'] = True
+    if grade_chain and args.prepare_picture:
+        store_path.mkdir(parents=True, exist_ok=False)
+        with (store_path/'task-provenance.json').open('x', encoding='utf-8') as provenance:
+            json.dump({'fresh':True,'purpose':'actual no-question Native quiz, answer and non-answer follow-up',
+                'created':time.time()}, provenance)
     startup_log = args.output.with_suffix('.host.log')
     startup_handle = startup_log.open('xb')
     report['startup_log'] = str(startup_log)
@@ -249,10 +261,10 @@ async def main(args):
             # A fresh isolated course, reusing an existing fixture. No new diagram
             # or quiz, and no alterations to the learner's normal daily course.
             from neko_native_avatar_toolchain import call
-            image = ROOT / 'benchmarks/raw/evidence/diagram-input-sky-dark.png'
+            image = ROOT / 'benchmarks/raw/evidence' / ('diagram-input-forward.png' if grade_chain else 'diagram-input-sky-dark.png')
             if not image.is_file(): raise RuntimeError('existing picture fixture missing; no voice connection')
             report['prepared_picture_sha256'] = hashlib.sha256(image.read_bytes()).hexdigest()
-            report['prepared_course'] = 'daily-speech-constraints-20261014'
+            report['prepared_course'] = args.store if grade_chain else 'daily-speech-constraints-20261014'
             for entry, fields in (
                 ('study_session', {'action':'set_course','course_id':report['prepared_course']}),
                 ('study_preferences', {'preferences':{'language':'zh-CN','length':'brief','proactive_quiz':False},'remember':True}),
@@ -262,7 +274,8 @@ async def main(args):
                     raise RuntimeError('fresh picture course setup refused; no voice connection')
             image_result = await asyncio.to_thread(client.call, 'study_submit_image', {
                 'image_base64':base64.b64encode(image.read_bytes()).decode(),
-                'text':'这张图作为本课材料，先简短确认主要天气请求路线，不出题。',
+                'text':('这张图作为本课材料，先简短确认主要箭头方向，不出题。' if grade_chain
+                    else '这张图作为本课材料，先简短确认主要天气请求路线，不出题。'),
                 'expected_course_id':report['prepared_course'],
             })
             report['picture_submission'] = image_result
@@ -299,6 +312,16 @@ async def main(args):
                 from neko_daily_failure_probe import database_snapshot
                 report['teaching_db_before'] = await asyncio.to_thread(database_snapshot,
                     store_path/'N.E.K.O/plugins/study_companion/data/study_companion.db')
+            if grade_chain:
+                from neko_native_grade_acceptance import grade_snapshot
+                from neko_study_answer_intent import read_question_pin
+                report['chain_before'] = await asyncio.to_thread(grade_snapshot,
+                    store_path/'N.E.K.O/plugins/study_companion/data/study_companion.db')
+                empty = read_question_pin((store_path/'N.E.K.O').resolve(), include_empty=True)
+                if (not report['chain_before'].get('ok') or not empty or empty.get('_question_empty') is not True
+                        or any(empty.get(key) != report['chain_before'].get(key) for key in ('course_id','session_id'))):
+                    raise RuntimeError('continuous scene requires healthy empty question; do not clear or fabricate pending')
+                report['chain_empty_pin'] = empty
         if args.point_code:
             from neko_native_avatar_toolchain import call
             from neko_role_point_browser import RolePointHandler
@@ -559,6 +582,16 @@ async def main(args):
                     turn["playback_first_scheduled_wall"] = next((event["wall"] for event in turn_events
                         if event.get("type") == "native_speech_playback_state" and event.get("active")), None)
                     report["turns"].append(turn)
+                    if grade_chain:
+                        from neko_native_grade_acceptance import grade_snapshot
+                        from neko_study_answer_intent import read_question_pin
+                        turn['grade_after_turn'] = await asyncio.to_thread(grade_snapshot,
+                            store_path/'N.E.K.O/plugins/study_companion/data/study_companion.db')
+                        turn['native_snapshot'] = report.get('native_final')
+                        if turn_index == 0:
+                            turn['grade_next_input_pin'] = read_question_pin((store_path/'N.E.K.O').resolve())
+                            if not grade_baseline_matches(turn['grade_after_turn'], turn['grade_next_input_pin']):
+                                raise RuntimeError('role quiz has no valid pending pin; stop before answer input')
                     if teaching_chain:
                         from neko_daily_failure_probe import database_snapshot
                         turn['study_database'] = await asyncio.to_thread(database_snapshot,
@@ -660,7 +693,7 @@ async def main(args):
             # These bounded diagnostic lines contain event timestamps, not credentials.
             report["timing_log"] = [line for line in fresh_log.splitlines() if any(mark in line for mark in (
                 "voice user_transcript", "TRIGGER entry='__llm_tool__study_", "首个 audio.delta", "/api/llm-tools/callback/study_companion/", "native-timing", "study voice admission", "study voice identical", "study-material-audio", "[study-grade-event]", "[study-grade-tail]"))]
-            if grade_current:
+            if grade_enabled:
                 from neko_spoken_turn_analysis import parse_phrase_deliveries
                 report['phrase_deliveries'] = parse_phrase_deliveries(fresh_log)
                 report['grade_markers'] = []
@@ -785,6 +818,9 @@ async def main(args):
             report['grade_acceptance'] = grade_acceptance(report)
             from neko_spoken_turn_analysis import analyze_grade_latency
             report['grade_latency'] = analyze_grade_latency(report)
+        if grade_chain:
+            from neko_native_grade_acceptance import grade_chain_acceptance
+            report['grade_chain_acceptance'] = grade_chain_acceptance(report)
         save()
         print(json.dumps({"report": str(args.output), "failure": report.get("failure"), "reply": report.get("reply"),
                           "audio_bytes": report.get("socket_audio_bytes"), "loopback_loud": (report.get("loopback") or {}).get("loud_chunks"),
@@ -792,6 +828,8 @@ async def main(args):
         if output_only and (report.get('failure') or report.get('cleanup_errors')):
             raise SystemExit(1)
         if grade_current and not all(report['grade_acceptance']['checks'].values()):
+            raise SystemExit(1)
+        if grade_chain and not all(report['grade_chain_acceptance']['checks'].values()):
             raise SystemExit(1)
 
 
@@ -808,6 +846,7 @@ if __name__ == "__main__":
     parser.add_argument("--output-only", action="store_true", help="speaker output with guarded capture APIs; no fake microphone or loopback")
     parser.add_argument("--phrase-input", action="store_true", help="one opt-in real phrase collector scene; default off")
     parser.add_argument("--grade-current", action="store_true", help="one actual ASR -> formal current-question grade; output-only task fixture required")
+    parser.add_argument("--grade-chain", action="store_true", help="output-only three WAVs: no-question request, own answer, non-answer follow-up; no pre-generated quiz")
     parser.add_argument("--grade-correction", action="store_true", help="explicit same-question correction; requires --grade-current and an evaluated wrong/partial attempt")
     parser.add_argument("--prepare-grade-quiz", action="store_true", help="prepare one formal quiz from this task's existing picture before the grade scene")
     parser.add_argument("--prepare-picture", action="store_true", help="fresh isolated course with an existing image, Chinese preference and no proactive quiz")
