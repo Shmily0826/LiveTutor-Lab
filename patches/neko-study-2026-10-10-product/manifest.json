@@ -131,14 +131,16 @@
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
-      "sha256": "45e6bed56a136d067f832ceb9952aa941331be7507b81eb093df6e8280743f50",
+      "sha256": "edf4c252359879912b6cba5977879df7d594624f56e7639682b09ce1ca5c5c80",
       "deployed_matches": true,
       "phase29_delta_prior_sha256": "afb52dbbc047fd3cf20eab2c536fcdde9d1cba36fe4056a489bda27fe6123af9",
       "phase29_verification": "Specific errors41 / correct100 and restart42 / Chinese then English43 observed; final reminder-negative narrowing source+6 offline only; all historical failures retained.",
       "phase29_language_prior_sha256": "848abd960be3db3834575429a295e2efcb68e13e25d7f7847bc21aea994f4db0",
       "phase29_final_prior_sha256": "f6f67af73e9bd468bf23623d33d064acf79889ebff9f965c35b4bc14bd8e4154",
       "phase32_prior_sha256": "01a145791e184ccfa9fcf172d37f463b9fcc29853263dabb143ba5b4d0cfe432",
-      "phase32_verification": "Reviewed source/offline course language9 plus course8/temporary6/preferences6 with actual persistence; actual silent direct SDK46 after startup, no avatar/language/course priming, English feedback and old7QA preserved. No broad concurrency/voice/device/human acceptance."
+      "phase32_verification": "Reviewed source/offline course language9 plus course8/temporary6/preferences6 with actual persistence; actual silent direct SDK46 after startup, no avatar/language/course priming, English feedback and old7QA preserved. No broad concurrency/voice/device/human acceptance.",
+      "phase56_prior_sha256": "45e6bed56a136d067f832ceb9952aa941331be7507b81eb093df6e8280743f50",
+      "phase56_verification": "Source/offline adapter8 + related material26/language6/native teaching binding5; cold card initialization existing3+new text1. Real role text68 teacher correct but filler/redundant reads PARTIAL;69 automatic study_explain project_code delegated actual CodeGraph file21-28@7aae20f, exact two-sentence teacher reply relayed and saved in existing SQLite. Cold text guidance actually present. Native free voice/device/human pending; extra preliminary source read and19.44s remain."
     },
     {
       "path": "payload/study_companion/study_ocr_pipeline.py",
@@ -208,6 +210,12 @@
       "sha256": "53305b8ad62ffcc5729cad481f677bef5a12c8af03fb92831126616bf513d470",
       "deployed_matches": true,
       "phase55_verification": "Shared headless Chromium 67: full real Study bootstrap/SDK and refresh at390/1440,22 DOM checks/16 reading runs; header visible controls bounds/text/44px pass, screenshots reviewed. Original QA and868/78/0 ledger unchanged. Observation-only bootstrap promise; not physical user Chrome/Native/audio/human or all responsive widths. 66 missing second observation retained FAIL."
+    },
+    {
+      "path": "payload/study_companion/study_code_teaching.py",
+      "sha256": "05e1de9d45cee9e5a9301c226c4257e02e4d5c37d47f7c8650490674dea0c815",
+      "deployed_matches": true,
+      "phase56_verification": "Source/offline adapter8 + related material26/language6/native teaching binding5; cold card initialization existing3+new text1. Real role text68 teacher correct but filler/redundant reads PARTIAL;69 automatic study_explain project_code delegated actual CodeGraph file21-28@7aae20f, exact two-sentence teacher reply relayed and saved in existing SQLite. Cold text guidance actually present. Native free voice/device/human pending; extra preliminary source read and19.44s remain."
     }
   ],
   "prior_deployment": "benchmarks/raw/neko-product-data/plugin-code/study_companion",

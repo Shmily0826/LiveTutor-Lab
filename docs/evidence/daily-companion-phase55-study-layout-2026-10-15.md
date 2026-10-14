@@ -20,3 +20,4 @@ scripts/neko_study_ready_probe.py 87483c212c6d5bf77972e0d308e8b35ed108f804204a42
 scripts/test_neko_study_ready_probe.py f1322331477a9e545b88888bc53e78861c2f75c0a79e718bbd849714f1782cbe
 
 下一56：优先复用现Study解释/CodeGraph与Native material绑定，把D源码教学证据交给可靠Study教师再接角色朗读；先核现接口和材料/换课边界再最小修复，不因text Focus窄PASS认语音交付。简短耐心风格及B自然停顿仍待，局部block继续其它任务。完整A–F/Goal active；发布排除raw/DB/密钥/音频/截图/备份，Root脏改动与Sky只读保留。
+55九文件已commit/push f70fb84e3c757b661b150c75125ccc5cee6058bd 到codex/daily-learning-companion；远端exact，master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb，publisher clean/Root index空/contract原SHA完整，账本仍868/78/0。只发布源码、测试和docs，不含raw/DB/截图/音频/备份/密钥。当前无live场；本段为source发布后的本地交接记录，下一阶段随相关记录发布，不重复已通过UI场。

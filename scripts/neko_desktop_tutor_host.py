@@ -369,6 +369,26 @@ def ensure_react_chat_bundle() -> None:
 FREE_ROUTE_VOICE = "yui"
 
 
+def ensure_tutor_character_card(store: Path) -> bool:
+    """Use existing upstream cold defaults before either text or voice reads its prompt."""
+    path = (store / "N.E.K.O/config/characters.json").resolve()
+    if path.exists():
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    runtime_root = path.parent.parent
+    seed_env = {**os.environ, "NEKO_TASK_SILENT":"1", "NEKO_DEV_TEXT_ONLY":"1",
+        "NEKO_STORAGE_SELECTED_ROOT":str(runtime_root), "NEKO_STORAGE_ANCHOR_ROOT":str(runtime_root),
+        "NEKO_STORAGE_CLOUDSAVE_ROOT":str(runtime_root), "NEKO_DO_NOT_TRACK":"1",
+        "LOCALAPPDATA":str(store), "APPDATA":str(store)}
+    subprocess.run([str(SOURCE_PYTHON), "-X", "utf8", "-B", "-c",
+        "import json,sys; from config import get_localized_default_characters; "
+        "data=get_localized_default_characters('zh-CN'); "
+        "f=open(sys.argv[1],'x',encoding='utf-8'); "
+        "json.dump(data,f,ensure_ascii=False,indent=2); f.close()", str(path)],
+        cwd=SOURCE_APP, env=seed_env, capture_output=True, check=True, timeout=20)
+    return True
+
+
 def apply_free_voice_route(store: Path) -> dict:
     """Pick the voice the app itself treats as provider-native on the free route.
 
@@ -392,21 +412,7 @@ def apply_free_voice_route(store: Path) -> dict:
     except ValueError:
         shown = path.as_posix()
     report = {"file": shown, "changed": {}, "skipped": {}}
-    if not path.exists():
-        # First startup has no card yet. Use the host's own defaults before its
-        # route/prompt are read, instead of requiring a second launch to speak.
-        path.parent.mkdir(parents=True, exist_ok=True)
-        runtime_root = path.parent.parent
-        seed_env = {**os.environ, "NEKO_TASK_SILENT":"1", "NEKO_DEV_TEXT_ONLY":"1",
-            "NEKO_STORAGE_SELECTED_ROOT":str(runtime_root), "NEKO_STORAGE_ANCHOR_ROOT":str(runtime_root),
-            "NEKO_STORAGE_CLOUDSAVE_ROOT":str(runtime_root), "NEKO_DO_NOT_TRACK":"1",
-            "LOCALAPPDATA":str(store), "APPDATA":str(store)}
-        subprocess.run([str(SOURCE_PYTHON), "-X", "utf8", "-B", "-c",
-            "import json,sys; from config import get_localized_default_characters; "
-            "data=get_localized_default_characters('zh-CN'); "
-            "f=open(sys.argv[1],'x',encoding='utf-8'); "
-            "json.dump(data,f,ensure_ascii=False,indent=2); f.close()", str(path)],
-            cwd=SOURCE_APP, env=seed_env, capture_output=True, check=True, timeout=20)
+    if ensure_tutor_character_card(store):
         report["created_from_host_defaults"] = True
     data = json.loads(path.read_text(encoding="utf-8"))
 
@@ -555,8 +561,11 @@ TUTOR_ROLE_GUIDANCE = (
     "do not give different edits the same effect without evidence. Do not add an unasked "
     "adjacent case that changes the conclusion. If asked for two sentences, use at most "
     "two short sentences total, including any uncertainty. "
-    "When source questions name a file, use study_code mode=file first; a unique filename "
-    "or path suffix can resolve through the authorized index. For ambiguous names, use the "
+    "For teaching about the authorized project, call study_explain material_source=project_code "
+    "with one to three bounded code_requests, so the Study teacher reads real CodeGraph evidence. "
+    "For a named file choose a mode=file request first; a unique filename "
+    "or path suffix can resolve through the authorized index. Use study_code alone for inspecting "
+    "or resolving a file before teaching, not as a substitute for the teacher. For ambiguous names, use the "
     "returned paths to choose the relevant file rather than broad symbol searches. "
     "For an explanation of an image submitted in Study, call study_material then study_explain with the learner's "
     "question and no invented observations in text. Study vision is the reliable image route.\n"
@@ -1098,7 +1107,10 @@ def main() -> int:
     EVIDENCE.mkdir(parents=True, exist_ok=True)
     if args.source:
         ensure_react_chat_bundle()
+        created_character_card = ensure_tutor_character_card(store)
         voice_route = apply_free_voice_route(store) if args.voice else {}
+        if args.voice and created_character_card:
+            voice_route['created_from_host_defaults'] = True
         character_models = ensure_character_models(store)
         # Before the character's prompt is built, not after - the host reads the
         # persona card at startup, so this is the last moment the rule can land in

@@ -39,5 +39,19 @@ class FirstVoiceStart(unittest.TestCase):
         with self.assertRaises(ValueError):host.apply_free_voice_route(self.store)
         self.assertEqual(self.card.read_bytes(),b'{invalid')
 
+    def test_fresh_text_card_can_receive_guidance_without_selecting_a_voice(self):
+        self.assertTrue(host.ensure_tutor_character_card(self.store))
+        before=json.loads(self.card.read_text(encoding='utf-8'))
+        active=before['当前猫娘']
+        self.assertEqual(host.apply_tutor_role_guidance(self.store/'N.E.K.O'),'set')
+        after=json.loads(self.card.read_text(encoding='utf-8'))
+        card=after['猫娘'][active]['_reserved']
+        self.assertEqual(card['voice_id'],before['猫娘'][active]['_reserved']['voice_id'])
+        self.assertNotEqual(card['voice_id'],host.FREE_ROUTE_VOICE)
+        self.assertIn('material_source=project_code',card['persona_override']['prompt_guidance'])
+        saved=self.card.read_bytes()
+        self.assertFalse(host.ensure_tutor_character_card(self.store))
+        self.assertEqual(self.card.read_bytes(),saved)
+
 
 if __name__=='__main__':unittest.main(verbosity=2)

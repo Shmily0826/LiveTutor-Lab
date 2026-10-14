@@ -819,7 +819,11 @@ class _StudyAvatarToolsMixin:
             "for supplied code/notes use literal_text. Auto only resumes an unchanged, "
             "previously bound picture explanation; if the correction target is unclear, ask. "
             "This tool has no live Realtime screen feed; OCR words alone do not "
-            "establish arrows. This is the main teaching tool."
+            "establish arrows. For teaching about the authorized project use material_source=project_code "
+            "and one to three code_requests using existing study_code modes/file windows; the backend reads "
+            "the actual filtered evidence for the teacher. Do not paste a code-tool summary into text. "
+            "For named files use mode=file with a small window; include consumers/guards only when needed. "
+            "This is the main teaching tool."
         ),
         parameters={
             "type": "object",
@@ -828,20 +832,30 @@ class _StudyAvatarToolsMixin:
                              "description": "What the learner wants explained, in their words."},
                 "text": {"type": "string", "default": "",
                          "description": "Literal source code or notes requested by the learner. Omit for the current Study picture/diagram or captured window. Never fill with an earlier picture summary or guessed arrows."},
-                "material_source": {"type":"string", "enum":["auto","current_picture","literal_text"], "default":"auto",
+                "material_source": {"type":"string", "enum":["auto","current_picture","literal_text","project_code"], "default":"auto",
                                     "description":"Use current_picture to recheck submitted pixels, ignoring an old summary in text. Use literal_text only for learner-supplied code/notes; never override a learner who rejects pictures."},
                 "language": {"type":"string", "enum":["zh-CN","en-US"],
                              "description":"Explicit reply language for this explanation only. Set it for a one-time language switch; does not save or pin a course preference."},
+                "code_requests": {"type":"array", "minItems":1, "maxItems":3,
+                    "description":"For project_code only: bounded existing CodeGraph requests; never source text or a project root.",
+                    "items":{"type":"object", "additionalProperties":False, "properties":{
+                        "mode":{"type":"string","enum":["file","explore","symbol","impact","find","structure"]},
+                        "query":{"type":"string","maxLength":1000},"file":{"type":"string","maxLength":400},
+                        "offset":{"type":"integer","minimum":1},"limit":{"type":"integer","minimum":1,"maximum":120}}}},
             },
         },
         timeout=150.0,
     )
     async def study_explain_tool(self, *, question: str = "", text: str = "", language: str = "",
-                                 material_source: str = "auto", **_):
+                                 material_source: str = "auto", code_requests: list | None = None, **_):
         if not isinstance(language, str) or language not in {"", "zh-CN", "en-US"}:
             return {"ok":False,"error":"unsupported_one_turn_language"}
-        if not isinstance(material_source, str) or material_source not in {"auto","current_picture","literal_text"}:
+        if not isinstance(material_source, str) or material_source not in {"auto","current_picture","literal_text","project_code"}:
             return {"ok":False,"error":"unsupported_material_source"}
+        if code_requests is not None and material_source != "project_code":
+            return {"ok":False,"error":"code_requests_require_project_code"}
+        if material_source == "project_code" and str(text or "").strip():
+            return {"ok":False,"error":"project_code_source_must_be_fetched"}
         if material_source == "literal_text" and not str(text or "").strip():
             return {"ok":False,"error":"literal_source_missing"}
         from .study_materials import material_context, material_output_target, material_context_current
@@ -867,6 +881,13 @@ class _StudyAvatarToolsMixin:
             if explicit_picture_reference and not rejected_picture:
                 return {"ok":False,"error":"material_source_conflict"}
             current_picture = False
+        elif material_source == "project_code":
+            if explicit_picture_reference and not rejected_picture:
+                return {"ok":False,"error":"material_source_conflict"}
+            from .study_code_teaching import explain_project_code
+            requested = language or _turn_language_request(question, "") or str((getattr(self, "_study_turn_preferences", None) or {}).get("language") or "")
+            return await explain_project_code(self, question=question, requests=code_requests,
+                                              language=requested, output_target=output_target)
         correction = bool(re.search(
             r"你(?:读|看|讲|说|理解|解释)(?:错|反)|请(?:重新|再)(?:检查|核对)|"
             r"\b(?:you (?:misread|got .* wrong)|that(?:'s| is) wrong|recheck|misread)\b", question, re.I))
