@@ -59,6 +59,17 @@ def grade_quiz_prepared(result):
                     for key in ('question', 'question_id', 'attempt_id')))
 
 
+def grade_baseline_matches(snapshot, pin, *, correction=False):
+    if not isinstance(snapshot, dict) or not isinstance(pin, dict):
+        return False
+    question = snapshot.get('question') or {}
+    held = {**{key:snapshot.get(key) for key in ('course_id','session_id')},
+        **{key:question.get(key) for key in ('question_id','attempt_id','attempt_evaluated')}}
+    return (snapshot.get('ok') is True and held == pin
+            and pin.get('attempt_evaluated') is correction
+            and (not correction or (snapshot.get('last_answer_evaluation') or {}).get('verdict') in ('wrong','partial')))
+
+
 def teaching_capture_seconds(paths):
     duration = 0.0
     for path in paths:
@@ -124,6 +135,7 @@ def material_retirement_observed(replacement, snapshot):
 async def main(args):
     output_only = getattr(args, 'output_only', False)
     grade_current = getattr(args, 'grade_current', False)
+    grade_correction = getattr(args, 'grade_correction', False)
     prepare_grade_quiz = getattr(args, 'prepare_grade_quiz', False)
     if output_only:
         host.require_task_speaker_output_allowed("output-only voice acceptance probe")
@@ -135,6 +147,8 @@ async def main(args):
     teaching_chain = bool(args.teaching_wav)
     if prepare_grade_quiz and not grade_current:
         raise ValueError('quiz preparation belongs only to the explicit grade scene')
+    if grade_correction and (not grade_current or prepare_grade_quiz):
+        raise ValueError('correction requires the current graded question; no quiz preparation')
     if grade_current and (not output_only or not args.wav or not args.verify_picture_state
             or teaching_chain or args.followup_wav or args.prepare_picture or args.point_code
             or args.manual_turn_probe or args.replace_picture_on_playback):
@@ -205,6 +219,7 @@ async def main(args):
     if grade_current:
         env['NEKO_STUDY_AUTO_GRADE'] = '1'
         report['native_grade_opt_in'] = True
+        report['grade_intent'] = 'correction' if grade_correction else 'answer'
     startup_log = args.output.with_suffix('.host.log')
     startup_handle = startup_log.open('xb')
     report['startup_log'] = str(startup_log)
@@ -274,10 +289,8 @@ async def main(args):
                 pin = read_question_pin((store_path/'N.E.K.O').resolve())
                 baseline = report['grade_before']
                 question = baseline.get('question') or {}
-                snapshot_pin = {**{key:baseline.get(key) for key in ('course_id','session_id')},
-                    **{key:question.get(key) for key in ('question_id','attempt_id','attempt_evaluated')}}
-                if baseline.get('ok') is not True or not pin or pin['attempt_evaluated'] or pin != snapshot_pin:
-                    raise RuntimeError('no complete pending question pin; do not start Native or fabricate a quiz')
+                if not grade_baseline_matches(baseline, pin, correction=grade_correction):
+                    raise RuntimeError('no matching question/grade input pin; do not start Native or fabricate a quiz')
                 if prepare_grade_quiz and any(question.get(key) != result['output'].get(key)
                         for key in ('question_id','attempt_id')):
                     raise RuntimeError('prepared question replaced before input; do not adopt a new question')
@@ -791,6 +804,7 @@ if __name__ == "__main__":
     parser.add_argument("--output-only", action="store_true", help="speaker output with guarded capture APIs; no fake microphone or loopback")
     parser.add_argument("--phrase-input", action="store_true", help="one opt-in real phrase collector scene; default off")
     parser.add_argument("--grade-current", action="store_true", help="one actual ASR -> formal current-question grade; output-only task fixture required")
+    parser.add_argument("--grade-correction", action="store_true", help="explicit same-question correction; requires --grade-current and an evaluated wrong/partial attempt")
     parser.add_argument("--prepare-grade-quiz", action="store_true", help="prepare one formal quiz from this task's existing picture before the grade scene")
     parser.add_argument("--prepare-picture", action="store_true", help="fresh isolated course with an existing image, Chinese preference and no proactive quiz")
     parser.add_argument("--verify-picture-state", action="store_true", help="reuse the existing isolated picture course, read before/after; no extra image model preparation")

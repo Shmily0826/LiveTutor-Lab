@@ -100,7 +100,7 @@ def grade_snapshot(db):
             qa_records = []
             for row in qa:
                 raw = dict(row)
-                qa_records.append({**{k: raw[k] for k in ('id', 'session_id', 'user_answer')},
+                qa_records.append({**{k: raw[k] for k in ('id', 'session_id', 'topic_id', 'user_answer')},
                                    'question': _qa_question(raw['question']),
                                    'row_sha256': _digest(raw), 'eval_result': _json_object(raw['eval_result'])})
             history = [{**{k: row[k] for k in ('id', 'session_id', 'input_text')},
@@ -153,8 +153,35 @@ def _grade(value):
     return isinstance(value, dict) and value.get('verdict') in ('wrong', 'partial', 'correct') and _number(value.get('score'))
 
 
+def _same_grade(*values):
+    return all(_grade(v) for v in values) and all(v[k] == values[0][k] for v in values for k in ('verdict', 'score'))
+
+
+def _correction_origin(before, question, qa_rows, history_rows):
+    """Join the specific old attempt, allowing its formal session to predate restart."""
+    candidates = []
+    for history in history_rows.values():
+        metadata = history.get('metadata') or {}
+        context = metadata.get('material_context') or {}
+        payload = metadata.get('payload') or {}
+        if (metadata.get('degraded') is not False or context.get('course_id') != before['course_id']
+                or any(metadata.get(k) != question.get(k) for k in ('question_id', 'attempt_id'))
+                or not isinstance(history.get('session_id'), str) or not history['session_id'].strip()
+                or context.get('session_id') != history['session_id']
+                or not isinstance(history.get('input_text'), str) or not history['input_text'].strip()
+                or not _same_grade(before.get('last_answer_evaluation'), payload)
+                or payload.get('verdict') not in ('wrong', 'partial')):
+            continue
+        for qa in qa_rows.values():
+            if (qa.get('session_id') == history['session_id'] and qa.get('user_answer') == history['input_text']
+                    and _qa_question_matches(qa.get('question'), question)
+                    and _same_grade(qa.get('eval_result'), payload)):
+                candidates.append(qa)
+    return candidates[0] if len(candidates) == 1 else None
+
+
 def grade_acceptance(report):
-    """Check one pending-answer turn, not correction/review or arbitrary multi-turns.
+    """Check one ordinary answer or explicit same-question correction turn.
 
     Native receive/schedule and old-token cancellation are distinct evidence.
     The function never interprets local wire writes as provider acknowledgements.
@@ -165,7 +192,15 @@ def grade_acceptance(report):
              'actual_free_profile', 'old_token_cancel_received', 'old_queue_retired_or_never_received',
              'new_token_pcm_after_grade', 'new_token_playback_scheduled', 'native_text_after_grade',
              'native_terminal', 'output_only_capture_guard', 'run_finished_without_failure')
+    intent = report.get('grade_intent', 'answer') if isinstance(report, dict) else None
+    correction = intent == 'correction'
+    state_check = 'evaluated_wrong_or_partial_four_ids' if correction else 'pending_four_ids'
+    result_check = 'same_question_new_attempt_evaluated' if correction else 'same_question_attempt_evaluated'
+    if correction:
+        names = tuple(state_check if n == 'pending_four_ids' else result_check if n == 'same_question_attempt_evaluated' else n for n in names)
+        names += ('correction_origin_formal_lineage', 'same_concept_topic')
     checks = dict.fromkeys(names, False)
+    checks['supported_grade_intent'] = intent in ('answer', 'correction')
     retirement_evidence = 'UNVERIFIED'
     try:
         before, after = report['grade_before'], report['grade_after']
@@ -173,10 +208,15 @@ def grade_acceptance(report):
         pin = {**{k: before[k] for k in ('course_id', 'session_id')},
                **{k: q0[k] for k in ('question_id', 'attempt_id')}}
         ids_valid = all(isinstance(v, str) and v.strip() for v in pin.values())
-        checks['pending_four_ids'] = ids_valid and q0.get('attempt_evaluated') is False
-        checks['same_question_attempt_evaluated'] = (ids_valid and after['course_id'] == pin['course_id']
+        checks[state_check] = (ids_valid and q0.get('attempt_evaluated') is (True if correction else False)
+            and (not correction or (_grade(before.get('last_answer_evaluation'))
+                 and before['last_answer_evaluation']['verdict'] in ('wrong', 'partial'))))
+        result_attempt = q1.get('attempt_id') if correction else pin['attempt_id']
+        checks[result_check] = (ids_valid and after['course_id'] == pin['course_id']
             and after['session_id'] == pin['session_id'] and q1.get('question_id') == pin['question_id']
-            and q1.get('attempt_id') == pin['attempt_id'] and q1.get('attempt_evaluated') is True
+            and isinstance(result_attempt, str) and bool(result_attempt.strip())
+            and (result_attempt != pin['attempt_id'] if correction else q1.get('attempt_id') == result_attempt)
+            and q1.get('attempt_evaluated') is True
             and isinstance(q0.get('question'), str) and bool(q0['question'].strip()) and q1.get('question') == q0['question'])
         qa0, qa1 = (_row_map(value['qa_records'], hashed=True) for value in (before, after))
         h0, h1 = (_row_map(value['grade_interactions']) for value in (before, after))
@@ -187,6 +227,11 @@ def grade_acceptance(report):
         checks['old_grade_interactions_preserved'] = all(h1.get(k) == v for k, v in h0.items())
         checks['exactly_one_new_formal_interaction'] = len(new_h) == 1 and len(h1) == len(h0) + 1
         qa, history = (new_qa[0] if len(new_qa) == 1 else {}), (new_h[0] if len(new_h) == 1 else {})
+        if correction:
+            origin = _correction_origin(before, q0, qa0, h0)
+            checks['correction_origin_formal_lineage'] = origin is not None
+            checks['same_concept_topic'] = (origin is not None and isinstance(origin.get('topic_id'), str)
+                and bool(origin['topic_id'].strip()) and qa.get('topic_id') == origin['topic_id'])
         metadata = history.get('metadata') or {}
         context, payload = metadata.get('material_context') or {}, metadata.get('payload') or {}
         last, evaluation = after.get('last_answer_evaluation'), qa.get('eval_result')
@@ -204,9 +249,9 @@ def grade_acceptance(report):
         original = asr[0]['text'] if len(asr) == 1 else None
         checks['formal_identity_and_asr'] = (isinstance(original, str) and bool(original.strip())
             and asr[0]['wall'] >= speech_end and qa.get('user_answer') == original == history.get('input_text')
-            and _qa_question_matches(qa.get('question'), q0) and qa.get('session_id') == pin['session_id']
+            and _qa_question_matches(qa.get('question'), q1) and qa.get('session_id') == pin['session_id']
             and history.get('session_id') == pin['session_id'] and metadata.get('degraded') is False
-            and all(metadata.get(k) == pin[k] for k in ('question_id', 'attempt_id'))
+            and metadata.get('question_id') == pin['question_id'] and metadata.get('attempt_id') == result_attempt
             and all(context.get(k) == pin[k] for k in ('course_id', 'session_id')))
         markers = report['grade_markers']
         if not isinstance(markers, list) or len(markers) != 3:
@@ -224,13 +269,16 @@ def grade_acceptance(report):
             and relayed['connection'] == accepted['connection'] + 1 and relayed['scope'] > accepted['scope']
             and _native_token(old) and _native_token(new) and new != old
             and completed.get('token') == old and all(m.get('old_token') == old for m in markers)
-            and all(m.get('result_attempt_id') == pin['attempt_id'] for m in (completed, relayed)))
+            and all(m.get('result_attempt_id') == result_attempt for m in (completed, relayed)))
         checks['actual_free_profile'] = report.get('grade_protocol_profile') == 'lanlan_app_gemini' and all(m.get('profile') == 'lanlan_app_gemini' for m in markers)
         cancels = [e for e in window if e.get('type') == 'game_route_speech_cancel' and e.get('correlation_id') == old and _wall(complete) and e['wall'] >= complete]
         stops = [e for e in window if e.get('type') == 'speech_playback_state' and e.get('correlationId') == old
                  and e.get('reason') == 'native_connection_cancel' and e.get('active') is False and _wall(complete) and e['wall'] >= complete]
         checks['old_token_cancel_received'] = bool(cancels)
         frames = [e for e in window if e.get('type') == 'audio_frame']
+        # Telemetry counts all binary messages; the player skips empty buffers.
+        # Empty messages retain their owner/time guards but cannot prove PCM.
+        pcm_frames = [e for e in frames if _integer(e.get('bytes')) and e['bytes'] > 0]
         all_frames = [e for e in events if e.get('type') == 'audio_frame']
         initial = report.get('native_initial') or {}
         initial_trace = initial.get('trace') or {}
@@ -250,12 +298,12 @@ def grade_acceptance(report):
                     and complete <= e['wall'] <= end for e in all_frames))
         checks['old_queue_retired_or_never_received'] = bool(stops) or never_received
         retirement_evidence = 'NATIVE_STOP_RECEIPT' if stops else 'FRESH_RENDERER_NEVER_RECEIVED_OLD_PCM' if never_received else 'UNVERIFIED'
-        checks['new_token_pcm_after_grade'] = (bool(frames) and bool(cancels) and checks['old_queue_retired_or_never_received']
-            and all(e.get('correlation_id') == new and _number(e.get('bytes')) and e['bytes'] > 0
+        checks['new_token_pcm_after_grade'] = (bool(pcm_frames) and bool(cancels) and checks['old_queue_retired_or_never_received']
+            and all(e.get('correlation_id') == new and _integer(e.get('bytes'))
                     and e['wall'] >= max(complete, min(c['wall'] for c in cancels), min((s['wall'] for s in stops), default=complete)) for e in frames))
         scheduled = [e for e in window if e.get('type') == 'native_speech_playback_state' and e.get('active') is True
                      and e.get('sdk_speech_correlation_id') == new and _wall(complete) and e['wall'] >= complete]
-        checks['new_token_playback_scheduled'] = bool(scheduled) and bool(frames) and min(e['wall'] for e in scheduled) >= min(e['wall'] for e in frames)
+        checks['new_token_playback_scheduled'] = bool(scheduled) and bool(pcm_frames) and min(e['wall'] for e in scheduled) >= min(e['wall'] for e in pcm_frames)
         replies = [e for e in window if e.get('type') == 'gemini_response' and isinstance(e.get('text'), str) and e['text'].strip()]
         checks['native_text_after_grade'] = bool(replies) and all(_wall(complete) and e['wall'] >= complete for e in replies)
         playback = report['native_final']['playback']
@@ -273,6 +321,6 @@ def grade_acceptance(report):
         checks['schema_valid'] = before.get('ok') is True and after.get('ok') is True
     except (KeyError, ValueError, TypeError, IndexError, AttributeError):
         checks['schema_valid'] = False
-    return {'checks': checks, 'result': 'CANDIDATE_GRADE_FLOW_PASS_REQUIRES_SEMANTIC_REVIEW' if all(checks.values()) else 'FAIL_OR_PARTIAL',
+    return {'grade_intent': intent, 'checks': checks, 'result': 'CANDIDATE_GRADE_FLOW_PASS_REQUIRES_SEMANTIC_REVIEW' if all(checks.values()) else 'FAIL_OR_PARTIAL',
             'old_output_retirement_evidence': retirement_evidence,
             'physical_output': 'UNVERIFIED_NO_LOOPBACK', 'human': 'PENDING'}

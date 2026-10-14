@@ -75,6 +75,43 @@ def make_report(before, after):
             'cleanup_errors':[],'failure':None,'timing_log':[],'wire_trace':[]}
 
 
+def make_correction(fixture, *, partial_origin=False):
+    # Actual Store shape: old formal QA belongs to the session before restart.
+    fixture.before_and_after()
+    if partial_origin:
+        partial = {'verdict': 'partial', 'score': 0.5, 'reply': '还需补全。'}
+        fixture.state['last_answer_evaluation'] = partial
+        with closing(sqlite3.connect(fixture.db)) as c, c:
+            metadata = json.loads(c.execute('SELECT metadata FROM interactions WHERE id=2').fetchone()[0])
+            metadata['payload'] = partial
+            c.execute("UPDATE qa_records SET eval_result=? WHERE id='new-qa'", (json.dumps(partial),))
+            c.execute('UPDATE interactions SET metadata=? WHERE id=2', (json.dumps(metadata),))
+    fixture.state['study_session_id'] = 'session-after-restart'
+    with closing(sqlite3.connect(fixture.db)) as c, c:
+        c.execute('UPDATE kv SET value=? WHERE key=?', (json.dumps(fixture.state), 'state'))
+    before = subject.grade_snapshot(fixture.db)
+    fixture.question['attempt_id'] = 'a-correction'
+    grade = {'verdict': 'correct', 'score': 1, 'reply': '这次正确。'}
+    fixture.state['last_answer_evaluation'] = grade
+    answer = '我更正刚才那道题，答案是 WEX，请重新评分。'
+    metadata = {'question_id': PIN['question_id'], 'attempt_id': 'a-correction', 'degraded': False,
+                'material_context': {'course_id': PIN['course_id'], 'session_id': 'session-after-restart'},
+                'payload': grade}
+    with closing(sqlite3.connect(fixture.db)) as c, c:
+        c.execute('UPDATE kv SET value=? WHERE key=?', (json.dumps(fixture.state), 'state'))
+        c.execute('INSERT INTO qa_records VALUES (?,?,?,?,?,?,?,?,?)', ('corrected-qa', 'session-after-restart', 'topic',
+            json.dumps(fixture.question, ensure_ascii=False), answer, json.dumps(grade), 'tutor', 900, 'correction-time'))
+        c.execute('INSERT INTO interactions VALUES (?,?,?,?,?,?,?)', (3, 'answer_evaluate', answer, grade['reply'],
+            json.dumps(metadata), 'correction-time', 'session-after-restart'))
+    report = make_report(before, subject.grade_snapshot(fixture.db))
+    report['grade_intent'] = 'correction'
+    for marker in report['grade_markers']:
+        marker['session_id'] = 'session-after-restart'
+        if marker['stage'] != 'accepted': marker['result_attempt_id'] = 'a-correction'
+    report['native_final']['trace']['events'][0]['text'] = answer
+    return report
+
+
 class GradeEvidenceTests(unittest.TestCase):
     def setUp(self):
         self.fixture = Fixture()
@@ -263,6 +300,142 @@ class GradeEvidenceTests(unittest.TestCase):
         with closing(sqlite3.connect(self.fixture.db)) as c,c:
             c.execute("UPDATE kv SET value='bad JSON' WHERE key='state'")
         self.assertFalse(subject.grade_snapshot(self.fixture.db)['ok'])
+
+
+class CorrectionEvidenceTests(unittest.TestCase):
+    def setUp(self):
+        self.fixture = Fixture()
+        self.report = make_correction(self.fixture)
+
+    def tearDown(self):
+        self.fixture.close()
+
+    def assert_partial(self, report, check):
+        result = subject.grade_acceptance(report)
+        self.assertEqual(result['result'], 'FAIL_OR_PARTIAL', result)
+        self.assertFalse(result['checks'][check], result)
+
+    def test_actual_json_correction_survives_session_restart_and_preserves_wrong_answer(self):
+        result = subject.grade_acceptance(self.report)
+        self.assertTrue(all(result['checks'].values()), result)
+        self.assertEqual(result['grade_intent'], 'correction')
+        self.assertEqual(result['physical_output'], 'UNVERIFIED_NO_LOOPBACK')
+        self.assertEqual(result['human'], 'PENDING')
+        before = self.report['grade_before']
+        old = next(r for r in before['qa_records'] if r['id'] == 'new-qa')
+        self.assertNotEqual(old['session_id'], before['session_id'])
+        self.assertEqual(old['topic_id'], 'topic')
+        self.assertNotIn('PRIVATE', json.dumps(self.report))
+        # Backward raw-report JSON is accepted, with all three question fields checked.
+        for snapshot in ('grade_before', 'grade_after'):
+            for row in self.report[snapshot]['qa_records']:
+                if isinstance(row['question'], dict): row['question'] = json.dumps(row['question'])
+        self.assertTrue(all(subject.grade_acceptance(self.report)['checks'].values()))
+
+    def test_wrong_mode_or_pending_or_correct_origin_rejects(self):
+        for mode in ('answer', 'review', '', None):
+            report = deepcopy(self.report); report['grade_intent'] = mode
+            check = 'pending_four_ids' if mode == 'answer' else 'supported_grade_intent'
+            self.assert_partial(report, check)
+        report = deepcopy(self.report); report['grade_before']['question']['attempt_evaluated'] = False
+        self.assert_partial(report, 'evaluated_wrong_or_partial_four_ids')
+        report = deepcopy(self.report); report['grade_before']['last_answer_evaluation'] = {'verdict':'correct', 'score':1}
+        self.assert_partial(report, 'evaluated_wrong_or_partial_four_ids')
+        report = deepcopy(self.report); report.pop('grade_intent')
+        self.assert_partial(report, 'pending_four_ids')
+
+    def test_actual_partial_origin_is_retryable_but_last_grade_alone_is_not_lineage(self):
+        fixture = Fixture()
+        try:
+            report = make_correction(fixture, partial_origin=True)
+            self.assertTrue(all(subject.grade_acceptance(report)['checks'].values()))
+            report['grade_before']['last_answer_evaluation'] = dict(GRADE)
+            self.assert_partial(report, 'correction_origin_formal_lineage')
+        finally:
+            fixture.close()
+
+    def test_same_attempt_changed_question_course_or_session_rejects(self):
+        for key, value in (('attempt_id', PIN['attempt_id']), ('attempt_id', ''), ('question_id', 'foreign'), ('question', 'another prompt')):
+            report = deepcopy(self.report); report['grade_after']['question'][key] = value
+            self.assert_partial(report, 'same_question_new_attempt_evaluated')
+        for key in ('course_id', 'session_id'):
+            report = deepcopy(self.report); report['grade_after'][key] = 'foreign'
+            self.assert_partial(report, 'same_question_new_attempt_evaluated')
+
+    def test_old_wrong_formal_join_must_be_unique_exact_and_saved(self):
+        for kind in ('qa_missing', 'formal_missing', 'old_aid', 'old_qid', 'old_input', 'old_session',
+                     'old_course', 'old_grade', 'degraded', 'duplicate_formal', 'duplicate_qa'):
+            report = deepcopy(self.report); before = report['grade_before']
+            qa = next(r for r in before['qa_records'] if r['id']=='new-qa')
+            history = before['grade_interactions'][0]; metadata = history['metadata']
+            if kind=='qa_missing':before['qa_records'].remove(qa)
+            elif kind=='formal_missing':before['grade_interactions']=[]
+            elif kind=='old_aid':qa['question']['attempt_id']='foreign'
+            elif kind=='old_qid':qa['question']['question_id']='foreign'
+            elif kind=='old_input':qa['user_answer']='different'
+            elif kind=='old_session':qa['session_id']='different'
+            elif kind=='old_course':metadata['material_context']['course_id']='foreign'
+            elif kind=='old_grade':qa['eval_result']['score']=0.5
+            elif kind=='degraded':metadata['degraded']=True
+            elif kind=='duplicate_formal':
+                duplicate=deepcopy(history); duplicate['id']=100; before['grade_interactions'].append(duplicate)
+            else:
+                duplicate=deepcopy(qa); duplicate['id']='duplicate'; before['qa_records'].append(duplicate)
+            with self.subTest(kind=kind): self.assert_partial(report, 'correction_origin_formal_lineage')
+
+    def test_deleted_wrong_old_mutation_extra_grade_and_topic_drift_reject(self):
+        for kind, check in (('deleted', 'old_qa_preserved'), ('mutated', 'old_qa_preserved'),
+                            ('old_formal_mutated','old_grade_interactions_preserved'),
+                            ('extra', 'exactly_one_new_formal_interaction'), ('topic', 'same_concept_topic'),
+                            ('missing_topic', 'same_concept_topic'), ('missing_old_topic', 'same_concept_topic')):
+            report = deepcopy(self.report); after = report['grade_after']
+            old=next(r for r in after['qa_records'] if r['id']=='new-qa')
+            new=next(r for r in after['qa_records'] if r['id']=='corrected-qa')
+            if kind=='deleted':after['qa_records'].remove(old)
+            elif kind=='mutated':old['row_sha256']='0'*64
+            elif kind=='old_formal_mutated':after['grade_interactions'][0]['input_text']='changed'
+            elif kind=='extra':
+                duplicate=deepcopy(after['grade_interactions'][-1]);duplicate['id']=100;after['grade_interactions'].append(duplicate)
+            elif kind=='topic':new['topic_id']='different'
+            elif kind=='missing_topic':new.pop('topic_id')
+            else:next(r for r in report['grade_before']['qa_records'] if r['id']=='new-qa').pop('topic_id')
+            with self.subTest(kind=kind):self.assert_partial(report,check)
+
+    def test_new_json_metadata_and_marker_attempt_are_not_original_attempt(self):
+        for kind, check in (('qa_aid','formal_identity_and_asr'), ('qa_qid','formal_identity_and_asr'),
+                            ('formal_aid','formal_identity_and_asr'), ('marker_pin','marker_chain'),
+                            ('marker_result','marker_chain')):
+            report=deepcopy(self.report)
+            new=next(r for r in report['grade_after']['qa_records'] if r['id']=='corrected-qa')
+            if kind=='qa_aid':new['question']['attempt_id']=PIN['attempt_id']
+            elif kind=='qa_qid':new['question']['question_id']='foreign'
+            elif kind=='formal_aid':report['grade_after']['grade_interactions'][-1]['metadata']['attempt_id']=PIN['attempt_id']
+            elif kind=='marker_pin':report['grade_markers'][1]['attempt_id']='a-correction'
+            else:report['grade_markers'][1]['result_attempt_id']=PIN['attempt_id']
+            with self.subTest(kind=kind):self.assert_partial(report,check)
+
+    def test_empty_binary_frame_is_not_pcm_and_still_requires_exact_owner_and_time(self):
+        report=deepcopy(self.report)
+        events=report['native_final']['trace']['events']
+        empty={'type':'audio_frame','wall':106,'correlation_id':'native_connection_new','bytes':0}
+        events.append(empty); report['native_final']['trace']['binaryFrames']=2
+        self.assertTrue(all(subject.grade_acceptance(report)['checks'].values()))
+        for value in (-1, True, False, float('nan'), float('inf'), 0.5, None, '0'):
+            bad=deepcopy(report);bad['native_final']['trace']['events'][-1]['bytes']=value
+            with self.subTest(bytes=value):self.assert_partial(bad,'new_token_pcm_after_grade')
+        for key,value in (('correlation_id','native_connection_old'),('wall',103)):
+            bad=deepcopy(report);bad['native_final']['trace']['events'][-1][key]=value
+            self.assert_partial(bad,'new_token_pcm_after_grade')
+        bad=deepcopy(report)
+        for event in bad['native_final']['trace']['events']:
+            if event.get('type')=='audio_frame':event['bytes']=0
+        self.assert_partial(bad,'new_token_pcm_after_grade')
+        self.assert_partial(bad,'new_token_playback_scheduled')
+        # An empty message cannot allow a playback schedule before real PCM.
+        bad=deepcopy(report);events=bad['native_final']['trace']['events']
+        events[-1]['wall']=104.5
+        next(e for e in events if e['type']=='native_speech_playback_state')['wall']=104.6
+        self.assert_partial(bad,'new_token_playback_scheduled')
 
 
 if __name__=='__main__':unittest.main(verbosity=2)

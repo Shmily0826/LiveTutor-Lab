@@ -34,6 +34,9 @@ class GradeProbePlan(unittest.IsolatedAsyncioTestCase):
         predicate=next(node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name=='grade_quiz_prepared')
         exec(compile(ast.Module(body=[predicate],type_ignores=[]),'actual quiz receipt','exec'),namespace)
         self.quiz_prepared=namespace['grade_quiz_prepared']
+        predicate=next(node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name=='grade_baseline_matches')
+        exec(compile(ast.Module(body=[predicate],type_ignores=[]),'actual baseline receipt','exec'),namespace)
+        self.baseline_matches=namespace['grade_baseline_matches']
     def args(self,**changes):
         values=dict(output_only=True,grade_current=True,prepare_grade_quiz=False,
             output=self.root/'result.json',teaching_text_chain=False,teaching_wav=None,
@@ -71,6 +74,28 @@ class GradeProbePlan(unittest.IsolatedAsyncioTestCase):
             with self.subTest(change=change):
                 self.assertFalse(self.quiz_prepared({'is_error':False,'output':{**value['output'],**change}}))
         self.assertFalse(self.quiz_prepared({'is_error':True,'output':value['output']}))
+
+    async def test_correction_cannot_replace_question_or_start_outside_grade_scene(self):
+        await self.reject(grade_current=False,grade_correction=True)
+        await self.reject(prepare_grade_quiz=True,grade_correction=True)
+        with self.assertRaises(Planned):await self.main(self.args(grade_correction=True))
+
+    async def test_baseline_and_pin_agree_before_native_for_both_modes(self):
+        pin=dict(course_id='course',session_id='session',question_id='q',attempt_id='a',attempt_evaluated=False)
+        baseline={'ok':True,'course_id':'course','session_id':'session',
+            'question':{k:pin[k] for k in ('question_id','attempt_id','attempt_evaluated')},'last_answer_evaluation':{}}
+        self.assertTrue(self.baseline_matches(baseline,pin))
+        self.assertFalse(self.baseline_matches(baseline,pin,correction=True))
+        for change in ({'ok':False},{'course_id':'other'},{'session_id':'other'}):
+            self.assertFalse(self.baseline_matches({**baseline,**change},pin))
+        self.assertFalse(self.baseline_matches(baseline,{**pin,'attempt_id':'other'}))
+        pin['attempt_evaluated']=True;baseline['question']['attempt_evaluated']=True
+        for verdict in ('wrong','partial'):
+            baseline['last_answer_evaluation']={'verdict':verdict}
+            self.assertTrue(self.baseline_matches(baseline,pin,correction=True))
+            self.assertFalse(self.baseline_matches(baseline,pin))
+        baseline['last_answer_evaluation']={'verdict':'correct'}
+        self.assertFalse(self.baseline_matches(baseline,pin,correction=True))
 
 
 if __name__=='__main__':unittest.main(verbosity=2)

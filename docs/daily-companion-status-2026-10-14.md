@@ -1,49 +1,41 @@
-# 日常学习伙伴当前状态（2026-10-15）
+# 日常学习伙伴当前状态（2026-10-15，阶段26）
 
-当前：阶段25真实ASR正式评分及Native子链取得证据，原量具FAIL保留、修后只读19项复核通过；本轮已发布 35abae0edd11e9e5569e3e220113969d8460cace。最新源码/证据均为阶段25；继承阶段24。Root master脏树及index保留，远端master未改；日常自动评分默认仍OFF，物理声音与真人待验。
+当前是实质progress，Goal active，整体验收未完成。场38已终结：真实Native纠正得到原正式Study correct100，同题新attempt，原wrong及旧历史保留、topic一致；Native一句正确反馈与播放终结。原exit1/FAIL只一项空binary误算PCM；核宿主跳过空消息并修21tests后只读22/22全真、Main语义正确，原件不覆写。日常AUTO_GRADE仍默认OFF，物理可听/human待验。
 
-阶段19实际原Start-Daily-Tutor.cmd文字入口Ready/refresh、课程设置历史保留通过；首次820topic行变FAIL保留，seed相同内容不UPDATE补丁4test及修后原21interaction/820topic/all nonkv rowhash数量不变。原daily当时pending/QA为空，不冒充错题重启证明；C33独立真实模型pending返课重启继承。diag11/actual-method4的localQueueSocket proof不证明provider ACK/full intake。
+完整契约：[原文](daily-companion-contract-2026-10-14.md)，169行，SHA256 `FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33`，未修改。每次上下文压缩或自动续跑先完整读取 contract、plan、status、blockers；后续用户明确指令优先，同步更新记录。Goal `01a13531-0341-7611-afc2-5c472a7ccf50` 当前实查 active，不重建、不局部标完成；完成依据实际交付和证据。局部阻塞记录失败/尝试/恢复条件，转其他任务；限流停止无效重试并退避。
 
-阶段20：voice34真实log反复No module named neko_phrase_input_transport，已补两exact helper部署到两个host根，实际cwd/import和SourceGate启动前核；9temp/stdlib PASS，最终独立containment审无具体P1/P2。尚未必要修后online，保留voice34 FAIL_NO_ASR_OR_REPLY。唯一新修改是部署安全，不替代声音验收。
+当前权限：必要扬声器仅用户已设约4%，不调整音量；禁止房间/物理/虚拟麦克风、捕获设备初始化和回环。已结束真人场的mic授权不延续。固定WAV只走文件→内存/WS，真实发声必须output-only及8API捕获保护；文字child `NEKO_TASK_SILENT=1`。不夜间要求本人朗读；再次集中真人体验待核心可用及本人明确在场。
 
-真人第二场已finished/ex0，mic/capture策略恢复false，当前无已知自有host/session/listener（启动前再核，不按旧PID清理）。用户无抢答反馈、识别中文和方向纠错可用；A/B/A同pending身份是Main实际SDK证据。口头判错后实际SQLite attempt_evaluated=false/evaluation空；题型范围丢、超两句、识别方框为方案、图不可见、末段ASR后13.4s文本。正式评分追加轮没完整观察，不能伪造失败。真人wrong纠正保存/语言/打断完整体验未验。引导过程用户80%等Main，安排FAIL。详情 docs/evidence/daily-companion-human-feedback-2026-10-15.md。
+账本沿用 `bargein-autocheck-20261012` 不重置/换轮：最新实查 DeepSeek **691/2000**、Lanlan.app **67/null**、Lanlan.tech **0/0**；仅Main调整额度和安排在线。无其他付费供应商；连接有界超时/异常停止/退避，不无限重连，不为耗额度测试。请求计数非账单金额。
 
-阶段21 request透传4+quiz guards12+memory8 Main离线过，独立审及空材料P2闭合；原daily仅三个code文件LF/hash部署，无学习data/config/history写入。真实题型遵循仍待。
+允许项目必要修改/隔离依赖、自有测试进程清理；保留Root脏树/.workbuddy/原历史。仅审查过allowlist commit/push `codex/`功能分支，不合并主分支、不强推/覆远端；排除密钥、用户DB、raw音频与无关修改。已有两个子Agent窄范围不冲突，无新增或换模型；Sky Scout源码/索引/已有架构图只读，复用已有两对比图。复用原SQLite和CodeGraph，不另建记忆/索引系统。
 
-完整契约：docs/daily-companion-contract-2026-10-14.md（原文169行，SHA256 FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33）。每次上下文压缩或自动续跑先完整读取 contract、plan、status、blockers；后续用户明确指令优先，同步记录。
+源码/离线、真实模型/SQLite、Native接收与播放调度、物理可听、真人体验分别报告；不能用日志/排程冒充可听或本人认可。当前人工不再逐句协助；自动验证到可用后一次约10–20分钟集中体验。
 
-2026-10-15用户明确恢复全部开发：先自动验证到可用，再安排集中真人验收，不逐句占用本人时间。现有Goal 01a13531-0341-7611-afc2-5c472a7ccf50 本轮get_goal已核active，不重建；完整约束以本contract及后续明确指令为准。局部阻塞记录失败/证据/尝试/恢复条件并转其他项；全部依据实际证据完成，阶段、小功能、到早晨或额度不构成完成。源码/离线、真实模型、设备播放、真人体验分层。
+## 本阶段真实证据
 
-音频：必要speaker用户已设约4%，不调整音量。已结束真人场的mic授权不延续；禁止room/physical/virtual mic、捕获设备初始化、回环。固定WAV内存/WS允许；仅经核输出专用入口/8API捕获保护可发声，mixed启动仍拒绝。文字开发child NEKO_TASK_SILENT=1。
+- C32原任务/原forward图/场37原wrong题，未重出题、未提交新图、未动原daily DB。observer新增 `--grade-correction`，必须grade-current/output-only/单固定WAV/已有fresh任务，禁止prepare-grade-quiz；启动前四ID和evaluated=True/last wrong或partial匹配，普通答题仍要求pending。Main及独立8离线测试通过。
+- correction量具20离线测试Main/独立通过：原formal历史session可早于当前restart，精确join原qid/aid/session/ASR/成绩；sameqid/题干、新aid/evaluated、恰+1QA/formal、所有原QA完整rowSHA/旧formal投影不变、相同非空topic。Native owner/capture/时序继承，原普通场37只读20项仍过。
+- 场38唯一exec46447 terminal exit1/cleanup_errors=[]，48911/48916/9234实查无listener。原raw `benchmarks/raw/evidence/daily-companion-20261015-native-correction38.json` SHA256 `c421dc05ef6fa71018ca1c00a3923a0b312ad005d1f3af20f4f4036b582161f8`；原FAIL_OR_PARTIAL保留，22项仅new_token_pcm_after_grade=False。
+- qid `q_f62b68fa3e77408cb26c2bbf3c1eb607` 不变，old aid `a_a71cf8980ca641bf84add105a3f7a055` → new aid `a_826a0e03bcdd4a1eb9fefd5d5c702511`。QA3→4、原wrong0与旧QA全hash/grade公开投影保留；actualASR方向WEX→NUD正确，正式correct100，角色一句“对，起点WEX、终点NUD，完全正确”。原实际submitted图SHA与已有forward图相同、WEX→NUD语义核查继承阶段25，材料前后相同。
+- accepted/grade_complete实际conn1/scope2，relay conn2/scope4，新token；原token cancel收到，fresh Native旧PCM0。8帧中7个正PCM累计378480bytes，末事件bytes0；均新token且grade后，source_ended/activefalse/remaining0。空binary本身不作PCM/ACK/终结；修量具仍核全部owner/时序/非负int且至少一正PCM，Main/独立21tests过。只读derived22checks全真，原exit1不追认；派生SHA256 `1f2837ad9f9ffcd44b160f60fd5654d41b9ecafd532b8f30cd3568aa44571cec`。8API locked/output-only、capture_started=false，未用mic/capture/loopback、不改音量。
+- speech end→观察ASR10.602s；accepted→grade4.308s；grade→relay0.579s；relay→首PCM2.225s；PCM→schedule0.527s；speech end→PCM17.707s。既有phrase日志：封口wall1791992479.933、首写2479.942、完成2479.960；speech-end estimate2478.724，有意1.2s缓冲，写入32ms，完成写→accepted约9.290s。该后段是服务识别/返回/调度组合，不能全部归单模型或以压停顿阈值修。
+- 前后Study preferences公开值、cfg.language和材料相同；比较整个RPC含_seconds会假不同，只比较实际偏好字段。任务coreApi已恢复deepseek。账本685→691 DS(+6，总调用不等于全是评分)、app65→67(+2：初始与受控relay)，tech0，原round/预算不变。
 
-沿用 bargein-autocheck-20261012，核账本DeepSeek677/2000、Lanlan.app63/null、Lanlan.tech0/0。不重置/换轮/切付费供应商，不为额度耗完测试；Main独占额度/online，限流停无效重试并退避。既有两个子Agent独立窄审，无新Agent，共享代码Main负责。
+## 继承成果与保留失败
 
-允许审查后commit/push codex/功能分支，不merge/force/覆远端；保留Root脏树和.workbuddy，Root index不stage。排除密钥、用户DB/history/raw录音/policy。Sky Scout源码/索引/已有架构图只读；复用两对比图，不另建记忆系统、不删除重置原用户历史。
+阶段19原Start-Daily-Tutor文字Ready/refresh/原21interaction/820topic/all非kv历史行hash保持，首次seed UPDATE FAIL保留并修4test。阶段20缺phrase helper实际cwd/SourceGate修复，34原FAIL不覆。阶段21 request透传/guard及真实phrase35 ASR→Study→English/24PCM，原timeoutFAIL保留、只读REPLAY修复，不冒充原exit0。阶段22 material窗口/currentimage及同题correction私有四身份、provider恢复Windows保护真实/离线过；六空目录清理被automatic approval blocked by policy，保留且不绕。
 
-精简前全部原bytes已exclusive归档到 docs/evidence/daily-companion-status-history-through-human-test-2026-10-15.md；此前phase18/16/14/12/10/8原档保留。contract未变。
+阶段23实际HTTP/SDK/DS wrong→correct/同topic/两QA及graded返课/两host重启过，startup丢题原FAIL修3test；只任务四state按真实冻结件恢复，不是用户历史修复。阶段24显式Native正式grade source17本地+actualLANLAN_APP arbiter/30文件幂等/SourceGate及部署、ordinary12/phrase20过；默认OFF，遗留协议输入failclosed。阶段25场37实际ASR→正式wrong0/同aid/QA2→3/同时provider去重、11新PCM/播放终结；原question JSON量具FAIL保留，修13tests只读19全真；材料语义Main核正确。上述physical/human都未外推。
 
-阶段21当前增量：源码/离线出题request透传4、材料12、memory8过；Native语音观察修复7 Main+独立过。必要单场phrase35有真实ASR→study_explain→两句English/24NativePCM、sourceEnded/queue0，无mic/capture/loopback，8APIguard。原raw35因心跳quiet/显式zhCN假设报turn_timeout/exit1/FAIL_PARTIAL，原文件不变；修后既有事件回放59.087s可结束，仅REPLAY通过，不追认整场PASS。speechEnd→ASR11.609s→首PCM21.775s，PCM→播放schedule0.512s，实际可听未验。唯一exec60014已terminal/cleanup_errors=[]，任务ports无listener。账本675/63/0，原round不重置。stage21证据 docs/evidence/daily-companion-phase21-quiz-request-and-voice-probe-2026-10-15.md。
+真人第二场已经结束：本人报告无抢答、识别中文/方向纠错可用；但未正式调用评分/图不可见/超句/ASR后13.4s等FAIL，以及本人80%等Main的组织FAIL均保留在 `docs/evidence/daily-companion-human-feedback-2026-10-15.md`。之后修复不冒充再次human认可。
 
-已定位尚未修复：Native显式答当前题可以自由口头判错绕过study_answer，旧qid/attempt仍pending/evaluation空；下一步需权威ASR owner+expected qid/attempt/course/session准入和防重、结果前自由评分抑制/失败诚实，保护ordinary打断。不能只增强prompt或从口头结果倒写DB。然后材料可见/graded多轮及全A–F继续。两个Agent最终窄审冻结，Main已完成stage21 exact发布；应用Goal已active，按contract自动接续。
+## 发布与下一步
 
-阶段22接续的具体边界：Core已注册study_answer，Native明确答题仍可零tool自由回复；只改prompt/转换已存在study_explain不覆盖零调用。必须固定真实pending identity与本轮ASR owner，使用原正式entry、防重复/换题；处理自由回复抑制与正式工具结果发声，不能伪造普通打断onset、复活退休scope或直接发虚构function_call_output。已核实际_tools.py要求Free返回真实call_id匹配server function_call，不能把一个local fabricated ToolCall当合法provider调用。Core turn.handle_input_transcript有既有plugin bus/缓存/显示，没有评分fallback；bus事件本身也没有当前完整voice owner，不能只按有pending题就消费每句对不对。先确定实际协议和权威快照/输出路径，再定向离线Core+SQLite测；不在不明时绕权限开mic/循环CONNECT。其它材料可见/记忆源码/受控指示继续，局部阻塞不暂停全部Goal。
+Root dirty master保留、index未stage；managed `C:/Users/Shmily/.codex/worktrees/daily-companion/LiveTutor-Lab`，分支 `codex/daily-learning-companion`。最新代码35abae0edd11e9e5569e3e220113969d8460cace、元数据39f98bac833db95939cfb0bfb7ba181c2f3aaa7d，candidate本阶段前clean；remote master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb（发布时再核）。26 observer/validator/证据尚待精确发布，产品Core/runtime此次未变。
 
-阶段22已交付当前Study图片默认跟随/旧指示退役、私有四身份pin、同题wrong/partial更正新attempt保留原错答、Windows保护下日常provider设置恢复。Main/独立离线与真实SDK/SQLite通过；最终原daily入口Ready/refresh/current-image DOM与原27interaction/820topic/QA0/all学习行hash、原pending题和配置偏好均保留，exit0，预算不变。初次coreApi变化失败及恢复初版竞态P2证据保留，最终锁定版7测试及实际入口通过。source/offline不冒称Native自动评分已修；完整A–F继续。证据 docs/evidence/daily-companion-phase22-material-and-correction-2026-10-15.md。scene60427已terminal，48911/48916/9234/55804无listener。六空目录清理automatic approval blocked by policy，保留且不绕。原账本675/63/0不重置，speaker用户4%仅必要output-only可用，禁止mic/capture/loopback。下一步Native真实ASR→原题正式grade→受owner保护的结果输出，再连续集成、剩余A–F和集中human。
+当前没有running场/host需要轮询。既有screen_guidance已完成量具两文件及其review窄审/只读派生后冻结，无provider权限；learning_memory容量失败冻结，不换模型、不新建Agent。先收尾本阶段发布，再分析已存在phrase日志把输入结束→ASR前段定位；随后日常启用范围、语言/自然短答/全A–F继续。无全局阻塞或complete依据。
 
-阶段23真实HTTP/SDK/DeepSeek同题wrong→correct两QA、原wrong行保持且同topic_id；+2 DS至677，app63/tech0不变。原ACK量具FAIL及实际graded startup丢题FAIL保持；修startup/idle按最新同课state四字段续接，新3/Main独立、course8/answer14过。只任务C32四字段按真实提交后冻结原件恢复，历史/QA原行不动，非原用户数据恢复；修后完整宿主返课/重启状态与两QA通过，不重复模型评分。scene9824已terminal，两owned host强制exit1/cleanup_errors[]，48911/48916无listener。原daily仅新init bytes受旧SHA防护部署，未再启动或改历史。证据 docs/evidence/daily-companion-phase23-graded-restart-2026-10-15.md。最新已发布代码阶段22 7ffb334be6bba957ab316e677a765dd1fcfc229b，阶段23源码已审查并精确发布 b540837d5f703cbc240d9fd87f175c2594f74e2a，远端同SHA、candidate clean、master不变。下一阶段Native accepted ASR后台正式grade、原题/owner pin、自由输出hold与逐send保护，缺terminal不猜音频归属；详见native-grade-fallback-design。完整A–F持续，不局部标整个完成。
+## 归档
 
-续跑交接：本阶段自主工作未暂停，Goal active。所有当前有界场均terminal、没有需继续轮询的exec，任务host端口无listener。下一轮先完整读四文件，再按phase23末段和native-grade-fallback-design处理零ToolCall评分；在ASR后才取status并不足以证明回答对应输入开始时的题，应固定预先可信held身份/原语音输入scope，后续status+四pin只核它，不能改用换课/换题后的最新题。先完成真实方法/本地SDK/SQLite定向六组回归，再安排必要单场fixed WAV，缺终结不释放Native声音，不重复今日human/旧PASS。无全局阻塞/complete依据。
-
-阶段24开发中：默认关闭Native显式答题自动正式grade。实际Core accepted transcript/route/echo→后台原SDK/SQLite→actual arbiter，本地12项通过，模型/连接/wire/设备替身，非真实Native或播放PASS。四身份首次音频pin、实际ASRowner、换题拒绝、同时provider去重、更正新attempt/原错答保留、一次受控无PCM重连、迟到发送抑制及失败诚实已离线覆盖。尚未runtime部署/发布，host/helper/product manifest待封版；当前不能启动该新版本宿主。legacy None/replay/歧义pin failclosed保留限制，独立审查进行中；learning_memory capacity失败已换给另一个既有Agent审，无新模型/Agent。账本实际677/63/0同round不变，本轮离线进程均terminal、无新增host/audio；不采mic/capture/loopback。详见 docs/evidence/daily-companion-phase24-native-grade-draft-2026-10-15.md。下一步独立审查修复、完整幂等/部署清单，必要有界Native固定WAV，然后其余A–F继续。Goal active，不能局部标complete。
-
-阶段24后续封版：初稿input-time authority P2已修并独立复核；17项Main/独立本地通过，最后defaultOFF绑定一行独立审；actual LANLAN_APP arbiter item驱动分支覆盖，非provider ACK。两host副本30文件回放/幂等/AST通过，原manifest全匹配后实际部署默认OFF；3helper实际cwd import和SourceGate通过。部署后ordinary handoff12/phrase transport20过。product avatar返回qid/attempt，canonical/LF清单及原daily仅code旧SHA保护替换，未动DB/config。仍未发布/真实Native/设备/真人验收；不能说口头绕正式评分已整体交付。账本677/63/0同round，本轮无外部调用/host/音频，Goal active。下一步精确codex分支发布、必要固定WAV真实集成；其它A–F保留继续。详phase24报告末段优先。
-
-阶段24源码已review/commit/push d520252c001f8d95a1f682f9fd15b27084a9d05b，远端codex/daily-learning-companion同SHA且candidate clean，remote master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。17 exact文件，staged LF产品29file及helper全部fingerprint核通过；Root index未stage，原脏树/.workbuddy保留。真实Native自动评分与设备仍待。下一轮先四文件，再准备自动评分专用observer：沿用既有任务材料/固定WAV，无mic/capture/loopback；先核真实任务库pending四身份（不得伪造、重置原历史），必要只创建本场新题，核ASR→QA及迟到音频owner/诚实失败。现有voice_probe默认只验study_explain，不能直接把其结果当grade PASS，先补针对性量具。未开online前先核账本和8API保护，保留单场超时/异常停止，不循环CONNECT。若局部protocol受阻，记录并转其余A–F，不停止全Goal。当前无新增host/音频会话，离线进程已terminal，Goal active。
-
-阶段25进行中（启动真实场前）：trace19本地/30文件回放幂等/AST和实际SourceGate过，defaultOFF。新增grade-current observer及5preflight拒绝测试、只读snapshot/validator正在独立复核。已有任务C32 QA2/grade2可只读取证，拟同已有图创建本场必要新题，再单固定WAV真实ASR正式评分，不碰原daily DB/历史。离线一次合成明确评分意图WAV，未播放、未采设备。当前ledger677/63/0不变、无host在线；先量具正确和baseline/pin一致再开有界单场。报告phase25，Goal active，全A–F持续。
-
-场36已terminal/exit1/cleanup_errors=[]，无Native连接/播放。真实quiz已成功保存pending题；observer错误要求rich study_quiz没有的ok字段而提前报FAIL，原raw保留SHA 8ce4ed6f033630c53c3521042c86b965f9e095c224974104554da89b8ad1f048。修为实际tool/非error/非degraded/题干双ID非空、补真实receipt第6前检，Main6PASS。只此新题DS+1至678，app63/tech0不变；旧QA2仍在。下一场37明确不prepare-grade-quiz，复用已保存qid/aid，启动前只读pin同36结果/未评分已核，不重出题、不重置历史，不重复未修服务场。当前无host listener，政策不变。
-
-阶段25实际集成：36为quiz receipt量具FAIL保留，37原FAIL/exit1仅QA question JSON形态比较假阴性，修13项Main/独立测试后只读复算19checks全True，原raw SHA不变。真实Native ASR→正式wrong0/同题同attempt/QA2→3、旧两QA完整hash保持，原生同时study_answer实际合并一grade；一次无PCM受控重连、新token11PCM/playback schedule/source_ended通过。Main对实际submitted图SHA同已有forward图并视觉核WEX→NUD，正式反馈/Native两句正确。无mic/capture/loopback/volumechange；physical/human待。总DS685/2000、app65/null、tech0/0同round，原Coreprovider恢复deepseek，学习偏好/语言不变；25285 terminal exit1/cleanup[]，48911/48916/9234无listener。AUTO_GRADE日常默认仍OFF。下一步复用本wrong题验证Native明确纠正新attempt/原错答保留，先扩适配correction量具再必要单场；旧short/legacy/replay/自然停顿/全A–F继续。证据phase25及grade-observer-review，Goal active，不整体complete。
-
-阶段25源码/证据已精确review/commit/push 35abae0edd11e9e5569e3e220113969d8460cace，13 allowlist文件，staged helper LF指纹通过；remote同SHA/candidate clean/master f1e8f3f未改，Root index未stage。发布后SourceGate再次通过，账本685/65/0，当前48911/48916/9234无listener，已无running exec需要轮询。现有Goal active。本轮是progress（真实自动正式grade+Native与记录发布）；下一轮仍先完整读contract/plan/status/blockers。C32当前真实wrong题及attempt仍在且evaluated=True已只读核，下一次不可再拿pending-answer脚本或重出题；先加correction模式和对应新attempt/旧wrong保留量具，再必要一次明确纠正固定WAV（无mic/capture/loopback），或转其余A–F。日常AUTO_GRADE默认OFF，不冒称全部交付。
+精简前status全部原bytes独占归档 `docs/evidence/daily-companion-status-history-through-phase25-and-phase26-preflight-2026-10-15.md`，SHA256 `a535f58a5df7bcbd02f0c386056c6dc163358c88c8fedbbffdf10f7eadadd3d9`；plan档d8a3694e、blockers档baa8d2b1、此前历史档均保留，contract未改。
