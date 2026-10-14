@@ -1,6 +1,6 @@
-# 日常学习伙伴状态（阶段49部分通过 / 整体未完成）
+# 日常学习伙伴状态（阶段50源码定位修复 / 整体未完成）
 
-49当前：唯一静音真实59已终止，controller exit0；任务host被有意forced-stop exit1，非自然退出0。3角色WS轮/8 CodeGraph receipts，DeepSeek累计847/2000（本场+12）、app78/null、tech0/0，原round不重置。首轮DSML工具标记泄漏无教学答案FAIL，后两轮区分值与缺键但过度断言HTTP结果，整体PARTIAL。已记录owned/三端口全清、post59 SourceGate PASS，无Native/浏览器/声音/mic/capture/loopback。下一50减少精确文件定位的无关查询并修工具标记过滤；不加轮数掩盖失败，不盲重跑59，全部A–F/Goal active。
+50当前：命名源码file模式支持授权索引内唯一文件名/路径后缀，原精确路径仍直接读窗口；多匹配只返回最多8候选不猜。源码10窗口（新6）+结构1+版本1共12不同离线case PASS，部署原文件同10 PASS不重复计数。唯一真实CLI三请求：weather_service.dart与routes/weather.js各精确12行，weather.js歧义2无source；9个本地命令、commit7aae20f、无模型/设备/真人。原59 DSML/过度HTTP断言PARTIAL仍保留；下一51修工具标记流过滤和空回答提示。账本847/2000、app78/null、tech0/0；无live host/自有端口，全部A–F/Goal active。
 
 完整任务以[原始contract](daily-companion-contract-2026-10-14.md)全文为准，169行/SHA256 FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33，禁止摘要替代或修改。现有Goal 01a13531-0341-7611-afc2-5c472a7ccf50 active，全部A–F持续推进，不重建/缩范围/阶段假完成；GPT-6.1 Sol High不擅改。
 
@@ -24,8 +24,8 @@
 
 ## 接续顺序与全部余项
 
-1. 48已发布；收口49实际PARTIAL证据与精确allowlist发布，完整Goal持续。
-2. 50先改善D精确源码查询及DSML输出过滤，保持工具cap与授权边界；B51协议局部待适配，不盲开新付费场。旧UI陈旧夹具登记F维护。
+1. 49已发布；收口50命名文件解析与实际CLI证据，完整Goal持续。
+2. 51修DSML输出流过滤与无有效回答提示，保持工具cap与授权边界；B51协议局部待适配，不盲重连。旧UI陈旧夹具登记F维护。
 3. 依真实失败继续B/C/D/F，不盲重复未变已过场。
 
 | 范围 | 剩余工作与边界 |
@@ -82,3 +82,9 @@
 阶段49唯一静音真实59已启动exec13483，fresh store neko-daily-code-contrast-20261015-59；raw evidence/daily-companion-code-contrast59.json已x预留，strict text-only/TASK_SILENT、DeepSeek现有角色textWS/CodeGraph，无Native/浏览器/音频/捕获/源码预取。独立3个量具P2全关闭/6PASS，835/78/0起、原2000硬顶/32事件间停止边界/单场380s不重置不重连。只poll同live handle，尚未就绪/终态，不冒模型或清理通过。
 
 阶段49终态与诊断：原raw59 SHA b24ca1b2b8e768eb8f8fc5d7a7dc688f2703c515ed785f84e915c02fb8021419，独立terminal SHA 2e6959db77cbe0e8357aa263ffbaef9242243e47b0687d6eb006ba2098fbe21d；原件semantics=PENDING保留，另件与独立review判PARTIAL。三轮约9.749/8.503/3.189s，工具实际shown客户端、route与坐标guard；下游src/weather.js只有空header，不能认领其实现/成功率。第一轮整段DSML无中文教学答案；后两轮“200还是400/通常仍200”遗漏实际shown502分支且无频率证据。8次工具查询中首explore主要给SkyMapPage，精确天气文件需后续查找。中央host.log 91918、91966分别在2026-10-15 11:24:18/26记录tool iteration cap 3 reached并forced final without tools，确认本场搜索耗尽工具轮数；尚不能说唯一根因或只加cap解决。既有ToolLeakFilter没有DSML支持，先修实际输出边界/文件解析，不执行泄漏文本为工具。独立最终6离线与59原件语义复核已闭合。当前无测试host，账本847/78/0，无设备/真人新验收。B自然停顿局部待proxy协议/适配，转D/F继续；49精确发布待收口，50先离线。
+
+阶段49九文件精确发布已核：commit/push 147a31f2864fd0d5c27cee4c5ac51c92ca16d266 到codex/daily-learning-companion，remote exact/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb；原件59 PARTIAL及独立审查原文保留。未发布raw/用户DB/WAV/密钥/profile/备份。
+
+阶段50开始：Main先仅修改现study_code file模式，在请求路径合法且实际缺失时复用CodeGraph files -j定位授权root内唯一basename/路径后缀，再沿既有file/window过滤返回精确源码；多匹配返回有限候选，不猜路径/不发整仓目录/不改变cap，不新建索引或读取Sky源码。现host指导优先命名文件mode=file；先离线负例/现窗口回归再部署与必要真实场。DSML过滤另列接续，不能将定位优化冒称输出问题解决。原4文件独占备份phase50-before。账本847/78/0，无live服务/音频/捕获。
+
+阶段50冻结与验证：仅现有_code_file_request合法路径缺失才从CodeGraph files -j查suffix，逐候选再经root/credential/symlink原围栏，不遍历整仓、不把inventory发模型、不改变cap/付费provider；不唯一返回有限候选和实际数量，未解析不说文件不存在。原有窗口/source shown与repo_commit保留；没有源码预填正确答案。新负例覆盖同名/邻仓/越界/凭据/坏JSON/非list/CLI失败/无结果/候选上限/不安全原请求，Main12离线及真实default编译10通过，未另称独立审查。真实CLI raw SHA 29afdda4405b1aad4009f8cd85c4356cbd891753e186fd97c464f06f2e6ce679。默认study_code_tools逐旧SHA独占备份后部署，完整product源码/部署指纹含既有protected_html pin、SourceGate PASS；最初字节核对把已知受保护HTML误当原index并中止，改按manifest既有protected_deployed_sha256核后通过，未修改HTML。product manifest SHA32f9da743c329d19e2e8018f52233946bdca029d72f962b942183671d2cd79a8；host manifest不变。没有真实角色选新模式/回答改善证据，更无新Native/播放/human；应等DSML实际边界修后再唯一有界模型场，避免只为重测花额度。

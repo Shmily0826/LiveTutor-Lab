@@ -108,6 +108,30 @@ def _code_file_window(raw, index_file, offset, limit):
     return f"**`{index_file}`**\n```\n" + "\n".join(rows) + "\n```"
 
 
+def _indexed_file_candidates(payload, authorized, requested, offset, limit):
+    """Resolve a missing path from the existing index, never from a repository scan."""
+    rows = json.loads(payload)
+    if not isinstance(rows, list):
+        raise ValueError("The index did not return a file list.")
+    requested = _slashes(str(requested).strip())
+    prefix = authorized["prefix"]
+    if requested.casefold().startswith(prefix.casefold()):
+        requested = requested[len(prefix):]
+    suffix = "/" + requested.casefold()
+    candidates = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        path = _slashes(str(row.get("path") or ""))
+        if not path.casefold().startswith(prefix.casefold()) or not path.casefold().endswith(suffix):
+            continue
+        try:
+            candidates.add(_code_file_request(authorized, path, offset, limit))
+        except (ValueError, OSError):
+            continue
+    return sorted(candidates)
+
+
 def _shown(kept: list[str], root: str, prefix: str) -> list[dict[str, Any]]:
     """Which files, and which line numbers of them, the evidence actually contains.
 
@@ -456,9 +480,12 @@ class _StudyCodeToolsMixin:
             "answers 'what is this project' or 'how is it divided' with the file tree from the "
             "same index - use it before explore when the learner asks about the shape of the "
             "codebase, and remember a tree carries no line numbers to cite. "
-            "For a specific file or original line, use mode='file', file='server/routes/weather.js', "
+            "For any named file or original line, prefer mode='file' over explore/find/symbol, "
+            "file='server/routes/weather.js', "
             "offset=1 and limit=40 (at most 120). It uses CodeGraph's existing file reader and "
-            "returns only those source rows, avoiding a broad natural-query miss. "
+            "returns only those source rows, avoiding a broad natural-query miss. A filename or "
+            "path suffix is also accepted if unique in the authorized index; if ambiguous, choose "
+            "the relevant returned candidate instead of guessing. "
             "Sending a sentence to symbol/find returns "
             "nothing - use explore instead. mode='explore' is the default for a reason. The index "
             "is synced before it answers (see index_sync), so code the learner just wrote is "
@@ -477,7 +504,7 @@ class _StudyCodeToolsMixin:
                 "mode": {"type": "string", "enum": list(_SUBCOMMANDS), "default": "explore"},
                 "query": {"type": "string",
                           "default": "", "description": "The question or exact symbol. Omit for structure; structure ignores this field."},
-                "file": {"type": "string", "description": "For file mode: root-relative or previously returned indexed path within the authorized project."},
+                "file": {"type": "string", "description": "For file mode: authorized root-relative/indexed path, or a unique filename/path suffix. Ambiguous names return candidates without source."},
                 "offset": {"type": "integer", "minimum": 1, "default": 1},
                 "limit": {"type": "integer", "minimum": 1, "maximum": 120, "default": 60},
             },
@@ -505,14 +532,31 @@ class _StudyCodeToolsMixin:
         if not sub or (not text and sub != "files" and not (str(mode).strip().lower() == "file" and file)):
             return {"ok": False, "error": f"unsupported mode {mode!r}" if not sub else "query is empty"}
         index_file = ""
+        resolve_file = False
         if str(mode).strip().lower() == "file":
             try:
                 index_file = _code_file_request(authorized, file or text, offset, limit)
                 text = index_file
+            except FileNotFoundError:
+                resolve_file = True
             except (ValueError, OSError) as error:
                 return {"ok": False, "error": "INVALID_SOURCE_FILE_REQUEST", "detail": str(error)[:200]}
         synced = await self._code_sync(cli, authorized)
         head = await self._code_head(authorized["root"])
+        if resolve_file:
+            try:
+                inventory = await _run([*cli, "files", "--path", authorized["root"], "-j"])
+                if inventory.returncode != 0:
+                    return {"ok": False, "error": f"CODEGRAPH_EXIT_{inventory.returncode}"}
+                candidates = _indexed_file_candidates(inventory.stdout, authorized, file or text, offset, limit)
+            except Exception as error:
+                return {"ok": False, "error": "SOURCE_FILE_LOOKUP_FAILED", "detail": str(error)[:200]}
+            if len(candidates) != 1:
+                return {"ok": False, "error": "AMBIGUOUS_SOURCE_FILE" if candidates else "SOURCE_FILE_NOT_RESOLVED",
+                        "candidates": candidates[:8], "candidate_count": len(candidates),
+                        "index_sync": synced, "repo_commit": head or authorized["commit"],
+                        "next": "Choose the relevant indexed path if listed. No source was returned; an unresolved name does not prove a file is absent."}
+            index_file = text = candidates[0]
         command = ([*cli, sub, "--path", authorized["root"], "-j"]
                    if sub == "files"
                    else [*cli, sub, text, "--path", authorized["root"]])

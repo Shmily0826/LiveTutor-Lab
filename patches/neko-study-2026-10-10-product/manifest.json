@@ -145,9 +145,11 @@
     },
     {
       "path": "payload/study_companion/study_code_tools.py",
-      "sha256": "8ff871153a7eadf5ab7e4b9203cd5eea760be62e8ab1528f26e0091226412897",
+      "sha256": "a080b174bc918e234f891403b0455d72164bc053a9441bdd6395d56ba2d75ba0",
       "deployed_matches": true,
-      "reason": "Required existing avatar code-tool mixin; included during publication dependency closure"
+      "reason": "Required existing avatar code-tool mixin; included during publication dependency closure",
+      "phase50_prior_sha256": "8ff871153a7eadf5ab7e4b9203cd5eea760be62e8ab1528f26e0091226412897",
+      "phase50_verification": "Main source/offline file-window10 (6 new), structure1 and revision1; actual CLI unique basename/suffix exact windows and ambiguous2 no source, current7aae20f. No model/Native/device/human guarantee; DSML containment pending."
     },
     {
       "path": "payload/study_companion/entry_tutor_explain_entries.py",
