@@ -24,7 +24,7 @@ from neko_lab_client import LabClient
 import neko_desktop_tutor_host as host
 import neko_native_shell as avatar
 from neko_native_telemetry import NativeTelemetry
-from neko_tutor_start import plugin_server_ready
+from neko_tutor_start import plugin_server_ready, cleanup_resources, process_creation_time
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -169,6 +169,7 @@ async def main(args):
         "--budget-round", "bargein-autocheck-20261012"] + (["--output-only"] if output_only else []) + (["--study-vision"] if args.prepare_picture or args.verify_picture_state else []), cwd=ROOT, env=env,
         stdout=startup_handle, stderr=subprocess.STDOUT)
     report['host_launcher_pid'] = process.pid
+    host_owner = [{'pid':process.pid, 'created_at':process_creation_time(process.pid)}]
     shell, meter, observer, observer_task, replacement_task = None, None, None, None, None
     log_path = ROOT / "benchmarks/raw/neko-desktop-host.log"
     log_start = log_path.stat().st_size if log_path.exists() else 0
@@ -289,8 +290,11 @@ async def main(args):
                 shell = await asyncio.to_thread(avatar.launch, ROOT / "benchmarks/raw" / args.store, 100,
                                                 "compact", debug_port, None if output_only else str(silence), output_only)
                 report["native"] = {"pid": shell["pid"], "windows": len(shell.get("windows", [])), "fake_silent_input": not output_only}
-                await asyncio.sleep(4)
-                observer = await NativeTelemetry.attach(debug_port)
+                if output_only:
+                    observer = await NativeTelemetry.attach_when_ready(debug_port)
+                else:
+                    await asyncio.sleep(4)
+                    observer = await NativeTelemetry.attach(debug_port)
                 if output_only:
                     report['capture_policy'] = await observer.evaluate("({receipt:globalThis.NekoCapturePolicy?.getResult(),flag:globalThis.__NEKO_OUTPUT_ONLY_CAPTURE_BLOCKED__===true,readonly:!Object.getOwnPropertyDescriptor(navigator.mediaDevices,'getUserMedia')?.writable})")
                     proof=report['capture_policy']
@@ -541,11 +545,15 @@ async def main(args):
                     report['loopback_covers_last_turn'] = bool(report.get('turns')) and report['loopback_end_wall'] >= report['turns'][-1]['observation_end_wall']
             except Exception as exc:
                 meter.terminate(); report["loopback_error"] = type(exc).__name__
-        if shell is not None:
-            avatar.shutdown(shell)
-        await asyncio.to_thread(stop_owned_host, process)
-        startup_handle.close()
-        surface.shutdown(); surface.server_close(); surface_thread.join(timeout=3)
+        if output_only:
+            report['cleanup_errors'] = await asyncio.to_thread(cleanup_resources,
+                surface, shell, process, host_owner, None, [], None)
+        else:
+            if shell is not None:
+                avatar.shutdown(shell)
+            await asyncio.to_thread(stop_owned_host, process)
+            surface.shutdown(); surface.server_close()
+        startup_handle.close(); surface_thread.join(timeout=3)
         report["after"] = json.loads(ledger_path.read_text())
         report['surface_guide_attempts'] = surface.guide_attempts
         if log_path.exists():
@@ -662,11 +670,15 @@ async def main(args):
                 report['speech_gate_acceptance'] = {'checks': gate_checks,
                     'result': 'PASS_THIS_SINGLE_UTTERANCE' if all(gate_checks.values()) and all(checks.values()) else 'FAIL_OR_PARTIAL',
                     'scope': 'this fixed source pointing utterance only; paid teaching constraints and human listening remain separate'}
+        if output_only and report.get('turn_timeout') and not report.get('failure'):
+            report['failure'] = 'TimeoutError: fixed input produced no completed response before the deadline'
         report['finalized'] = True
         save()
         print(json.dumps({"report": str(args.output), "failure": report.get("failure"), "reply": report.get("reply"),
                           "audio_bytes": report.get("socket_audio_bytes"), "loopback_loud": (report.get("loopback") or {}).get("loud_chunks"),
                           "spent": report["after"]["spent"], "acceptance": report.get('acceptance')}, ensure_ascii=False), flush=True)
+        if output_only and (report.get('failure') or report.get('cleanup_errors')):
+            raise SystemExit(1)
 
 
 if __name__ == "__main__":

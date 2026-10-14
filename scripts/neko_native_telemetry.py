@@ -9,6 +9,7 @@ import asyncio
 import json
 from pathlib import Path
 import urllib.parse
+import urllib.error
 import urllib.request
 import websockets
 
@@ -83,6 +84,25 @@ return {wall:Date.now()/1000,url:location.href,title:document.title,trace:trace?
 })()"""
 
 
+class NativeRendererPending(RuntimeError):
+    """The task's known pet surface has not finished loading."""
+
+
+def read_task_targets(port, timeout):
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    with opener.open(f"http://127.0.0.1:{port}/json/list", timeout=timeout) as response:
+        return json.load(response)
+
+
+async def close_failed_attachment(socket):
+    try:
+        await asyncio.wait_for(socket.close(), timeout=2)
+    except Exception:
+        transport = getattr(socket, 'transport', None)
+        if transport is not None:
+            transport.abort()
+
+
 class NativeTelemetry:
     def __init__(self, socket):
         self.socket = socket
@@ -92,10 +112,17 @@ class NativeTelemetry:
         self.fixed_input_scope = None
 
     @classmethod
-    async def attach(cls, port):
-        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-        with opener.open(f"http://127.0.0.1:{port}/json/list", timeout=5) as response:
-            targets = json.load(response)
+    async def attach(cls, port, *, timeout=8):
+        deadline = asyncio.get_running_loop().time() + timeout
+        def remaining():
+            value = deadline - asyncio.get_running_loop().time()
+            if value <= 0:
+                raise TimeoutError('task native attachment deadline expired')
+            return value
+        # Blocking local HTTP must not prevent the readiness deadline from firing.
+        targets = await asyncio.wait_for(asyncio.to_thread(read_task_targets, port, min(5, remaining())),
+                                         timeout=remaining())
+        targets_before_filter = targets
         # This port was allocated for this test's native launch; never query Chrome.
         targets = [t for t in targets if t.get("type") == "page" and
                    urllib.parse.urlsplit(t.get("url", "")).hostname in {"127.0.0.1", "localhost"} and
@@ -103,20 +130,50 @@ class NativeTelemetry:
         # Both chat templates load the audio modules. Presence/readiness cannot
         # identify the PCM owner; only the task's known root pet page can.
         pets = [t for t in targets if urllib.parse.urlsplit(t['url']).path == '/']
+        if not pets:
+            foreign_roots = [t for t in targets_before_filter if t.get('type') == 'page'
+                             and urllib.parse.urlsplit(t.get('url', '')).scheme in {'http', 'https'}
+                             and urllib.parse.urlsplit(t.get('url', '')).path == '/']
+            if foreign_roots:
+                raise RuntimeError('task native pet renderer identity unresolved: foreign root')
+            raise NativeRendererPending('task native pet renderer identity unresolved: 0 root pages')
         if len(pets) != 1:
             raise RuntimeError(f'task native pet renderer identity unresolved: {len(pets)} root pages')
-        socket = await websockets.connect(pets[0]["webSocketDebuggerUrl"], proxy=None, max_size=8*1024*1024)
+        socket = await websockets.connect(pets[0]["webSocketDebuggerUrl"], proxy=None,
+                                         max_size=8*1024*1024, open_timeout=min(5, remaining()), close_timeout=2)
         observer = cls(socket)
         try:
-            probe = await observer.evaluate("({socketReady:window.appState?.socket?.readyState,audioPlaybackAvailable:!!window.appAudioPlayback})")
+            probe = await asyncio.wait_for(observer.evaluate("({socketReady:window.appState?.socket?.readyState,audioPlaybackAvailable:!!window.appAudioPlayback})"),timeout=remaining())
             if not probe or probe.get("socketReady") != 1 or not probe.get("audioPlaybackAvailable"):
                 diagnostic = {key: (probe or {}).get(key) for key in ('socketReady', 'audioPlaybackAvailable')}
-                raise RuntimeError('task native pet renderer not ready: '+json.dumps(diagnostic))
-            await observer.evaluate(INSTALL)
+                raise NativeRendererPending('task native pet renderer not ready: '+json.dumps(diagnostic))
+            try:
+                await asyncio.wait_for(observer.evaluate(INSTALL), timeout=remaining())
+            except TimeoutError as error:
+                raise RuntimeError('task native telemetry installation timed out') from error
             return observer
         except BaseException:
-            await socket.close()
+            await close_failed_attachment(socket)
             raise
+
+    @classmethod
+    async def attach_when_ready(cls, port, timeout=35):
+        deadline = asyncio.get_running_loop().time() + timeout
+        last = None
+        while True:
+            remaining = deadline - asyncio.get_running_loop().time()
+            if remaining <= 0:
+                raise TimeoutError('task native renderer readiness deadline expired') from last
+            try:
+                return await cls.attach(port, timeout=min(8, remaining))
+            except (NativeRendererPending, ConnectionRefusedError, TimeoutError) as error:
+                last = error
+            except urllib.error.URLError as error:
+                if not isinstance(error.reason, ConnectionRefusedError):
+                    raise
+                last = error
+            # Poll the same task surface; never launch a replacement or connect a provider.
+            await asyncio.sleep(min(.5, max(0, deadline - asyncio.get_running_loop().time())))
 
     async def command(self, method, params=None):
         async with self.lock:

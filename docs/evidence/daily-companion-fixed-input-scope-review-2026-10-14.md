@@ -113,3 +113,57 @@ generate的scope fetch及selection fetch亦有await后origin核；loadQuestionCo
 Main随后报告runtime3 PASS；只读harness新增延迟synthetic grade/export期间实际SDK set_course B并refresh，释放旧grade后明确核B仍当前、reply未变、feedback无旧grade、gradeRequests=1。该场现在有两个显式synthetic结果：旧grade和讲解成功→status503；actual course/status/reload/fresh仍真实SDK。它支持真实DOM拒迟到回调，**没有后端实际评分、DB grade、模型或设备新增证明**。原量具comment/阶段single-synthetic说法须随该增量同步，已通知Main；本报告不省略新增grade double。实际runtime3结果/清理/额度证明归Main，本 Agent没有执行或读取DB。
 
 本轮只追加scope报告，未改生产/测试/共享记录、未运行服务/API/浏览器/设备或账本。报告最终冻结。
+
+## 阶段十八ready wait关联窄审
+
+Main明确授权后，只读telemetry、相应Native test及daily voice probe的output-only准备分支，不运行宿主/API/设备/DB/账本。NativeRendererPending区分已知root未加载/未ready；foreign HTTP(S) root或多个合法root为普通RuntimeError，未恢复chat fallback。attach_when_ready始终重用同task debug-port，只有ready读取/本地CDP连接，不启动替代Native、不调用begin/start_session或provider连接。daily probe仅output_only采用新等待，ordinary仍原4秒加单attach；output_only成功附着后仍先核capture flag/readonly/installed才登记和发送，权限没有由ready推导。
+
+Main报告Native11 OFFLINE通过，本 Agent只读。新增用例覆盖同port loading/connection refused后ready，identity/install RuntimeError/其他URLError只试一次，.005秒即时mock deadline；既有attach INSTALL异常close和单root/无fallback等保持。它们没有执行真实慢HTTP读取或取消时挂close，因此不能外推严格35秒总上限。
+
+### P2：35秒不是严格总上限，安装超时阶段未区分
+
+attach使用同步opener.open/json.load，底层timeout5但阻塞async event loop。若deadline仅剩0.05秒时进入最后一次HTTP读取，wait_for取消需等同步调用返回，实际可超出35秒。其次wait_for会等待attach取消清理；attach的BaseException路径直接await socket.close，没有本地cleanup deadline，所以close等待也可延长该上限。11项的即时AsyncMock不能覆盖这两个具体边界。
+
+最小修法：本地HTTP读取移出event loop并把I/O timeout限制到remaining，明确取消worker不等于停止底层读取，但它须有真实有界I/O；CDP关闭独立短有界cleanup，同时准确区分ready预算与清理预算，保留关闭尝试，不因timeout留下未知自有连接。新增慢读取/取消与挂close定向负例，无需provider或设备。
+
+另当前except TimeoutError覆盖probe、INSTALL及外层wait_for全部阶段；INSTALL recv超时或进入INSTALL后总等待超时也会被再次attach，不符合“install失败立即拒”的严格含义。若仅允许loading/读取超时重试，应把已ready后的INSTALL失败（包括超时）包装为不可重试类别；不能通过降低身份/capture检查来恢复。这是stage分类问题，不声称当前重试会重连provider。已即时交Main。源码无API/捕获/provider重连路径，但 **ready deadline P2待修/准确限界，install超时待精确分类**。报告冻结等待关闭，既有阶段结果保留。
+
+## 阶段十八等待/cleanup P2精确关闭
+
+只读Main修复及Native测试：HTTP读取通过to_thread执行，底层socket timeout限制到min(5,remaining)，await也限制remaining，不再阻塞event loop。attach为HTTP、DevTools handshake、probe、INSTALL提供剩余预算；INSTALL的TimeoutError（含进入时剩余预算耗尽）转换为RuntimeError，attach_when_ready不再重试安装失败。foreign/ambiguous/其他网络仍拒绝，只有loading/本地连接未ready继续同port polling。
+
+失败连接cleanup通过close_failed_attachment独立wait_for(close,2秒)，异常/超时对已持有transport执行abort。现在准确口径为 **35秒readiness预算加至多最后一次失败CDP close的2秒清理预算**，不是宣称所有同步线程在35秒内瞬间消失。取消HTTP await不能杀worker，其底层有界I/O及task-owned Native停止负责收尾；不把取消async等待冒称已经停止底层读取。原“同步HTTP阻塞/无界close/INSTALL timeout重试”P2 **SOURCE REVIEW CLOSED**。
+
+新增测试直接让HTTP worker sleep .2秒而attach预算.01秒、核caller不被阻塞；INSTALL抛TimeoutError核连接仅一次且close一次；close挂起核2秒后abort。Main报告 **Native14 OFFLINE通过**，本 Agent只读未执行。主动取消的其他分支仍是BaseException清理源码证据，不把这些测试冒称真实Native/provider/设备证明。限定新实现未发现新具体阻断。
+
+daily voice probe仅output-only改为复用阶段十五cleanup_resources：本次host Popen记录PID+creation-time，surface shutdown/close、Native shutdown、owned host stop/wait分别尝试，错误汇总进cleanup_errors；有failure或cleanup_errors退出1，输出log后续仍关闭。独立observer release/close异常保留各自diagnostic字段；不能把这些字段等同成功释放或抹除。ordinary沿原路径，没有为等待改动放宽捕获/回环/provider准入；output-only仍在fixed begin前核capture installed/readonly/flag。
+
+本轮只追加本scope报告，不运行服务/API/浏览器/Native/设备/DB/账本，未启动待准备的voice34。Main安排的必要单场、既有WAV/图片和后续真实结果另记，不能从本审查认领ASR/TTS/PCM播放或human。报告最终冻结。
+
+## Voice34 terminal后的窄输入链诊断
+
+Main已将voice34停止，不在线重试。本 Agent仅解析私有report34的标记/计数，不输出配置、secret或原history；只读runtime router/asr/audio pipeline和其必要streaming/Omni/phrase/ownership精确callee。runtime无CodeGraph由Main确认，本轮不建立索引、不扫描整仓、不运行任何服务/API/设备/DB/账本。
+
+report34标记独立读取：output_only=true，room_microphone/capture_devices/loopback=false，finalized/turn_timeout=true，cleanup_errors为空；fixed ticket id1/core/gen2/socket1/capture_started false。Native trace本地send计数2098 frames、1006953 samples，receive binary0；session_started标native，未见transcript/tool事件，provider wire_trace仅3个send session.update，没有input_audio_buffer.append。**本地socket.send计数不等于服务端已收PCM，更不是ASR/provider通过。** 最初报告没有分层server intake计数，不能仅据空返回推定router丢弃。
+
+Main随后提供对应时间段实际server RNNoise诊断：同pipeline约每2秒201/202 chunks，unavailable_chunks=0、scored_frames与count相符，probability peak1、尾段0、pipeline_max_ms至4.306。此为 **Main提供的实际服务端DSP处理证据**，已跨过本地send-only。它不证明DSP后路由、phrase接收/seal或provider提交；本 Agent未新采现场或重跑。持续DSP也使“全部PCM停在router/queue之前”的解释不成立，后续优先核DSP后门槛。
+
+### 源码实际链及无声return条件
+
+- router音频stream_data源1277–1348：先theater普通音频drop；claim voice connection；外部麦克风route可claim后consume；有序await manager.stream_data。superseded connection分支961–1000依独立voice identity dispatch或在lease已vacated时drop。streaming.py:237–243把audio送_enqueue，不走text缓存。此为链路范围，**不再用它泛称34未到DSP**。
+- asr_runtime.py:3459–3508：activation_required但factory缺失、pipeline failed/failure token、lease/registry不接受都会在queue前return。_voice_input_accepts_pcm（1476–1500）要求synchronized、builtin core/game target且accepts input、无mute/focus/suppression/external suppression。worker3584–3599拒stale ingress，activation authority下不重绑旧帧。
+- audio_input.py pipeline对48k做RNNoise/resample，对16k保持原PCM；asr_runtime.py:3945完成该DSP后，3959空输出return，3966–3972核 **is_active、audio epoch、lease owner、accepts PCM** 后无声return；随后token/refs/pipeline变化与hot-swap barrier决定丢弃/缓存（3973–4044）。这是当前最优先的断点：DSP持续正常但is_active false等可令所有帧不达native发送。
+- _route_microphone_audio（4073起）会consume preview-isolation、activation degraded、required却无factory、factory noise reduction contract不匹配、要求RNNoise但实际不可用；activation runtime create失败或feed决策尚未允许output也不直送provider。没有activation factory/shadow时才走unfiltered；源码中return True表示已在本地处理/consume，**不等于provider写入**。
+- native unfiltered（4734–4830）再次核session_closed、same session/connection generation/route/token、owner core、accepts PCM、可调用stream_audio及fatal状态。phrase模式时传真实bool speech_active、单frame标记、require_output_commit；None为LOCAL_ACCEPTED，False为NOT_SENT，不能把collector保存在本地误计provider音频。
+- Omni _transport.py:1409/1548–1799：phrase opt-in还须lanlan_app_gemini/free proxy/no server VAD/non-Gemini；pending barge-in/fatal、DSP或resampler空输出、turn-admission lock、phrase collect都可能先不写。实际direct provider事件在1785构造input_audio_buffer.append后send_event；send_event:990–1017仍核send_guard/fatal/Gemini/throttle/ws存在。需要记录实际return层，不能从session.update成功推定audio.append可达。
+- NativePhraseUplink的accept/read_snapshot要求actual Core callback、已安装nonretired session、active/native/core、无takeover/closed/fatal、当前Core websocket和provider ws/connection；没有speech true时只保有限preroll，只有buffer sealed后才创建writer。flush逐await核authority，真正send_event成功后才记written_samples。Core authority在session_lifecycle.py:346–384实接，不能用game route getter代替。
+
+### 下一步最小无内容诊断
+
+先新增本地/离线counts-only分层钩子和actual method负例，避免再次盲目paid场。DSP已证实，建议在3966门槛按互斥reason计数，采is_active、epoch_match、owner_match、accepts_pcm、token_match、refs_match、pipeline_match/hot_swap booleans；owner enum/route enum/queue epoch等仅非秘密数值，owner token/PCM/transcript/完整配置不入日志。
+
+随后记录route_enter计数、activation required/factory present/enforce/degraded/noise-contract/current generation匹配、到native_unfiltered/stream_audio的计数；若到phrase，记mode_allowed、bypass reason、speech_true/false计数、authority_current、preroll/buffer样本数、seal/flush/result/written_samples。最后send_event append attempted/true/false与fatal/throttle/ws存在/guard当前等原因。这些字段复用现有Core/controller/provider边界，不更换owner、不伪onset、不重播旧PCM、不创建新队列。
+
+持续约100fps DSP由单audio worker依次await下游；一个长期阻塞turn-admission lock通常会停止后续DSP并形成backlog，所以本场优先无声return/未activation，锁仍仅为待排条件。probability_peak1只有在实际到unfiltered后才推出speech_active true，不能跨过中间门槛直接认领phrase已收语音。
+
+当前报告的timing_log导出只保留固定工具/native timing等marker（probe源564–565），不含voice-rnnoise或native phrase delivery；**缺这些导出日志不证明从未调用**。建议采上述窄计数再明确恢复条件；34保持turn_timeout/未通过，DS610/app59/tech0与cleanup由Main记录，不以本审查改账本或重连。本轮仅追加本scope报告，最终冻结。

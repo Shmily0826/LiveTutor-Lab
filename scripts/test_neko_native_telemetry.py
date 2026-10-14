@@ -3,7 +3,9 @@ import asyncio
 import json
 import subprocess
 import unittest
-from neko_native_telemetry import NativeTelemetry, INSTALL, SNAPSHOT, BEGIN_FIXED_INPUT
+from neko_native_telemetry import NativeTelemetry, NativeRendererPending, INSTALL, SNAPSHOT, BEGIN_FIXED_INPUT
+import urllib.error
+import time
 from pathlib import Path
 from unittest.mock import AsyncMock,patch
 from types import SimpleNamespace
@@ -25,6 +27,65 @@ class FakeDevTools:
 
 
 class NativeTelemetryTest(unittest.IsolatedAsyncioTestCase):
+    async def test_bounded_ready_wait_only_polls_the_same_task_port(self):
+        ready=object()
+        attach=AsyncMock(side_effect=[NativeRendererPending('loading'),
+                                     urllib.error.URLError(ConnectionRefusedError()),ready])
+        with patch.object(NativeTelemetry,'attach',attach),patch('neko_native_telemetry.asyncio.sleep',AsyncMock()):
+            self.assertIs(await NativeTelemetry.attach_when_ready(9233),ready)
+        self.assertEqual(attach.await_count,3)
+        self.assertTrue(all(call.args==(9233,) and 0<call.kwargs['timeout']<=8 for call in attach.await_args_list))
+
+    async def test_ready_wait_never_retries_identity_install_or_other_network_errors(self):
+        for error in (RuntimeError('foreign root'),RuntimeError('2 root pages'),RuntimeError('install failed'),
+                      urllib.error.URLError('HTTP access refused')):
+            attach=AsyncMock(side_effect=error)
+            with patch.object(NativeTelemetry,'attach',attach):
+                with self.assertRaises(type(error)):await NativeTelemetry.attach_when_ready(9233)
+            self.assertEqual(attach.await_count,1)
+            self.assertEqual(attach.await_args.args,(9233,))
+
+    async def test_ready_wait_expires_without_launching_or_reconnecting_anything(self):
+        attach=AsyncMock(side_effect=NativeRendererPending('loading'))
+        started=asyncio.get_running_loop().time()
+        with patch.object(NativeTelemetry,'attach',attach):
+            with self.assertRaisesRegex(TimeoutError,'deadline expired'):
+                await NativeTelemetry.attach_when_ready(9233,timeout=.005)
+        self.assertLess(asyncio.get_running_loop().time()-started,.2)
+        self.assertGreaterEqual(attach.await_count,1)
+        self.assertTrue(all(call.args==(9233,) for call in attach.await_args_list))
+
+    async def test_blocking_local_http_does_not_block_the_attachment_deadline(self):
+        def delayed_http(*args):
+            time.sleep(.2)
+            return []
+        started=asyncio.get_running_loop().time()
+        with patch('neko_native_telemetry.read_task_targets',delayed_http):
+            with self.assertRaises(TimeoutError):await NativeTelemetry.attach(9233,timeout=.01)
+        self.assertLess(asyncio.get_running_loop().time()-started,.1)
+
+    async def test_installation_timeout_is_not_retried_and_closes_the_socket(self):
+        targets=[{'type':'page','url':'http://localhost:48911/','webSocketDebuggerUrl':'ws://task/pet'}]
+        socket=SimpleNamespace(close=AsyncMock())
+        evaluate=AsyncMock(side_effect=[{'socketReady':1,'audioPlaybackAvailable':True},TimeoutError('install')])
+        connect=AsyncMock(return_value=socket)
+        with patch('neko_native_telemetry.read_task_targets',return_value=targets),\
+             patch('neko_native_telemetry.websockets.connect',connect),patch.object(NativeTelemetry,'evaluate',evaluate):
+            with self.assertRaisesRegex(RuntimeError,'installation timed out'):
+                await NativeTelemetry.attach_when_ready(9233)
+        self.assertEqual(connect.await_count,1);socket.close.assert_awaited_once()
+
+    async def test_failed_attachment_close_has_an_independent_bounded_cleanup(self):
+        from neko_native_telemetry import close_failed_attachment
+        from unittest.mock import Mock
+        transport=SimpleNamespace(abort=Mock())
+        async def stalled_close():await asyncio.sleep(60)
+        socket=SimpleNamespace(close=stalled_close,transport=transport)
+        started=asyncio.get_running_loop().time()
+        await close_failed_attachment(socket)
+        self.assertLess(asyncio.get_running_loop().time()-started,3)
+        transport.abort.assert_called_once()
+
     async def test_actual_controller_trace_binds_ticket_and_late_old_status_to_socket(self):
         fixture=(Path(__file__).parent/'neko_fixed_input_fixture.mjs').as_uri()
         script=r'''import vm from 'node:vm';import {fixture} from FIXTURE;
