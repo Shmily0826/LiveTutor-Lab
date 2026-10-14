@@ -1,6 +1,6 @@
 # 阶段24：Native 显式答题的正式评分路由（开发中，2026-10-15）
 
-状态：SOURCE/OFFLINE PARTIAL；已受旧指纹保护部署到两宿主，默认关闭；尚未发布或验证真实 Native 服务及设备播放。
+状态：SOURCE/OFFLINE PARTIAL；已受旧指纹保护部署到两宿主，默认关闭；源码已发布 d520252c001f8d95a1f682f9fd15b27084a9d05b；尚未验证真实 Native 服务及设备播放。
 
 ## 本轮完成
 
@@ -49,3 +49,6 @@ Goal active，完整 contract 原文不改。账本实际读数 DeepSeek677/2000
 - scripts/neko_runtime_helpers.py SHA256 d1d26c8eb1c28338cd5a903ddf1539dfa1a23922d43eaeccac6b1a5ab77189c0
 - patches/neko-study-2026-10-10-host/manifest.json SHA256 2609b384b412de672a011b61857663b913df21cdc6f26d46141d4978963cae69
 - patches/neko-study-2026-10-10-product/payload/study_companion/study_avatar_tools.py SHA256 afb52dbbc047fd3cf20eab2c536fcdde9d1cba36fe4056a489bda27fe6123af9
+
+发布记录：d520252c001f8d95a1f682f9fd15b27084a9d05b（codex功能分支，未merge/force），17 exact allowlist文件；远端同SHA及master未变已核。
+阶段24源码已review/commit/push d520252c001f8d95a1f682f9fd15b27084a9d05b，远端codex/daily-learning-companion同SHA且candidate clean，remote master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。17 exact文件，staged LF产品29file及helper全部fingerprint核通过；Root index未stage，原脏树/.workbuddy保留。真实Native自动评分与设备仍待。下一轮先四文件，再准备自动评分专用observer：沿用既有任务材料/固定WAV，无mic/capture/loopback；先核真实任务库pending四身份（不得伪造、重置原历史），必要只创建本场新题，核ASR→QA及迟到音频owner/诚实失败。现有voice_probe默认只验study_explain，不能直接把其结果当grade PASS，先补针对性量具。未开online前先核账本和8API保护，保留单场超时/异常停止，不循环CONNECT。若局部protocol受阻，记录并转其余A–F，不停止全Goal。当前无新增host/音频会话，离线进程已terminal，Goal active。
