@@ -30,3 +30,6 @@ Main实际离线：新11题目归属测试通过；既有answer_material_guard14
 - 实际task部署29canonical均匹配（包含本次4helper）；45没有`--text-only`UI保护包装，task static为canonical，default页面仍既有protected transform；没有打开浏览器/avatar/UI或声音，只有SDK/backend，--source gate及NEKO_TASK_SILENT。随后probe补显式`--text-only`供未来使用，仅源码审查，未为此重复付费场；不将45当新flag运行证明。
 
 账本原round DS721→723/2000（+2总请求）、app70/null、tech0/0不变；无额度重置/换轮/别的paid供应商，无audio/mic/capture/loopback。阶段31窄SOURCE/OFFLINE+真实SDK/模型/SQLite通过，Native、物理可听、真人体验无新增证明。全A–F Goal active继续，不能因本阶段结束标完成。
+
+
+阶段31发布确认：12精确allowlist文件（4产品source/1manifest、2隔离测试脚本、3当前记录、2证据）已review/commit/push `92ec265a3773a4cabf5c7e5c88925e4fbf633302` 到codex/daily-learning-companion，remote同SHA/candidate clean/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。Root index空/脏树/.workbuddy/原历史保留，raw/录音/DB/密钥未入Git；contract原169行/SHA不变。独立45底层14checks过，旧5QA/旧掌握与复习行保持，实际同题未来归属跨restart稳定；这是progress，不是整体完成。ledger723/2000/app70/null/tech0/0原round，无live exec/host需轮询。下轮先完整四文件，再从study_avatar_tools._study_effective_language和__init__._start_study_session_locked接续B直接入口语言应用，已知savedEnglish/实际Chinese，不大范围重扫或复跑31身份/30指导/29语言/28声音。临时语言仍只单轮，课程/全局回退需防前课语言残留；保存映射与实际prompt/回复分别验证。全A–F继续，任一局部缺陷不结束Goal。

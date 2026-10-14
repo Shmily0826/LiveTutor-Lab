@@ -68,3 +68,6 @@ Root dirty master/index空、.workbuddy保留；managed `C:/Users/Shmily/.codex/
 
 
 阶段31独立终审：45原件14checks已逐字段复算（非仅读flags），QA/mastery5→6→7、formal10→11→12、FSRS3→4→4，原全row保持；两新QA跨不同session仍同完整key/topic，newscope question，旧三identity不合。wrong0入边误选出边/正确100反馈窄链成立，两回复中文，English仅持久设置保留。四source/default/清单及12新/31既有离线通过；ledger723/70/0，无live场/host。新增--text-only防护只source审，不重复付费/不冒45flag运行证明。下一阶段先B directSDK语言cfg应用，再跨字段诊断/全A–F连续集成；当前待精确codex分支发布，不标Goal complete。
+
+
+阶段31发布确认：12精确allowlist文件（4产品source/1manifest、2隔离测试脚本、3当前记录、2证据）已review/commit/push `92ec265a3773a4cabf5c7e5c88925e4fbf633302` 到codex/daily-learning-companion，remote同SHA/candidate clean/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。Root index空/脏树/.workbuddy/原历史保留，raw/录音/DB/密钥未入Git；contract原169行/SHA不变。独立45底层14checks过，旧5QA/旧掌握与复习行保持，实际同题未来归属跨restart稳定；这是progress，不是整体完成。ledger723/2000/app70/null/tech0/0原round，无live exec/host需轮询。下轮先完整四文件，再从study_avatar_tools._study_effective_language和__init__._start_study_session_locked接续B直接入口语言应用，已知savedEnglish/实际Chinese，不大范围重扫或复跑31身份/30指导/29语言/28声音。临时语言仍只单轮，课程/全局回退需防前课语言残留；保存映射与实际prompt/回复分别验证。全A–F继续，任一局部缺陷不结束Goal。
