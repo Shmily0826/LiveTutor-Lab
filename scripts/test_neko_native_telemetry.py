@@ -22,12 +22,15 @@ class FakeDevTools:
 
 
 class NativeTelemetryTest(unittest.IsolatedAsyncioTestCase):
-    async def test_fixed_input_uses_current_renderer_socket_and_refuses_closed(self):
+    async def test_fixed_control_delegates_only_to_registered_source_and_refuses_denial(self):
         observer=NativeTelemetry(None)
-        payload={'action':'stream_data','input_type':'text','data':'quote\" 中文 </script> \\'}
-        for state in (1,3):
+        for payload in ({'action':'start_session','input_type':'audio'}, {'action':'stream_data','input_type':'audio','data':[1]}, {'action':'end_session'}):
+            with self.assertRaisesRegex(RuntimeError,'not registered'):await observer.send_current(payload)
+        payload={'action':'start_session','input_type':'audio','request_id':'quote\" 中文 </script> \\'}
+        observer.fixed_input_id=4
+        for allowed in (True,False):
             async def evaluate(expression):
-                script="const sent=[];global.window={appState:{socket:{readyState:"+str(state)+",send:x=>sent.push(JSON.parse(x))}}};try{const result=eval(process.argv[1]);process.stdout.write(JSON.stringify({result,sent}));}catch(e){process.stdout.write(JSON.stringify({error:e.message,sent}));}"
+                script="const sent=[];global.window={appState:{socket:{send(){throw Error('Raw socket bypass');}}},appAudioCapture:{sendFixedInputControl:(id,p)=>{if(id!==4)throw Error('Wrong source');sent.push(p);return "+str(allowed).lower()+";}}};try{const result=eval(process.argv[1]);process.stdout.write(JSON.stringify({result,sent}));}catch(e){process.stdout.write(JSON.stringify({error:e.message,sent}));}"
                 result=json.loads(subprocess.check_output(['node','-e',script,expression],timeout=5))
                 if 'error' in result:
                     self.assertEqual(result['sent'],[])
@@ -35,9 +38,9 @@ class NativeTelemetryTest(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(result['sent'],[payload])
                 return result['result']
             observer.evaluate=evaluate
-            if state==1:await observer.send_current(payload)
+            if allowed:await observer.send_current(payload)
             else:
-                with self.assertRaisesRegex(RuntimeError,'controller unavailable'):await observer.send_current(payload)
+                with self.assertRaisesRegex(RuntimeError,'did not accept'):await observer.send_current(payload)
 
     async def test_concurrent_observations_preserve_protocol_ids_and_notifications(self):
         socket = FakeDevTools()

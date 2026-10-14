@@ -1,0 +1,27 @@
+# 阶段十二：固定内存输入参加现有 controller
+
+本阶段针对真实26“session_started但0 ASR/PCM”的具体失败；当前仍DS594/app57/tech0，同账本，不重置。26 actual owner未被旧trace记录；源码可解释owner-none拒绝，不能冒称已确认唯一根因。后端边界未放宽，也不把开始会话当输入接受。
+
+实际app-audio-capture模块新增guard限定的固定PCM来源，绑定当次Native socket和局部source id；它参加现有resolveMicLeaseOwner/currentVoiceInputControlState，用原private voiceLeaseGeneration发送完整snapshot。没有将isRecording设置true，不调用capture/STT/虚拟设备。静音/focus/game/recovery/route blocked/录音接管/断连换socket均永久撤销旧source，恢复条件不会悄悄恢复旧ticket。结束仅释放自己的ticket，旧释放不撤销新source。每个frame检查480上界与s16数据，并在无await的当前controller送入；callback期间失效再次拒绝。普通非guard路径原行为不变。
+
+Main当前SOURCE/OFFLINE证据：全actual capture JS module由真实capture policy保护后，Node11通过（真实private计数、owner/core/none控制、frame/释放及7种撤销、invalid PCM；无设备初始化）；实际ASGI与pinned replay6通过，两树gate匹配；NativeTelemetry3通过。第一次known本地helper草稿更新被exact基线门拒绝，没有覆盖未知代码；只加入精确草稿转换并仍逆向检查完整已知BASE SHA，随后current11通过，第一次旧11不冒当新版proof。
+
+NativeTelemetry固定audio必须先begin登记，逐frame委托实际source方法，controller失效/拒绝立即停止剩余WAV；sanitized trace只记owner/generation/engaged/mute/focus和bounded拒绝code/reason及发送samples计数，不记录PCM/秘密。输入结束后的释放跟随有界会话，不把本地send/前端receipt当服务端positive ack。后端当前无positive ack，因此下一场记录原拒绝code/实际provider audio append计数，并以真实ASR/工具作为最终准入证明。
+
+阶段十二当前尚无新online/Native/扬声器/human proof。独立ASR actual方法测试和只读review由两既有Agent分别执行，Main独占host/patch/manifest/账本/online。后续只在局部离线/审查闭合后，用原0.9s WAV与recheck21已有Sky图片做一次必要有界场，不paid重新准备图片，不麦克风、不回环、不调音量；失败不降安全门，不重复无诊断发送。
+
+## 启动前增量闭合
+
+独立actual AsrRuntimeMixin/真实registry与duration queue8 PASS，报告fixed-input-asr-offline。真实owner-none授权session但拒queue、合法core入队、严格计数/旧connection/mute/focus/wrong registry/game无route/结束清queue证据均为SOURCE/OFFLINE，不扩成router整段或实际provider。
+
+review两P2已关闭：生命周期也委托确切fixed ticket/socket，end_session发送和release同一同步JS操作；release旧socket不会给新socket发none。readiness阻断永久退票；Main进一步让readiness异常也永久退票。恢复必须新begin，不重放旧音频。完整actual module current15 PASS（171ms），Native控制桥3 PASS；最新两树gate匹配。automatic recovery误疑经真实identity要求isRecording=true核对已撤回，未增加无身份拒绝。agent首次测试夹具导入触发Core/Memory日志的副作用已如实登记，最终改窄AST夹具避免日志初始化，不删除原日志/历史。
+
+三项sanitized拒绝code在begin/session等待与逐帧观测中均终止发送；未登记来源不允许任何control/PCM bridge dispatch。先保护再begin、先controller控制再start_session，lease计数仍原private controller维护，不猜常量。本地receipt依然不是服务端positive ack。新实际场编号27，只因上述具体修复推进，不重跑已通过图像准备或普通打断。
+
+## 实际27：明确拒绝，停止而不盲发
+
+27受控Native capture receipt installed（八入口阻断、readonly），固定来源本地receipt为active=true/id1/lease_generation2/owner core/capture_started=false。服务端实际拒绝 `VOICE_INPUT_CONTROL_REJECTED`，reason `invalid_or_stale_control`；probe在session等待阶段立即停止，未发送完整WAV、无ASR/教学/PCM，未使用扬声器。wire两次session.update，app57→58、DS594不变，tech0。自有host/Native已清理，旧26和新27证据都保留。
+
+这证明客户端参与者本地登记不等于服务端授权，不能将15+8离线扩大为真实准入或自然停顿PASS。27首版在wait的局部snapshot里捕获拒绝reason，却未保存该时刻完整控制trace；Main已经改为每次wait保存native_final，失败时保留snapshot/截图，供下次本地诊断。该记录增强只有源码，没有追改27raw或假造此前控制payload。
+
+下一步先做无paid语音连接的Native控制面诊断/实际frontend→ASR序列联通，核真实counter、connection/多窗口消息和拒绝时序；不猜更大generation、不忽略拒绝、不再重复整WAV。27未提供拒绝时incoming generation/owner的服务端positive ack，不能唯一归因计数回退或其它renderer。局部阻塞继续其他A–F，原语音打断已验收结果保留。

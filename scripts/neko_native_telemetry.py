@@ -14,7 +14,7 @@ import websockets
 
 INSTALL = r"""(() => {
 if (window.__dailyNativeTelemetry) return {installed:true,existing:true};
-const trace = {events:[],binaryFrames:0,binaryBytes:0,installedAt:Date.now()/1000};
+const trace = {events:[],binaryFrames:0,binaryBytes:0,inputFrames:0,inputSamples:0,installedAt:Date.now()/1000};
 window.__dailyNativeTelemetry = trace;
 const put = event => { trace.events.push({wall:Date.now()/1000,...event}); if(trace.events.length>500) trace.events.shift(); };
 window.addEventListener('neko-speech-playback-state', e => {
@@ -33,13 +33,25 @@ const install = () => {
    if(incomingText.has(p.type))event.text=String(p.text||p.data||'').slice(0,12000);
    if(p.type==='system')event.data=String(p.data||'').slice(0,200);
    if(p.type==='session_failed'||p.type==='session_ended_by_server')event.reason=String(p.reason||p.message||'').slice(0,300);
+   if(p.type==='session_started')event.microphone_route=p.microphone_route;
+   if(p.type==='status'){
+    let status=p.message||p.data;try{if(typeof status==='string')status=JSON.parse(status);}catch{status=null;}
+    if(status && ['VOICE_INPUT_CONTROL_REJECTED','VOICE_INPUT_LEASE_RESYNC_REQUIRED','ASR_INPUT_DELIVERY_FAILED'].includes(status.code)){
+     event.code=status.code;event.reason=String(status.details?.reason||'').slice(0,120);
+    }
+   }
    if(p.type==='audio_chunk'){event.correlation_id=p.sdk_speech_correlation_id;trace.lastNativeCorrelation=p.sdk_speech_correlation_id;}
    if(p.type==='game_route_speech_cancel')event.correlation_id=p.sdk_speech_correlation_id;
    put(event);
   } catch {}
  });
  const send = socket.send.bind(socket);
- socket.send = data => { try { const p=JSON.parse(data); if(['native_speech_playback_state','playback_feedback','audio_playback_feedback','speech_playback_feedback'].includes(p.action)) { const event={direction:'send',type:p.action};for(const key of ['active','audible','speech_id','turn_id','correlation_id','sdk_speech_correlation_id','stage','status','reason']) if(key in p)event[key]=p[key];put(event); }}catch{} return send(data); };
+ socket.send = data => { try { const p=JSON.parse(data);
+  if(p.action==='stream_data' && p.input_type==='audio' && Array.isArray(p.data)){trace.inputFrames++;trace.inputSamples+=p.data.length;}
+  if(['voice_input_control','native_speech_playback_state','playback_feedback','audio_playback_feedback','speech_playback_feedback'].includes(p.action)) {
+   const event={direction:'send',type:p.action};for(const key of ['event','owner','lease_generation','engaged','hard_muted','focus_suppressed','active','audible','speech_id','turn_id','correlation_id','sdk_speech_correlation_id','stage','status','reason']) if(key in p)event[key]=p[key];put(event);
+  }
+ }catch{} return send(data); };
 };
 install();trace.timer=setInterval(install,100);
 return {installed:true,socketReady:window.appState?.socket?.readyState,url:location.href,wall:Date.now()/1000};
@@ -48,7 +60,7 @@ return {installed:true,socketReady:window.appState?.socket?.readyState,url:locat
 SNAPSHOT = r"""(() => {
 const trace=window.__dailyNativeTelemetry;
 const rows=[...document.querySelectorAll('.message-bubble,.message-text,.message-content')].map(e=>({text:(e.innerText||'').trim(),className:e.className,visible:!!(e.offsetWidth||e.offsetHeight)})).filter(e=>e.text);
-return {wall:Date.now()/1000,url:location.href,title:document.title,trace:trace?{events:trace.events,binaryFrames:trace.binaryFrames,binaryBytes:trace.binaryBytes,installedAt:trace.installedAt}:null,playback:window.NekoSpeechPlaybackState||null,bubbles:rows.slice(-40)};
+return {wall:Date.now()/1000,url:location.href,title:document.title,trace:trace?{events:trace.events,binaryFrames:trace.binaryFrames,binaryBytes:trace.binaryBytes,inputFrames:trace.inputFrames,inputSamples:trace.inputSamples,installedAt:trace.installedAt}:null,playback:window.NekoSpeechPlaybackState||null,bubbles:rows.slice(-40)};
 })()"""
 
 
@@ -57,6 +69,7 @@ class NativeTelemetry:
         self.socket = socket
         self.counter = 0
         self.lock = asyncio.Lock()
+        self.fixed_input_id = None
 
     @classmethod
     async def attach(cls, port):
@@ -103,16 +116,46 @@ class NativeTelemetry:
         return result.get("result", {}).get("value")
 
     async def snapshot(self):
-        return await self.evaluate(SNAPSHOT)
+        result = await self.evaluate(SNAPSHOT)
+        if self.fixed_input_id is not None:
+            result['fixed_input'] = await self.evaluate(
+                f"window.appAudioCapture.fixedInputState({self.fixed_input_id})")
+        return result
+
+    async def begin_fixed_input(self):
+        if self.fixed_input_id is not None:
+            raise RuntimeError('Fixed input source already registered')
+        receipt = await self.evaluate('window.appAudioCapture.beginFixedInput()')
+        if (not isinstance(receipt, dict) or receipt.get('active') is not True
+                or receipt.get('capture_started') is not False or receipt.get('owner') != 'core'
+                or type(receipt.get('id')) is not int or receipt['id'] < 1
+                or type(receipt.get('lease_generation')) is not int or receipt['lease_generation'] < 1):
+            raise RuntimeError('Fixed input controller registration failed')
+        self.fixed_input_id = receipt['id']
+        return receipt
+
+    async def end_fixed_input(self):
+        identifier = self.fixed_input_id
+        self.fixed_input_id = None
+        if identifier is not None:
+            return await self.evaluate(f'window.appAudioCapture.endFixedInput({identifier})')
 
     async def send_current(self, payload):
         """Fixed test input on this renderer's own controller, never the superseded socket."""
+        if self.fixed_input_id is None:
+            raise RuntimeError('Fixed input source not registered; control/PCM refused')
         encoded = json.dumps(payload, ensure_ascii=True)
-        result = await self.evaluate("(() => {const s=window.appState?.socket;"
-            "if(!s || s.readyState!==1)throw new Error('Native controller unavailable');"
-            "s.send(JSON.stringify(" + encoded + "));return true;})()")
+        if payload.get('action') == 'stream_data' and payload.get('input_type') == 'audio':
+            if self.fixed_input_id is None:
+                raise RuntimeError('Fixed input source not registered; PCM refused')
+            samples = json.dumps(payload.get('data'), ensure_ascii=True, allow_nan=False)
+            result = await self.evaluate(f'window.appAudioCapture.sendFixedInputFrame({self.fixed_input_id},{samples})')
+        else:
+            result = await self.evaluate(f'window.appAudioCapture.sendFixedInputControl({self.fixed_input_id},{encoded})')
         if result is not True:
             raise RuntimeError('Native controller did not accept fixed input')
+        if payload.get('action') == 'end_session':
+            self.fixed_input_id = None
 
     async def screenshot(self, path):
         result = await self.command("Page.captureScreenshot", {"format": "png"})

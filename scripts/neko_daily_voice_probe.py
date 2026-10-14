@@ -269,6 +269,7 @@ async def main(args):
             receiver = asyncio.create_task(receive())
             async def send(value):
                 if output_only:
+                    if value.get('action')=='ping' and (observer is None or observer.fixed_input_id is None):return
                     if observer is None:
                         if value.get('action')=='ping':return
                         raise RuntimeError('Native controller not verified; input refused')
@@ -299,6 +300,7 @@ async def main(args):
             try:
                 if output_only:
                     await prepare_renderer()
+                    report['fixed_input_control'] = await observer.begin_fixed_input()
                 await send({"action": "start_session", "input_type": "audio", "language": "zh-CN",
                             "new_session": False, "independent_asr_enabled": False})
                 if output_only:
@@ -306,6 +308,10 @@ async def main(args):
                     while time.monotonic()<deadline:
                         snapshot=await observer.snapshot()
                         events=(snapshot.get('trace') or {}).get('events',[])
+                        report['native_final']=snapshot
+                        if output_only and any(e.get('code') in ('VOICE_INPUT_CONTROL_REJECTED','VOICE_INPUT_LEASE_RESYNC_REQUIRED','ASR_INPUT_DELIVERY_FAILED') for e in events):
+                            report['fixed_input_rejected']=[e for e in events if e.get('code')]
+                            raise RuntimeError('Native fixed input control rejected; no retries')
                         if any(e.get('type') in ('session_failed','session_ended_by_server') for e in events):
                             raise RuntimeError('Native voice provider/session refused; no retries')
                         if any(e.get('type')=='session_started' for e in events):
@@ -325,7 +331,13 @@ async def main(args):
                         snapshot = await observer.snapshot()
                         report["native_final"] = snapshot
                         events = (snapshot.get("trace") or {}).get("events", [])
+                        if output_only and observer.fixed_input_id is not None and (snapshot.get('fixed_input') or {}).get('active') is not True:
+                            report['fixed_input_revoked'] = snapshot.get('fixed_input')
+                            failed.set();ended.set()
                         if output_only and any(e.get('type') in ('session_failed','session_ended_by_server') for e in events):
+                            failed.set();ended.set()
+                        if output_only and any(e.get('code') in ('VOICE_INPUT_CONTROL_REJECTED','VOICE_INPUT_LEASE_RESYNC_REQUIRED','ASR_INPUT_DELIVERY_FAILED') for e in events):
+                            report['fixed_input_rejected']=[e for e in events if e.get('code')]
                             failed.set();ended.set()
                         if len(events) != count:
                             count = len(events); native_changed = time.monotonic()
@@ -408,6 +420,7 @@ async def main(args):
                         began = time.monotonic()
                         report["input_audio_start_wall"] = time.time()
                         for offset in range(0, len(samples), 480):
+                            if failed.is_set():raise RuntimeError('Fixed input refused or source revoked; stop remaining WAV')
                             await send({"action": "stream_data", "input_type": "audio", "data": samples[offset:offset+480].tolist()})
                             await asyncio.sleep(max(0, began + (offset+480)/48000 - time.monotonic()))
                         report["input_end_at"] = round(time.monotonic() - origin, 3)
@@ -491,17 +504,28 @@ async def main(args):
                 save()
                 if failed.is_set(): raise RuntimeError("voice session ended abnormally")
                 await send({"action": "end_session", "reason": "bounded_daily_voice_probe"})
+                if output_only:
+                    report['fixed_input_release'] = 'end_session_and_release_same_validated_source'
             finally:
                 pinger.cancel(); await asyncio.gather(pinger, return_exceptions=True)
                 receiver.cancel(); await asyncio.gather(receiver, return_exceptions=True)
     except Exception as exc:
         report["failure"] = type(exc).__name__ + ": " + str(exc)
+        if output_only and observer is not None:
+            try:
+                report['native_failure_snapshot']=await observer.snapshot()
+                await observer.screenshot(args.output.with_suffix('.failure.native.png'))
+            except Exception as diagnostic_exc:
+                report['native_failure_snapshot_error']=type(diagnostic_exc).__name__
     finally:
         if replacement_task is not None and not replacement_task.done():
             replacement_task.cancel(); await asyncio.gather(replacement_task, return_exceptions=True)
         if observer_task is not None:
             observer_task.cancel(); await asyncio.gather(observer_task, return_exceptions=True)
         if observer is not None:
+            if output_only:
+                try: report['fixed_input_cleanup_release'] = await observer.end_fixed_input()
+                except Exception as exc: report['fixed_input_cleanup_error'] = type(exc).__name__
             try: await observer.close()
             except Exception as exc: report["telemetry_cleanup_error"] = type(exc).__name__
         if meter is not None:

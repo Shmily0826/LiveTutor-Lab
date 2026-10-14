@@ -293,7 +293,7 @@
     {
       "path": "static/app/app-audio-capture.js",
       "base_sha256": "e609d90cb6731a9edb20a41997007ebd299ad2ac911d162d0eb5a9308d9940ad",
-      "patched_sha256": "e89fc7723aa66c47bf6fc1f97a3c0af58ce8baac8fe1b5536af24cb66280cba2",
+      "patched_sha256": "918b4741fce4fe8396f8b0dc0dad7c764c5e413693cad630e1080fbb9876a641",
       "reproduce": "python scripts/neko_output_only_patch.py",
       "proof": "SOURCE_OFFLINE pending real browser/Native/output proof"
     }
