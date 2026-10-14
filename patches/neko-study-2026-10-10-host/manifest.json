@@ -82,9 +82,11 @@
     {
       "path": "main_logic/omni_offline_client/_streaming.py",
       "base_sha256": "5a88236f6903612074af2ff38db68880ec0c95ecb35bd051451dc26fd702d3fe",
-      "patched_sha256": "4b86ac819a00dd7c3a7881e8da369f3fa9f653f33e17e6d08736e0aec856c659",
+      "patched_sha256": "63041b29993f92632ded27393aa67b54ad99eb89d09d4882c2b0de7574039137",
       "patch_file": "discard-notice.patch",
-      "purpose": "notify the frontend on a terminal model-connection failure, so the chat window shows why nothing came back instead of staying silent"
+      "purpose": "notify the frontend on a terminal model-connection failure, so the chat window shows why nothing came back instead of staying silent",
+      "phase52_prior_sha256": "4b86ac819a00dd7c3a7881e8da369f3fa9f653f33e17e6d08736e0aec856c659",
+      "phase52_verification": "Main actual stream_text/name-prefix methods over fixed chunks9 distinct offline cases: math/code pipes, exact whitespace in stream/flush/history, blank answer suppression, speaker prefix/length/cancel guards. Candidate historical discard-notice difference preserved. Model/device/human acceptance pending."
     },
     {
       "path": "main_routers/characters_router/language_preference.py",
@@ -459,6 +461,11 @@
       "path": "scripts/neko_dsml_output_patch.py",
       "sha256": "3671d2f098c4d090b6f84181b229812c1244a4e6bc0e366ced1c4ef1c87b477b",
       "reason": "Replay only exact known DSML filter/offline visible-stream source to pinned hosts before SourceGate"
+    },
+    {
+      "path": "scripts/neko_pipe_output_patch.py",
+      "sha256": "9e8319533925710bd8687e9b1ae986de3126cf63a2609a17d5f9bb619452a981",
+      "reason": "Replay only exact known actual-source streaming guard; candidate historical source remains separate"
     }
   ],
   "daily_phrase_input_update": {

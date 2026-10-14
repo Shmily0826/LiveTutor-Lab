@@ -121,7 +121,7 @@ async def main(options):
         opener=build_opener(ProxyHandler({}))
         with opener.open('http://127.0.0.1:48911/api/characters/current_catgirl',timeout=10) as response:
             character=json.load(response)['current_catgirl']
-        print('Actual role text host ready; three questions, no source prefetch/audio',flush=True)
+        print('Actual role text host ready; bounded questions, no source prefetch/audio',flush=True)
         async with websockets.connect('ws://127.0.0.1:48911/ws/'+quote(character),proxy=None,max_size=2*1024*1024) as ws:
             async def ping():
                 while True:
