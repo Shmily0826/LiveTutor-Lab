@@ -1,6 +1,6 @@
-# 日常学习伙伴执行计划（阶段47入口交付 / 整体未完成）
+# 日常学习伙伴执行计划（阶段48任务浏览器修复 / 整体未完成）
 
-47当前交付：Study顶部主动“显示学习材料”恢复入口，严格本次loopback无tokenURL，首异步await前配置。13 Python离线+Node URL边界通过，独立Node/window4复核；桌手机真实共享fixture加载原图→实际window.closed→再点重开、无参computed隐藏。57正式受保护早期入口可见/同课同PNG，但2主窗外Translate popup复现，原false保留，完整async Ready与物理task Chrome点击未冒通过。57 exit0/cleanup[]/自有进程端口全清，ledger835/78/0。源码/default部署与精确发布已核；下一48翻译popup任务profile可靠性，全部A–F/Goal active。
+48当前：仅任务浏览器profile补translate.enabled=false，保留其它JSON键，坏配置/活任务owner/未完成temp拒改。新6+window4+text9共19不同离线case PASS，独立新6 PASS；唯一58同54实际profile两次窗口观察仅2主窗/noaux、同课同PNG，退出后pref仍false。原55/57翻译popup失败保留，不推永久稳定/实际点击/完整asyncReady。58 exit0/cleanup[]、owned/Native与四端口清理，postGate PASS，ledger835/78/0，无模型/音频/真人新验收。下一B连续分轮与晚到尾约束离线设计，全部A–F/Goal active。
 
 完整任务以[原始contract](daily-companion-contract-2026-10-14.md)全文为准，169行/SHA256 FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33，禁止摘要替代或修改。现有Goal 01a13531-0341-7611-afc2-5c472a7ccf50 active，全部A–F持续推进，不重建/缩范围/阶段假完成；GPT-6.1 Sol High不擅改。
 
@@ -8,7 +8,7 @@
 
 音频：必要speaker仅用户已设4%，不调音量；当前无声音。禁房间/物理/虚拟mic、capture初始化、loopback。旧真人许可不延续，新须明确准备好了；核心成熟后一次10–20min集中human，不再逐句让用户等待。固定WAV仅文件/内存/WS，发声须已审output-only保护；text-only TASK_SILENT/source guard。只观察任务学习窗口，不采其它窗口。
 
-原账本bargein-autocheck-20261012不重置/换轮：最新56实核DS835/2000、app78/null、tech0/0；启动前再核，连接保留单场超时/异常停止/退避。计数非金额，不为耗额度测试、不换付费供应商。仅Main调共享额度/安排在线会话；沿原最多2Agent、明确文件所有权，learning_memory容量失败冻结，screen_guidance仅独立报告，不新增/换模型。
+原账本bargein-autocheck-20261012不重置/换轮：最新58实核DS835/2000、app78/null、tech0/0；启动前再核，连接保留单场超时/异常停止/退避。计数非金额，不为耗额度测试、不换付费供应商。仅Main调共享额度/安排在线会话；沿原最多2Agent、明确文件所有权，learning_memory容量失败冻结，screen_guidance仅独立报告，不新增/换模型。
 
 保留Root脏master/空index/.workbuddy/用户历史；不reset/clean/stash/清库。只精确allowlist审查后commit/push codex/，不合主/强推/覆盖历史；排除密钥/DB/WAV/raw/备份。Sky Scout源码/索引/原HTML只读，复用原两图/47WAV/SQLite/CodeGraph，不造新记忆系统或重做已过材料。Root无.codegraph，Sky定位先CodeGraph；localhost用D:/AI/tools/web-inspector/cli.mjs，不查个人Chrome/安装项目Playwright。六目录审批拒绝不绕过。
 
@@ -16,7 +16,7 @@
 
 ## 当前证据和进程
 
-46详[阶段报告](evidence/daily-companion-phase46-material-windows-2026-10-15.md)与[独立review](evidence/daily-companion-material-window-review-2026-10-15.md)。56原raw SHA42f88ed152dcd5d409121b4bc5caf70064ca6f4b6f983fa1b3091ba3f700cedf，exec33605终态0，无live测试宿主/自有端口。关闭单个材料窗口后目前仍仅控制台URL可重开，未声称已交付一键恢复。21不同离线case，不将重跑4+9重复计数。
+46详[阶段报告](evidence/daily-companion-phase46-material-windows-2026-10-15.md)与[独立review](evidence/daily-companion-material-window-review-2026-10-15.md)。56原raw SHA42f88ed152dcd5d409121b4bc5caf70064ca6f4b6f983fa1b3091ba3f700cedf，exec33605终态0，无live测试宿主/自有端口。这是46时的历史快照；47已增加Study主动恢复链接，真实task Chrome点击仍待更强证据。21不同离线case，不将重跑4+9重复计数。
 
 45源码已发布97b5b9dbd38940e4c60cb53822d5ac78e0e3bc42，metadata212e41fbf1843677f272c098ed667df48dd7c038；49离线/独立35/default23，静音53实际两句召回旧误读与纠正、无穷尽否定窄MODEL PASS。alias跨题grade仍SOURCE/OFFLINE。product manifest bc4f78fa032582cf3e2a590a5274c6a0d7be9b6273cc00f19e025ecb9f043f86，host manifest4226ab40401a419bd1618b6e54dac13dde64c731b4bed40072d2182c03713210，46不改两manifest，post56 SourceGate PASS。
 
@@ -24,8 +24,8 @@
 
 ## 接续顺序与全部余项
 
-1. 完成46最终独立原件核验与精确allowlist发布；不因本阶段收尾结束Goal。
-2. 47已交付主动恢复入口；下一48 A/E：57重现Translate popup的task-profile配置，保持所有权/不改个人Chrome；旧UI陈旧夹具登记F维护。
+1. 完成48最终独立原件核验与精确allowlist发布；46–47源码发布已核，不因阶段收尾结束Goal。
+2. 47恢复入口/48任务profile翻译偏好窄修已交付；下一49 B先核51真实输入/ASR/tool协议边界，离线解决晚到约束，不盲开新付费场。旧UI陈旧夹具登记F维护。
 3. 依真实失败继续B/C/D/F，不盲重复未变已过场。
 
 | 范围 | 剩余工作与边界 |
@@ -56,3 +56,15 @@
 
 
 阶段47已独立57原件复核冻结，链接窄交付、整体窗口UX仍PARTIAL。13精确allowlist已commit/push c66196f695fc19bc09f739a863aec02504b1f5e7 到codex/daily-learning-companion；remote exact/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb/publisher clean/Root index空/contract原SHA/原ledger835-78-0均核。没有raw/DB/WAV/密钥/备份发布。最终product manifest db8d169e6519a53ed29af99f59c8e8212d2d6e29aa8d3ce0fe8ec57978092820，source/default与post57 Gate PASS，无live测试宿主。下一48先读取Chromium prefs正式源码核任务profile翻译关闭键，最小保留式配置/坏JSON拒改/必要实际检查；不因局部问题停全Goal，不重复未变模型/音频场。
+
+
+阶段48开始：47源码/部署/定向DOM/57真实早期入口/独立复核/c66196f+metadata c21ca8f发布为progress，原57 Translate辅助popup false保留。完整四记录已读，Root无.codegraph、index空/publisher clean、账本835/78/0实核。Main仅launcher任务profile的translate.enabled=false保留式配置与必要离线/实际启动；Chromium官方源码已核该键控制自动offer bubble，非系统policy/个人Chrome。原start及54任务Preferences独占raw备份phase48-before，坏JSON/非dict不覆盖/拒启动；独立Agent只browser-preferences-review。无live场/模型/声音/捕获，完整A–F/Goal active。
+
+
+阶段48开发冻结：start70712982e36a53256da0de68fa1b21502c1bdeea1601b2c0c56427627e7178d0，新preftest bdf66f6ba87a239b0934be54c140a5c0d646e6d259055356affff0b9e9d817e1。新6 PASS .036s，window4/text9 PASS；仅closed任务profile/RAW/ROOT containment，读失败与非dict拒改，isFalse原bytes不写，exclusive临时+原子replace。live recorded真实PID guard先于helper已离线验证；不承诺与外部同时writer并发合并，失败临时文件保留不覆盖。launcher直接用源码，无product/host manifest变更。独立freeze复核pending，实际58尚未启动，835/78/0/无音频设备，Goal active。
+
+
+阶段48唯一修后58已实际启动exec61267 tty，复用54任务store/其browser text-profile，surface http://127.0.0.1:52264；text-only/offline-egress/API0/3min/原round。独立source/new6复核已关闭，无新P1/P2；835/78/0起、不mic/capture/loopback/声音/音量。只poll同live handle，待Ready与任务窗口/实际prefs后正常Enter清理；未终态不冒清理/实际通过。
+
+
+阶段48终态：唯一58 exec61267 Enter正常exit0/cleanup[]；实际原54 profile自动翻译pref false，两次OS窗口快照相隔5.719s均仅Study+材料2主窗，无aux；actual callback同课/原PNG，退出后pref仍false。raw58 SHA29eac32101b8979f37c847629b46ee2385315e6df4fa301de94d599064886b3d。全部owned与Native40952死、48911/48916/9234/52264无listener，SourceGate PASS，原ledger835/78/0不变，本场allowed[]/direct[]。未再次截图/重跑47DOM/模型/音频/真人，原55/57false保留；不能推所有Chrome永久无popup，actualtask点击/fullasyncReady仍无新证。独立58原件复核/精确发布pending；下一49 B基于51原协议与尾约束建立离线分轮方案，不盲开新在线场，全部A–F/Goal active。

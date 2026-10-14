@@ -99,6 +99,31 @@ def browser_window_commands(template, *, study_ui: bool, surface_url: str = ""):
     return commands
 
 
+def prepare_browser_profile(profile: Path) -> None:
+    """Run only after the existing live-owner check, before launching task Chrome."""
+    raw = (ROOT / 'benchmarks/raw').resolve()
+    profile = profile.resolve()
+    prefs = (profile / 'Default/Preferences').resolve()
+    temporary = prefs.with_name('Preferences.livetutor-tmp')
+    if (not raw.is_relative_to(ROOT.resolve()) or profile == raw or not profile.is_relative_to(raw) or
+            not prefs.is_relative_to(profile) or not temporary.resolve().is_relative_to(profile)):
+        raise RuntimeError('浏览器偏好必须留在项目任务profile内，不会修改个人Chrome。')
+    try:
+        data = json.loads(prefs.read_text(encoding='utf-8')) if prefs.exists() else {}
+    except (OSError, ValueError, UnicodeError) as error:
+        raise RuntimeError(f'任务浏览器偏好无法读取，原文件已保留：{prefs}') from error
+    if not isinstance(data, dict) or not isinstance(data.get('translate', {}), dict):
+        raise RuntimeError(f'任务浏览器偏好格式无效，原文件已保留：{prefs}')
+    if data.get('translate', {}).get('enabled') is False:
+        return
+    # A feature flag did not reliably suppress the automatic translation bubble.
+    data.setdefault('translate', {})['enabled'] = False
+    prefs.parent.mkdir(parents=True, exist_ok=True)
+    with temporary.open('x', encoding='utf-8') as stream:
+        json.dump(data, stream, ensure_ascii=False)
+    os.replace(temporary, prefs)
+
+
 # Ownership of the browser tree is proved with kernel32 and killed with `taskkill /T`, with no
 # third-party import in the exit path. That is a measured reason, not a style choice: the launcher
 # runs on the vendored Python under `benchmarks/raw/goal-python`, which has **no psutil**, so
@@ -651,6 +676,8 @@ def main() -> int:
             previous = json.loads(BROWSER_OWNER_FILE.read_text(encoding="utf-8"))
             if owned_browser_pids(previous):
                 raise RuntimeError("项目专用 Chrome 窗口仍在运行；请先关闭该学习窗口再启动，不会接管或关闭其他 Chrome。")
+        if browser_args:
+            prepare_browser_profile(BROWSER_PROFILE)
     except Exception as error:
         print(f"启动检查失败：{error}")
         return 1
