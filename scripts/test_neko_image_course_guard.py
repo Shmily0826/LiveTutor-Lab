@@ -37,9 +37,11 @@ def product_method(path, name, namespace):
 
 
 def explain_namespace():
+    from test_neko_english_reply_guard import spans
     def unexpected_error(_host, error, **kwargs):
         raise AssertionError(f'unexpected product error: {type(error).__name__}: {error}')
     return {'asyncio': asyncio, 'monotonic': time.monotonic, '_PRIMARY_EXPLAIN_TIMEOUT_SECONDS': 70,
+            'english_prose_spans': spans,
             '_plugin_lock': lambda lock: lock, 'Err': EntryError, 'SdkError': StudyError,
             'handle_user_intent': lambda text, **kwargs: {'matched': False, 'remaining_text': text},
             '_validate_optional_vision_image_payload': lambda host, image, **kwargs: image,

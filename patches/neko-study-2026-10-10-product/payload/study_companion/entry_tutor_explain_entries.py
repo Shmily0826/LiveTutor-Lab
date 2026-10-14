@@ -10,7 +10,7 @@ from ._solution_structure import (
     parse_solution_structure,
     render_solution_structure,
 )
-from .tutor_llm_agent_concept_explain import repair_solution_structure
+from .tutor_llm_agent_concept_explain import repair_solution_structure, english_prose_spans
 from .entry_tutor_context_support import _TutorFinalizeProgress
 from .llm_prompts import build_concept_recent_context
 from .study_materials import (save_material, material_context, material_context_current, MaterialContextChanged,
@@ -319,11 +319,13 @@ class _TutorExplainEntriesMixin:
             primary_remaining = primary_deadline_monotonic - monotonic()
             if primary_remaining <= 0:
                 raise asyncio.TimeoutError
+            agent_context = dict(tutor_context)
+            agent_context["_reply_material_is_current"] = material_is_current
             reply = await asyncio.wait_for(
                 self._agent.concept_explain(
                     source_text,
                     mode=active_mode,
-                    context=tutor_context,
+                    context=agent_context,
                 ),
                 timeout=primary_remaining,
             )
@@ -449,6 +451,10 @@ class _TutorExplainEntriesMixin:
                                     repaired_structure,
                                     language=self._cfg.language,
                                 )
+            if (str(self._cfg.language or "").lower().startswith("en")
+                    and english_prose_spans(reply.reply, source_text)):
+                return Err(SdkError("I could not produce a reliable English explanation. Please try again or choose Chinese.",
+                                    code="reply_language_unresolved"))
             finalize_progress = _TutorFinalizeProgress()
             if material_context:
                 tutor_context["_material_context"] = dict(material_context)
@@ -463,6 +469,7 @@ class _TutorExplainEntriesMixin:
                         metadata={
                             "degraded": reply.degraded,
                             "diagnostic": reply.diagnostic,
+                            "reply_language_repair_attempted": bool(reply.payload.get("reply_language_repair_attempted")),
                             "mode": active_mode,
                             "mode_switch": mode_switch,
                             "intent": intent,

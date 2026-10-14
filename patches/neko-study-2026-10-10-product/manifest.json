@@ -107,7 +107,7 @@
     },
     {
       "path": "payload/study_companion/entry_tutor_explain_entries.py",
-      "sha256": "24741948bfea6c181a35bcb83562aa0a9111e6540ae4bc894ad12ff2c0519417",
+      "sha256": "9b3601565e8c554c5be159aa2c6d031bbf3e87b96906a4c5283900c1ff7e29e9",
       "deployed_matches": true
     },
     {
@@ -133,6 +133,16 @@
     {
       "path": "payload/study_companion/_event_bus.py",
       "sha256": "5459855d18381ebeb80c09e874c88261f390487c33adda0f1e5ef5f435ab019f",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/tutor_llm_agent_concept_explain.py",
+      "sha256": "32889c6bac3438d78bcd5ce50a677d850ed648ecbcae71dcb2a779817c1289c6",
+      "deployed_matches": true
+    },
+    {
+      "path": "payload/study_companion/tutor_llm_agent.py",
+      "sha256": "618e3dc5d3def47bcfa644fa280799233fac9b84969c8dde0e85c4ea80c04257",
       "deployed_matches": true
     }
   ],
@@ -294,5 +304,11 @@
     "scope": "discarded old image explanation text cannot choose this turn language; explicit schema/request and saved course preferences retained",
     "tests": "2 actual wrapper/entry/SQLite negative tests + existing language4",
     "report": "docs/evidence/daily-companion-picture-language-correction-2026-10-14.md"
+  },
+  "daily_english_prose_guard_update": {
+    "proof": "SOURCE_OFFLINE; awaiting real backend semantic review; no device or human proof",
+    "scope": "one bounded same-runtime span translation; ASCII prose/numbers/code unchanged; final guard before history",
+    "tests": "12 actual helper/agent/runtime/entry/SQLite + 32 related source/material/language checks",
+    "report": "docs/evidence/daily-companion-english-reply-guard-2026-10-14.md"
   }
 }
