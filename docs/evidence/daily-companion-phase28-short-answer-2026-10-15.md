@@ -50,3 +50,6 @@ Main intent16run：15PASS、1 Windows symlink1314权限skip；现有14项基线�
 Main重新查看既有forward图：WEX→NUD→REZ；本题NUD出发、固定答WEX→NUD，判wrong及正确答案有据，Native已引用本次结果，没有旧“已经评分”。但反馈开头“你答反了”及misconceptions“方向说反了”不准确：这是答成相邻另一箭头，不是反向。结论为**真实评分/去重/转述链PASS；教学措辞PARTIAL**，不能把20checks全真当完整语义PASS。下一步应从已有评估prompt约束要求只给材料支持的具体错误类型、区别选错连接与方向反转，并保证不固执；无需重跑已过短答链。
 
 账本同bargein-autocheck-20261012，DS699→706/2000（+7，总请求不等于全评分）、app68→70/null（+2初始+受控relay）、tech0/0；无重置/改限/换provider。Goal active，A–F继续、daily AUTO_GRADE默认OFF，未知迟到改答的语义合并未解决、四语言/历史/源码与受控指示范围/集成交付仍按plan推进；human待核心可用后集中一次。阶段28发布待精确allowlist同步，不提交raw/音频/DB/密钥。
+
+
+阶段28发布确认：14个精确allowlist文件（8脚本/测试、host manifest、5记录）已review/commit/push `7118f5eab9f6ff3ba107e293dde5a4a7c716ad0b` 到codex/daily-learning-companion，remote同SHA、candidate clean、master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。Root index未stage，脏树/.workbuddy/原历史保留；raw/录音/DB/密钥未提交。全契约SHA仍FD518311...84C33。无待轮询进程，账本706/70/0原round。阶段28是实际progress（源码/部署/真实40窄链闭合与准确措辞缺陷证据），不是等待或Goal完成。下一次先读四文件；从现有prompt_templates.py的STUDY answer评估规则及llm_prompts.build_answer_evaluate_messages接续，约束基于真实材料的具体错因、篇幅/语言，再A–F；无需重复40或重建Goal。

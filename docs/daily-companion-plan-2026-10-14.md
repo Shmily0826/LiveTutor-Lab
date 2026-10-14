@@ -55,3 +55,6 @@
 exec71445 exit0/cleanup[]，任务三端口无listener，无待轮询host。ledger706/2000、app70/null、tech0/0同原round；不使用mic/capture/loopback，speaker仅用户4%不调。两host实际10runtime/helper旧SHAguard部署、manifest/cwdimports/SourceGate通过；Main route28、intent15+1权限skip、phrase20，independent迁移3；ordinary18/19的1旧TARGETS断言已独立确认在d87a26e存在。场40原件SHA356f05bd...875c84ab，17正PCM/926280bytes及sourceEnded，speechend→PCM10.952024秒不等于物理可听；short-answer-tail-review及phase28报告详载。
 
 下一步：精确审查/发布本轮allowlist后，修“选错连接被说成反向”的具体错误解释，再沿plan A–F连续推进；不重跑本轮已过链、不擅自开daily AUTO、不改原用户历史。当前仅此教学措辞局部缺陷，无全局阻塞或complete依据。
+
+
+阶段28发布确认：14个精确allowlist文件（8脚本/测试、host manifest、5记录）已review/commit/push `7118f5eab9f6ff3ba107e293dde5a4a7c716ad0b` 到codex/daily-learning-companion，remote同SHA、candidate clean、master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。Root index未stage，脏树/.workbuddy/原历史保留；raw/录音/DB/密钥未提交。全契约SHA仍FD518311...84C33。无待轮询进程，账本706/70/0原round。阶段28是实际progress（源码/部署/真实40窄链闭合与准确措辞缺陷证据），不是等待或Goal完成。下一次先读四文件；从现有prompt_templates.py的STUDY answer评估规则及llm_prompts.build_answer_evaluate_messages接续，约束基于真实材料的具体错因、篇幅/语言，再A–F；无需重复40或重建Goal。
