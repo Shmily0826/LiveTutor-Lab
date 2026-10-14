@@ -22,6 +22,23 @@ class FakeDevTools:
 
 
 class NativeTelemetryTest(unittest.IsolatedAsyncioTestCase):
+    async def test_fixed_input_uses_current_renderer_socket_and_refuses_closed(self):
+        observer=NativeTelemetry(None)
+        payload={'action':'stream_data','input_type':'text','data':'quote\" 中文 </script> \\'}
+        for state in (1,3):
+            async def evaluate(expression):
+                script="const sent=[];global.window={appState:{socket:{readyState:"+str(state)+",send:x=>sent.push(JSON.parse(x))}}};try{const result=eval(process.argv[1]);process.stdout.write(JSON.stringify({result,sent}));}catch(e){process.stdout.write(JSON.stringify({error:e.message,sent}));}"
+                result=json.loads(subprocess.check_output(['node','-e',script,expression],timeout=5))
+                if 'error' in result:
+                    self.assertEqual(result['sent'],[])
+                    raise RuntimeError(result['error'])
+                self.assertEqual(result['sent'],[payload])
+                return result['result']
+            observer.evaluate=evaluate
+            if state==1:await observer.send_current(payload)
+            else:
+                with self.assertRaisesRegex(RuntimeError,'controller unavailable'):await observer.send_current(payload)
+
     async def test_concurrent_observations_preserve_protocol_ids_and_notifications(self):
         socket = FakeDevTools()
         observer = NativeTelemetry(socket)

@@ -92,7 +92,11 @@ def material_retirement_observed(replacement, snapshot):
 
 
 async def main(args):
-    host.require_task_audio_allowed("voice acceptance probe")
+    output_only = getattr(args, 'output_only', False)
+    if output_only:
+        host.require_task_speaker_output_allowed("output-only voice acceptance probe")
+    else:
+        host.require_task_audio_allowed("voice acceptance probe")
     if args.output.exists(): raise RuntimeError("do not overwrite or repeat a voice attempt")
     if args.teaching_text_chain:
         raise ValueError('fixed text on a superseded controller is intentionally unauthorized; use --teaching-wav')
@@ -119,7 +123,7 @@ async def main(args):
         raise ValueError('voice fixture store must stay under project raw directory')
     if args.prepare_picture and (not args.store.startswith('neko-daily-speech-acceptance-') or store_path.exists()):
         raise ValueError('picture preference preparation requires a new isolated speech-acceptance store')
-    if args.verify_picture_state and not args.store.startswith('neko-daily-speech-acceptance-'):
+    if args.verify_picture_state and not args.store.startswith(('neko-daily-speech-acceptance-','neko-daily-silent-vision-')):
         raise ValueError('picture constraint probe must use an isolated speech-acceptance store')
     for port in (host.MAIN_PORT, host.PLUGIN_PORT):
         with sockets.socket() as probe:
@@ -128,10 +132,13 @@ async def main(args):
     report = {"events": [], "room_microphone": False, "input": "text inside actual audio session",
               "volume_changed": False, "started_at": datetime.now(timezone.utc).isoformat()}
     report['store'] = args.store
+    report.update(output_only=output_only, capture_devices=False if output_only else 'fake input',
+                  loopback_enabled=not output_only)
     if teaching_chain:
         report['teaching_wav_chain'] = True
         report['loopback_deadline_seconds'] = capture_seconds
-        report['input_scope'] = 'three fixed WAVs through RNNoise/native ASR; fake silent input device, no room mic'
+        report['input_scope'] = ('three fixed WAVs through RNNoise/native ASR; no capture devices'
+                                 if output_only else 'three fixed WAVs through RNNoise/native ASR; fake silent input device, no room mic')
     ledger_path = ROOT / "benchmarks/raw/neko-desktop-egress-cap"
     report["before"] = json.loads(ledger_path.read_text())
     assert report["before"]["round"] == "bargein-autocheck-20261012"
@@ -149,6 +156,9 @@ async def main(args):
         env['NEKO_STUDY_SPEECH_GATE'] = '1'
         env['NEKO_STUDY_SPEECH_GATE_TRACE'] = '1'
         report['study_speech_gate'] = 'opt-in exact free route; quiet + received ASR + host readiness, fixed owner'
+    if getattr(args, 'phrase_input', False):
+        env['NEKO_EXPERIMENTAL_PHRASE_INPUT'] = '1'
+        report['experimental_phrase_input'] = True
     startup_log = args.output.with_suffix('.host.log')
     startup_handle = startup_log.open('wb')
     report['startup_log'] = str(startup_log)
@@ -156,7 +166,7 @@ async def main(args):
         "--source", "--voice", "--core-provider", "free", "--store", args.store,
         "--hold", str(max(360,capture_seconds+120)), "--seconds", "100", "--api-budget", "30", "--egress-budget", "2000",
         "--allow-host", "www.lanlan.app:unlimited", "--allow-host", "www.lanlan.tech:0",
-        "--budget-round", "bargein-autocheck-20261012"] + (["--study-vision"] if args.prepare_picture or args.verify_picture_state else []), cwd=ROOT, env=env,
+        "--budget-round", "bargein-autocheck-20261012"] + (["--output-only"] if output_only else []) + (["--study-vision"] if args.prepare_picture or args.verify_picture_state else []), cwd=ROOT, env=env,
         stdout=startup_handle, stderr=subprocess.STDOUT)
     report['host_launcher_pid'] = process.pid
     shell, meter, observer, observer_task, replacement_task = None, None, None, None, None
@@ -231,7 +241,7 @@ async def main(args):
         with opener.open("http://127.0.0.1:48911/api/characters/current_catgirl", timeout=10) as response:
             character = json.load(response)["current_catgirl"]
         silence = ROOT / "benchmarks/raw/voice-input/daily-silent-input-20261014.wav"
-        if not silence.exists():
+        if not output_only and not silence.exists():
             with wave.open(str(silence), "wb") as wav:
                 wav.setparams((1, 2, 48000, 0, "NONE", "not compressed")); wav.writeframes(b"\x00\x00" * 48000 * 180)
         report["surface_url"] = env["NEKO_LEARNING_SURFACE_URL"]
@@ -257,26 +267,56 @@ async def main(args):
                         failed.set(); started.set(); ended.set()
                     if event.get("type") == "system" and event.get("data") == "turn end": ended.set()
             receiver = asyncio.create_task(receive())
-            async def send(value): await socket.send(json.dumps(value, ensure_ascii=False))
+            async def send(value):
+                if output_only:
+                    if observer is None:
+                        if value.get('action')=='ping':return
+                        raise RuntimeError('Native controller not verified; input refused')
+                    await observer.send_current(value)
+                else:
+                    await socket.send(json.dumps(value, ensure_ascii=False))
             async def heartbeat():
                 while True:
                     await asyncio.sleep(5)
                     await send({"action": "ping"})
             pinger = asyncio.create_task(heartbeat())
-            try:
-                await send({"action": "start_session", "input_type": "audio", "language": "zh-CN",
-                            "new_session": False, "independent_asr_enabled": False})
-                await asyncio.wait_for(started.wait(), 45)
-                if failed.is_set(): raise RuntimeError("voice provider/session refused; no retries")
+            async def prepare_renderer():
+                nonlocal shell, observer
                 with sockets.socket() as debug_port_probe:
                     debug_port_probe.bind(("127.0.0.1", 0))
                     debug_port = debug_port_probe.getsockname()[1]
                 shell = await asyncio.to_thread(avatar.launch, ROOT / "benchmarks/raw" / args.store, 100,
-                                                "compact", debug_port, str(silence))
-                report["native"] = {"pid": shell["pid"], "windows": len(shell.get("windows", [])), "fake_silent_input": True}
+                                                "compact", debug_port, None if output_only else str(silence), output_only)
+                report["native"] = {"pid": shell["pid"], "windows": len(shell.get("windows", [])), "fake_silent_input": not output_only}
                 await asyncio.sleep(4)
                 observer = await NativeTelemetry.attach(debug_port)
+                if output_only:
+                    report['capture_policy'] = await observer.evaluate("({receipt:globalThis.NekoCapturePolicy?.getResult(),flag:globalThis.__NEKO_OUTPUT_ONLY_CAPTURE_BLOCKED__===true,readonly:!Object.getOwnPropertyDescriptor(navigator.mediaDevices,'getUserMedia')?.writable})")
+                    proof=report['capture_policy']
+                    if not (proof.get('flag') and proof.get('readonly') and (proof.get('receipt') or {}).get('status')=='installed'):
+                        raise RuntimeError('Native renderer capture policy not installed; no input submitted')
                 report["native_initial"] = await observer.snapshot()
+            try:
+                if output_only:
+                    await prepare_renderer()
+                await send({"action": "start_session", "input_type": "audio", "language": "zh-CN",
+                            "new_session": False, "independent_asr_enabled": False})
+                if output_only:
+                    deadline=time.monotonic()+45
+                    while time.monotonic()<deadline:
+                        snapshot=await observer.snapshot()
+                        events=(snapshot.get('trace') or {}).get('events',[])
+                        if any(e.get('type') in ('session_failed','session_ended_by_server') for e in events):
+                            raise RuntimeError('Native voice provider/session refused; no retries')
+                        if any(e.get('type')=='session_started' for e in events):
+                            started.set();break
+                        await asyncio.sleep(0.2)
+                    if not started.is_set():raise TimeoutError('Native session start timed out; no retries')
+                else:
+                    await asyncio.wait_for(started.wait(), 45)
+                if failed.is_set(): raise RuntimeError("voice provider/session refused; no retries")
+                if not output_only:
+                    await prepare_renderer()
                 native_changed = time.monotonic()
                 async def observe_native():
                     nonlocal native_changed
@@ -285,6 +325,8 @@ async def main(args):
                         snapshot = await observer.snapshot()
                         report["native_final"] = snapshot
                         events = (snapshot.get("trace") or {}).get("events", [])
+                        if output_only and any(e.get('type') in ('session_failed','session_ended_by_server') for e in events):
+                            failed.set();ended.set()
                         if len(events) != count:
                             count = len(events); native_changed = time.monotonic()
                         if any(e.get("type") == "system" and e.get("data") == "turn end" and
@@ -336,9 +378,10 @@ async def main(args):
                     raise RuntimeError('no confirmed audible old-material playback within bounded replacement window')
                 if args.replace_picture_on_playback:
                     replacement_task = asyncio.create_task(replace_picture_when_playing())
-                meter = subprocess.Popen([str(host.SOURCE_PYTHON), "-X", "utf8", str(ROOT / "scripts/neko_loopback_meter.py"),
-                    "--seconds", str(capture_seconds), "--out", str(args.output.with_suffix(".loopback.wav"))],
-                    cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
+                if not output_only:
+                    meter = subprocess.Popen([str(host.SOURCE_PYTHON), "-X", "utf8", str(ROOT / "scripts/neko_loopback_meter.py"),
+                        "--seconds", str(capture_seconds), "--out", str(args.output.with_suffix(".loopback.wav"))],
+                        cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
                 report["turns"] = []
                 input_wavs = args.teaching_wav if teaching_chain else ([args.wav, args.followup_wav] if args.followup_wav else [args.wav])
                 for turn_index, input_wav in enumerate(input_wavs):
@@ -494,7 +537,8 @@ async def main(args):
                     try: wire_records.append(json.loads(line.split("[wire-trace] ", 1)[1]))
                     except ValueError: pass
             report["wire_trace"] = wire_records
-        report["proof"] = "separate actual provider/native/loopback; fixed input proves this device route, human listening remains unverified"
+        report["proof"] = ("actual provider and Native renderer only; no capture devices or loopback; physical output and human listening remain unverified"
+                           if output_only else "separate actual provider/native/loopback; fixed input proves this device route, human listening remains unverified")
         if (args.prepare_picture or args.verify_picture_state) and not args.followup_wav and not teaching_chain:
             speech_end = report.get('fixed_speech_end_wall')
             audio = [e['t'] for e in report.get('wire_trace',[]) if e.get('dir') == 'recv' and e.get('type') == 'response.audio.delta']
@@ -518,6 +562,13 @@ async def main(args):
             report['picture_constraint_acceptance']={'checks':checks,
                 'result':'CANDIDATE_CHECKS_PASS_REQUIRES_SEMANTIC_REVIEW' if all(checks.values()) else 'FAIL_OR_PARTIAL',
                 'scope':'automatic timing/shape/device checks only; final question/no-quiz/database/diagram facts must be reviewed, human pending'}
+            if output_only:
+                native_checks={key:value for key,value in checks.items() if key!='device_loopback_loud'}
+                report['output_only_native_acceptance']={
+                    'checks':native_checks,
+                    'result':'CANDIDATE_NATIVE_CHECKS_PASS_REQUIRES_SEMANTIC_REVIEW' if all(native_checks.values()) else 'FAIL_OR_PARTIAL',
+                    'scope':'provider timing and Native renderer PCM only; no loopback device proof',
+                    'physical_output':'UNVERIFIED_NO_LOOPBACK', 'human_experience':'PENDING'}
         if args.followup_wav:
             turns = report.get('turns', [])
             for turn in turns:
@@ -604,6 +655,8 @@ if __name__ == "__main__":
     parser.add_argument("--manual-turn-probe", action="store_true", help="one opt-in explicit-end support scene; no production VAD change")
     parser.add_argument("--point-code", action="store_true", help="prepare authorized source selected by learner; require actual role to point")
     parser.add_argument("--speech-gate", action="store_true", help="one opt-in Study execution-admission scene; never changes onset/cancel")
+    parser.add_argument("--output-only", action="store_true", help="speaker output with guarded capture APIs; no fake microphone or loopback")
+    parser.add_argument("--phrase-input", action="store_true", help="one opt-in real phrase collector scene; default off")
     parser.add_argument("--prepare-picture", action="store_true", help="fresh isolated course with an existing image, Chinese preference and no proactive quiz")
     parser.add_argument("--verify-picture-state", action="store_true", help="reuse the existing isolated picture course, read before/after; no extra image model preparation")
     parser.add_argument("--teaching-text-chain", action="store_true", help="disabled: a superseded controller must not gain text authority")

@@ -105,6 +105,15 @@ class NativeTelemetry:
     async def snapshot(self):
         return await self.evaluate(SNAPSHOT)
 
+    async def send_current(self, payload):
+        """Fixed test input on this renderer's own controller, never the superseded socket."""
+        encoded = json.dumps(payload, ensure_ascii=True)
+        result = await self.evaluate("(() => {const s=window.appState?.socket;"
+            "if(!s || s.readyState!==1)throw new Error('Native controller unavailable');"
+            "s.send(JSON.stringify(" + encoded + "));return true;})()")
+        if result is not True:
+            raise RuntimeError('Native controller did not accept fixed input')
+
     async def screenshot(self, path):
         result = await self.command("Page.captureScreenshot", {"format": "png"})
         Path(path).write_bytes(base64.b64decode(result["data"]))

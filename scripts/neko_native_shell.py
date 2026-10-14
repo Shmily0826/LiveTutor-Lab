@@ -99,7 +99,7 @@ def host_ready() -> bool:
         return False
 
 
-def write_surface_config(store: Path, chat_surface: str = "full") -> Path:
+def write_surface_config(store: Path, chat_surface: str = "full", userdata: Path | None = None) -> Path:
     """Ask the shell for the standalone full chat window through its own setting.
 
     ``/chat`` is a compact-only host: ``coerceChatSurfaceModeForHost`` in
@@ -115,7 +115,7 @@ def write_surface_config(store: Path, chat_surface: str = "full") -> Path:
     starting point; later launches keep the persisted configuration and update
     only the fields required for this tutor attachment.
     """
-    userdata = store / USERDATA_DIRNAME
+    userdata = userdata or store / USERDATA_DIRNAME
     userdata.mkdir(parents=True, exist_ok=True)
     bundled = APP / "resources/core_config.txt"
     path = userdata / "core_config.txt"
@@ -134,14 +134,14 @@ def write_surface_config(store: Path, chat_surface: str = "full") -> Path:
     return path
 
 
-def shell_environment(store: Path) -> dict[str, str]:
+def shell_environment(store: Path, userdata: Path | None = None) -> dict[str, str]:
     env = dict(os.environ)
     env.pop("ELECTRON_RUN_AS_NODE", None)
     env.update({
         "NEKO_STORAGE_SELECTED_ROOT": str(store),
         "NEKO_STORAGE_ANCHOR_ROOT": str(store),
         "NEKO_STORAGE_CLOUDSAVE_ROOT": str(store),
-        "NEKO_USER_DATA_DIR": str(store / USERDATA_DIRNAME),
+        "NEKO_USER_DATA_DIR": str(userdata or store / USERDATA_DIRNAME),
         "LOCALAPPDATA": str(store),
         "APPDATA": str(store),
         "PYTHONIOENCODING": "utf-8",
@@ -149,11 +149,31 @@ def shell_environment(store: Path) -> dict[str, str]:
     return env
 
 
+def verify_output_only_host():
+    import hashlib
+    expected = hashlib.sha256((ROOT/'scripts/neko_capture_policy.js').read_bytes()).hexdigest()
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    with opener.open(f"http://127.0.0.1:{MAIN_PORT}/",timeout=8) as response:
+        body=response.read(16384).decode('utf-8')
+        if (response.status != 200 or response.headers.get('X-LiveTutor-Audio-Mode') != 'output-only'
+                or response.headers.get('X-LiveTutor-Capture-Policy-SHA256') != expected
+                or 'microphone=()' not in response.headers.get('Permissions-Policy','')
+                or 'NekoCapturePolicy.installOutputOnly({enabled:true})' not in body):
+            raise RuntimeError('source host has no verified output-only page bootstrap')
+
+
 def launch(store: Path, wait_seconds: int = 150, chat_surface: str = "full",
-           cdp_port: int | None = None, audio_input: str | None = None) -> dict:
+           cdp_port: int | None = None, audio_input: str | None = None,
+           output_only: bool = False) -> dict:
     """Start the avatar shell and prove it attached to the host we control."""
-    from neko_desktop_tutor_host import require_task_audio_allowed
-    require_task_audio_allowed("Native avatar shell")
+    from neko_desktop_tutor_host import require_task_audio_allowed, require_task_speaker_output_allowed
+    if output_only:
+        require_task_speaker_output_allowed("output-only Native avatar shell")
+        if audio_input is not None:
+            raise RuntimeError("output-only forbids real or fake capture devices")
+        verify_output_only_host()
+    else:
+        require_task_audio_allowed("Native avatar shell")
     if not EXE.is_file():
         raise RuntimeError(f"找不到 N.E.K.O 桌面程序：{EXE}")
     if not host_ready():
@@ -161,13 +181,20 @@ def launch(store: Path, wait_seconds: int = 150, chat_surface: str = "full",
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     EVIDENCE.mkdir(parents=True, exist_ok=True)
     log_path = EVIDENCE / f"neko-avatar-shell-{stamp}.log"
-    config_path = write_surface_config(store, chat_surface)
+    userdata = None
+    if output_only:
+        import uuid
+        # A previously cached unprotected page must never run before this guard.
+        userdata = store / 'output-only-userdata' / uuid.uuid4().hex
+    config_path = write_surface_config(store, chat_surface, userdata)
     backend_pids = {pid for pid, name in processes() if name.lower() == FROZEN_BACKEND}
     handle = log_path.open("wb")
     # The debugging port is only ever passed by the acceptance probes; the
     # learner-facing launcher runs without it so no local process can drive the
     # avatar window.
     flags = [*FLAGS] + ([f"--remote-debugging-port={cdp_port}"] if cdp_port else [])
+    if output_only:
+        flags.append("--autoplay-policy=no-user-gesture-required")
     if audio_input:
         # Feed a recorded wav in place of the microphone and skip the permission prompt,
         # so a voice acceptance run never leaves the room open to listen all night. The
@@ -187,12 +214,12 @@ def launch(store: Path, wait_seconds: int = 150, chat_surface: str = "full",
         flags += [f"--use-file-for-fake-audio-capture={wav.as_posix()}",
                   "--use-fake-device-for-media-stream",
                   "--use-fake-ui-for-media-stream"]
-    process = subprocess.Popen([str(EXE), *flags], cwd=str(APP), env=shell_environment(store),
+    process = subprocess.Popen([str(EXE), *flags], cwd=str(APP), env=shell_environment(store, userdata),
                                stdout=handle, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
     started = time.monotonic()
     seen: list[dict] = []
     frozen: list[int] = []
-    outcome: dict[str, object] = {"pid": process.pid, "status": "starting"}
+    outcome: dict[str, object] = {"pid": process.pid, "status": "starting", "output_only":output_only}
     try:
         while time.monotonic() - started < wait_seconds:
             time.sleep(3)
@@ -253,6 +280,8 @@ def main() -> int:
     parser.add_argument("--audio-input", default=None,
                         help="acceptance only: feed this wav to the renderer as the "
                              "microphone instead of leaving the room open to listen")
+    parser.add_argument("--output-only", action="store_true",
+                        help="explicit speaker permission and guarded source host; no capture devices")
     args = parser.parse_args()
     if args.stop:
         shutdown()
@@ -260,7 +289,7 @@ def main() -> int:
         return 0
     try:
         outcome = launch(Path(args.store).resolve(), args.wait, args.chat_surface,
-                         args.cdp_port, args.audio_input)
+                         args.cdp_port, args.audio_input, args.output_only)
     except RuntimeError as error:
         print(f"原生角色启动失败：{error}", file=sys.stderr)
         return 1

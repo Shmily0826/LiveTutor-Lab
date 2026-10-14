@@ -1,0 +1,114 @@
+/* Load before every app script. Installation is explicit; output APIs are untouched. */
+(function (root) {
+    'use strict';
+    const FLAG = '__NEKO_OUTPUT_ONLY_CAPTURE_BLOCKED__';
+    const RECEIPT = '__NEKO_CAPTURE_POLICY_RESULT__';
+    const MODERN = ['getUserMedia', 'getDisplayMedia', 'enumerateDevices'];
+    const LEGACY = ['getUserMedia', 'webkitGetUserMedia', 'mozGetUserMedia'];
+    const RECOGNITION = ['SpeechRecognition', 'webkitSpeechRecognition'];
+    let installed = null;
+    let failure = null;
+
+    function snapshot(status, code, blocked) {
+        return Object.freeze({
+            mode: 'output-only', status, captureBlocked: status === 'installed',
+            code, blocked: Object.freeze(blocked.slice())
+        });
+    }
+
+    function denied() {
+        return new root.DOMException('Capture is disabled in this output-only task.', 'NotAllowedError');
+    }
+
+    function rejectCapture() { return Promise.reject(denied()); }
+    function rejectRecognition() { throw denied(); }
+    function rejectLegacy(_constraints, _success, errorCallback) {
+        const error = denied();
+        if (typeof errorCallback !== 'function') throw error;
+        // Never invoke a capture implementation or the success callback.
+        Promise.resolve().then(function () { errorCallback(error); });
+    }
+
+    function mayLock(target, key) {
+        const descriptor = Object.getOwnPropertyDescriptor(target, key);
+        if (descriptor && !descriptor.configurable &&
+                (!Object.prototype.hasOwnProperty.call(descriptor, 'value') || !descriptor.writable)) {
+            throw new Error('Unreplaceable descriptor: ' + key);
+        }
+        if (!descriptor && !Object.isExtensible(target)) throw new Error('Non-extensible target: ' + key);
+    }
+
+    function lock(target, key, value) {
+        const prior = Object.getOwnPropertyDescriptor(target, key);
+        Object.defineProperty(target, key, {value, configurable: false, writable: false,
+            enumerable: prior ? prior.enumerable : false});
+        const descriptor = Object.getOwnPropertyDescriptor(target, key);
+        if (!descriptor || descriptor.value !== value || descriptor.writable || descriptor.configurable) {
+            throw new Error('Lock verification failed: ' + key);
+        }
+    }
+
+    function installOutputOnly(options) {
+        if (!options || options.enabled !== true) return snapshot('disabled', null, []);
+        if (failure) {
+            const error = new Error('Capture policy previously failed; abort app bootstrap.');
+            error.code = 'NEKO_CAPTURE_POLICY_INSTALL_FAILED';
+            error.receipt = failure;
+            throw error;
+        }
+        if (installed) return installed;
+        const blocked = [];
+        try {
+            if (typeof root.DOMException !== 'function') throw new Error('DOMException unavailable');
+            const nav = root.navigator;
+            if (!nav || typeof nav !== 'object') throw new Error('Navigator unavailable');
+            const devices = nav.mediaDevices;
+            if (!devices || typeof devices !== 'object') throw new Error('MediaDevices unavailable');
+            if (Object.prototype.hasOwnProperty.call(root, FLAG) ||
+                    Object.prototype.hasOwnProperty.call(root, RECEIPT)) throw new Error('Policy marker already exists');
+            // Preflight the entire installation before any irreversible property change.
+            for (const key of MODERN) mayLock(devices, key);
+            for (const key of LEGACY) mayLock(nav, key);
+            for (const key of RECOGNITION) mayLock(root, key);
+            mayLock(nav, 'mediaDevices');
+            mayLock(root, 'navigator');
+            mayLock(root, FLAG);
+            mayLock(root, RECEIPT);
+            for (const key of MODERN) {
+                lock(devices, key, rejectCapture);
+                blocked.push('navigator.mediaDevices.' + key);
+            }
+            for (const key of LEGACY) {
+                lock(nav, key, rejectLegacy);
+                blocked.push('navigator.' + key);
+            }
+            for (const key of RECOGNITION) {
+                lock(root, key, rejectRecognition);
+                blocked.push(key);
+            }
+            // Missing methods become denial stubs too: late assignment cannot restore capture.
+            lock(nav, 'mediaDevices', devices);
+            lock(root, 'navigator', nav);
+            const result = snapshot('installed', null, blocked);
+            lock(root, RECEIPT, result);
+            lock(root, FLAG, true); // Last operation; never publish a successful flag prematurely.
+            installed = result;
+            return installed;
+        } catch (_cause) {
+            failure = snapshot('failed', 'NEKO_CAPTURE_POLICY_INSTALL_FAILED', blocked);
+            // Do not roll back denial stubs to real capture APIs after a partial failure.
+            const error = new Error('Capture policy installation failed; abort app bootstrap.');
+            error.code = failure.code;
+            error.receipt = failure;
+            throw error;
+        }
+    }
+
+    const api = Object.freeze({
+        installOutputOnly,
+        getResult: function () { return installed || failure; }
+    });
+    Object.defineProperty(root, 'NekoCapturePolicy', {
+        value: api, configurable: false, writable: false, enumerable: false
+    });
+}(globalThis));

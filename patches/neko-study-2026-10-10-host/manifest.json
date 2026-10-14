@@ -268,6 +268,34 @@
       "base_sha256": "f82fe6723947868195b09e015823cc65ae0d3929be6cf5dbc9cf3e9f5dfb4372",
       "patched_sha256": "1a00099aa9ab848ffe9f43a3573e36b91bef281f9d68225644b03a578d29eaef",
       "daily_phrase_resealed_utc": "2026-10-13T23:22:42.753804+00:00"
+    },
+    {
+      "path": "app/main_server/web_app.py",
+      "base_sha256": "2eb8e78f6a7c49e75a574bee575b22b03ca6409013a6bc7794832599bba7f861",
+      "patched_sha256": "cc085070bc0dbbb62fdfcf554ad8435aa32a34e1054ca759bf6a30415686e32d",
+      "reproduce": "python scripts/neko_output_only_patch.py",
+      "proof": "SOURCE_OFFLINE pending real browser/Native/output proof"
+    },
+    {
+      "path": "main_logic/livetutor_output_only.py",
+      "base_sha256": null,
+      "patched_sha256": "9479de31da8c37cd3093e429bcb2339a7dfa31b349e42ef11186a40c607feacc",
+      "reproduce": "python scripts/neko_output_only_patch.py",
+      "proof": "SOURCE_OFFLINE pending real browser/Native/output proof"
+    },
+    {
+      "path": "static/app/neko-capture-policy.js",
+      "base_sha256": null,
+      "patched_sha256": "2bde39c6042ea835c26464c8455567677c680126cd9d0f7761f1e7690ac4992a",
+      "reproduce": "python scripts/neko_output_only_patch.py",
+      "proof": "SOURCE_OFFLINE pending real browser/Native/output proof"
+    },
+    {
+      "path": "static/app/app-audio-capture.js",
+      "base_sha256": "e609d90cb6731a9edb20a41997007ebd299ad2ac911d162d0eb5a9308d9940ad",
+      "patched_sha256": "e89fc7723aa66c47bf6fc1f97a3c0af58ce8baac8fe1b5536af24cb66280cba2",
+      "reproduce": "python scripts/neko_output_only_patch.py",
+      "proof": "SOURCE_OFFLINE pending real browser/Native/output proof"
     }
   ],
   "native_barge_in_handoff": {
@@ -327,6 +355,14 @@
     {
       "path": "scripts/neko_phrase_input_transport.py",
       "sha256": "79cff29ca529ebc2e2e421288f48f0a384ed6d88399707d24711223ecfa324bb"
+    },
+    {
+      "path": "scripts/neko_output_only_runtime.py",
+      "sha256": "9479de31da8c37cd3093e429bcb2339a7dfa31b349e42ef11186a40c607feacc"
+    },
+    {
+      "path": "scripts/neko_capture_policy.js",
+      "sha256": "2bde39c6042ea835c26464c8455567677c680126cd9d0f7761f1e7690ac4992a"
     }
   ],
   "daily_phrase_input_update": {

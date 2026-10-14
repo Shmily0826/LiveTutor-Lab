@@ -95,6 +95,20 @@ MAIN_PORT = 48911
 PLUGIN_PORT = 48916
 
 
+def require_task_speaker_output_allowed(action: str) -> None:
+    """Explicit output permission never grants a capture or mixed UI permission."""
+    policy = ROOT / "benchmarks/raw/daily-companion-audio-policy.json"
+    try:
+        data = json.loads(policy.read_text(encoding="utf-8"))
+        permitted = (isinstance(data, dict) and data.get("speaker_output_allowed") is True
+                     and data.get("microphone_allowed") is False
+                     and data.get("capture_devices_allowed") is False)
+    except (OSError, ValueError):
+        permitted = False
+    if os.environ.get("NEKO_TASK_SILENT") == "1" or not permitted:
+        raise RuntimeError(f"任务未明确授权无捕获的扬声器输出：{action}")
+
+
 def read_key() -> str:
     for line in KEY_FILE.read_text(encoding="utf-8", errors="replace").splitlines():
         value = line.strip()
@@ -863,9 +877,15 @@ def main() -> int:
     parser.add_argument("--voice", action="store_true",
                         help="except ONLY the native realtime audio events out of the "
                              "development mute; external TTS stays refused")
+    parser.add_argument("--output-only", action="store_true",
+                        help="source host only: block all browser capture APIs; fixed input over WS, speaker output only")
     args = parser.parse_args()
 
-    if not args.stop and args.voice:
+    if args.output_only and not args.source:
+        parser.error("--output-only requires the verified source host")
+    if not args.stop and args.output_only:
+        require_task_speaker_output_allowed("output-only source host")
+    elif not args.stop and args.voice:
         require_task_audio_allowed("Native voice host")
     if not args.stop and not args.source:
         require_task_audio_allowed("unverified packaged host")
@@ -895,6 +915,9 @@ def main() -> int:
     key = read_key()
     if args.source:
         print(f"宿主侧可靠性补丁：{apply_voice_host_patch()}")
+        from neko_output_only_patch import HOSTS, apply_to
+        for source_tree in HOSTS:
+            apply_to(source_tree)
         verify_source_audio_gate()
     store = (ROOT / "benchmarks/raw" / args.store).resolve()
     if not store.is_relative_to(ROOT / "benchmarks/raw"):
@@ -941,6 +964,7 @@ def main() -> int:
         "APPDATA": str(store),
         "PYTHONIOENCODING": "utf-8",
         "NEKO_DEV_AUDIO_ALLOW": VOICE_GATE_EXCEPTIONS if args.voice else "",
+        "NEKO_OUTPUT_ONLY": "1" if args.output_only else "0",
         "HTTP_PROXY": f"http://127.0.0.1:{sink.port}",
         "HTTPS_PROXY": f"http://127.0.0.1:{sink.port}",
         "NO_PROXY": "127.0.0.1,localhost",
