@@ -1,4 +1,4 @@
-# 日常学习伙伴状态（阶段53核心语义窄通过，整体未完成）
+# 日常学习伙伴状态（阶段54入口就绪窄通过，整体未完成）
 
 完整任务以[原始 contract](daily-companion-contract-2026-10-14.md)全文为准，不摘要替代、不修改；169行，SHA256 `FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33`。Goal `01a13531-0341-7611-afc2-5c472a7ccf50` active，完整A–F不缩范围、不因局部失败结束。沿用户指定模型，不擅自换模型。
 
@@ -45,3 +45,9 @@
 接续边界：53的即时Focus只改实际source离线文字brain路径，不能据此认领free Native Realtime的源码口语同样改善。D语音仍需复用已有Study教师/授权CodeGraph与朗读桥接后验证；不能把文字路径当最终日常语音交付。54先处理角色风格与F UI入口/夹具，随后继续此集成，不因62核心窄PASS收缩A–F。
 
 阶段53九文件精确发布已核：commit/push c7dcec4341d81715ddb0188b19d29aba571d8185 到codex/daily-learning-companion，remote exact/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb/publisher clean/Root index空/contract原SHA；不发raw/DB/密钥/音频/备份。当前868/78/0、无live宿主/自有端口，全部A–F/Goal active。下一自动续跑先读四记录及phase53 report；54修简短风格并推进F UI Ready/夹具，再续D Native教师桥接，不能将文字窄证当语音交付，不重跑62数值场。
+
+54进行中：F原UI夹具维护/正式异步Ready验证；详细范围见phase54报告，当前868/78/0，无live场/音频。
+
+54冻结：UI旧夹具PASS/只读relay5 PASS；63准备验证完整bootstrap与真实refresh，原868/78/0无新模型/音频。细节见phase54报告。
+54：63观察量具来源HTTP403失败保留，不能据此认正式UI故障；已有受支持的单场精确origin配置修复，6离线case PASS，待唯一64。868/78/0，静音无mic。
+54终态：65完整bootstrap/刷新9DOM与8真实读取PASS，无浏览器错，QA0前后同SHA。63来源拒绝/64列表漏白名单失败保留。868/78/0，exec8562=0、owned forced-stop1且全死/四端口空，SourceGate PASS。截图页头裁切仍PARTIAL，55修；详见phase54报告。

@@ -1,4 +1,4 @@
-# 日常学习伙伴执行计划（阶段53核心语义窄通过，整体未完成）
+# 日常学习伙伴执行计划（阶段54入口就绪窄通过，整体未完成）
 
 完整任务以[原始 contract](daily-companion-contract-2026-10-14.md)全文为准，不摘要替代、不修改；169行，SHA256 `FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33`。Goal `01a13531-0341-7611-afc2-5c472a7ccf50` active，完整A–F不缩范围、不因局部失败结束。沿用户指定模型，不擅自换模型。
 
@@ -42,3 +42,6 @@
 接续边界：53的即时Focus只改实际source离线文字brain路径，不能据此认领free Native Realtime的源码口语同样改善。D语音仍需复用已有Study教师/授权CodeGraph与朗读桥接后验证；不能把文字路径当最终日常语音交付。54先处理角色风格与F UI入口/夹具，随后继续此集成，不因62核心窄PASS收缩A–F。
 
 阶段53九文件精确发布已核：commit/push c7dcec4341d81715ddb0188b19d29aba571d8185 到codex/daily-learning-companion，remote exact/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb/publisher clean/Root index空/contract原SHA；不发raw/DB/密钥/音频/备份。当前868/78/0、无live宿主/自有端口，全部A–F/Goal active。下一自动续跑先读四记录及phase53 report；54修简短风格并推进F UI Ready/夹具，再续D Native教师桥接，不能将文字窄证当语音交付，不重跑62数值场。
+
+54进行中：F原UI夹具维护/正式异步Ready验证；详细范围见phase54报告，当前868/78/0，无live场/音频。
+54闭环：旧UI夹具+7只读relay边界通过，真实65完整启动/刷新窄PASS；不重跑62。下一55修截图实见页头裁切，然后续D语音桥接/B短答，完整A–F不变。

@@ -2,31 +2,45 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const source = fs.readFileSync(`${__dirname}/main.js`, 'utf8');
-const block = (start, end) => source.slice(source.indexOf(start), source.indexOf(end, source.indexOf(start)));
+const block = (start, end) => {
+  const from = source.indexOf(start), to = source.indexOf(end, from);
+  assert.ok(from >= 0 && to > from, `Current source block missing: ${start} -> ${end}`);
+  return source.slice(from, to);
+};
 
 function harness() {
   const calls = [];
   const status = [];
   const delays = [];
-  const input = () => ({value: '', textContent: '', hidden: true});
+  const input = () => ({value: '', textContent: '', hidden: true, focus() { this.focused = true; }});
+  const elements = new Map([['windowCaptureOptions', {open: true}]]);
   const context = vm.createContext({
     studyInput: input(), ocrWindowTitle: input(), ocrExpectedMarkers: input(),
     ocrSelectedWindow: input(), studyCourseId: input(), selectedStudyCourse: input(),
     answerInput: input(), usePreviousExplanation: {checked: true, disabled: false},
     setStatus: (value) => status.push(value), setReply: () => {},
+    t: (_key, fallback) => fallback, $id: (id) => elements.get(id) || null,
+    setPasteError: () => {}, studyMaterialControlNotice: input(),
+    questionAttemptMeta: input(), document: {},
     sleep: async (ms) => delays.push(ms), setImagePreview: () => {},
     setGeneratedQuestion: () => {}, setQuestionContext: () => {}, clearFeedback: () => {},
     refreshStatus: async () => {},
-    callPlugin: async (entry, args) => { calls.push({entry, args}); return context.response; },
+    callPlugin: async (entry, args) => {
+      calls.push({entry, args});
+      return entry === 'study_get_practice_scope' ? {no_data: true} : context.response;
+    },
   });
-  vm.runInContext("let ocrN='old title', ocrT='old OCR', previousExplanation={input:'Flutter'}, currentQuestion={}, currentSelectionContext={}, currentPracticeScope={};", context);
+  vm.runInContext("let ocrN='old title', ocrT='old OCR', previousExplanation={input:'Flutter'}, currentQuestion={}, currentSelectionContext={}, currentPracticeScope={}; let studyMaterialRevision=0, lastStatusPayload={}, studyServiceReady=true, hasInitializedCourseInput=false;", context);
+  vm.runInContext(block('function studySessionId(', 'async function refreshMaterialControl('), context);
+  vm.runInContext(block('function studyContextIsCurrent(', 'function normalizeVisionMaxImagePx('), context);
+  vm.runInContext(block('async function refreshAfterSuccess(', 'async function loadQuestionContext('), context);
   vm.runInContext(block('function clearOcrAttribution(', 'function buildFollowupText('), context);
   context.studyInput.value = 'old OCR';
   context.ocrWindowTitle.value = 'LiveTutor Flutter Lesson';
   context.ocrExpectedMarkers.value = 'ChangeNotifier\ncontext.watch';
   context.response = {status: 'ok', text: 'raw OCR\nChangeNotifier context.watch',
     capture_mode_used: 'target_window', target_window_title: 'LiveTutor Flutter Lesson', target_window_markers_matched: 2};
-  return {context, calls, status, delays};
+  return {context, calls, status, delays, elements};
 }
 
 (async () => {
@@ -40,6 +54,13 @@ function harness() {
   assert.deepEqual(good.delays, [1000, 1000, 1000, 1000, 1000]);
   assert.equal(good.context.studyInput.value, good.context.response.text);
   assert.equal(good.context.ocrSelectedWindow.hidden, false);
+
+  const closed = harness(); closed.elements.get('windowCaptureOptions').open = false;
+  await closed.context.runOcr();
+  assert.equal(closed.elements.get('windowCaptureOptions').open, true);
+  assert.equal(closed.context.ocrWindowTitle.focused, true);
+  assert.equal(closed.calls.length, 0, 'Opening the window fields must not request capture');
+  assert.deepEqual(closed.delays, []);
 
   for (const invalid of ['', '\n ', Array.from({length: 13}, (_, i) => `marker${i}`).join('\n')]) {
     const h = harness(); h.context.ocrExpectedMarkers.value = invalid;
@@ -93,12 +114,13 @@ function harness() {
   await second.click();
   assert.equal(secondCalls, 1);
 
-  const courseStatus = vm.createContext({studyCourseId: {value: 'flutter-provider'}, selectedStudyCourse: {},
-    document: {}, t: (_key, fallback) => fallback, modeLabel: String,
+  const courseStatus = harness().context;
+  Object.assign(courseStatus, {modeLabel: String,
     setStatus: () => {}, syncLearningProfileUi: () => {}, renderDiagnosis: () => {},
     renderFirstRunGuide: () => {}, updateStudySummaries: () => {}, renderNekoCoach: () => {},
     setModeButtons: () => {}, setStudyState: () => {}});
-  vm.runInContext('let lastStatusPayload={}, hasInitializedCourseInput=false;', courseStatus);
+  courseStatus.studyCourseId.value = 'flutter-provider';
+  vm.runInContext(block('function syncStatusQuestion(', 'function setStatusLine('), courseStatus);
   vm.runInContext(block('function setStatusLine(', 'function setAdvancedSettingsOpen('), courseStatus);
   courseStatus.setStatusLine({study_course_id: 'networking'});
   assert.equal(courseStatus.studyCourseId.value, 'networking', 'Existing selected course takes priority over demo default');
@@ -110,15 +132,17 @@ function harness() {
   for (const fromMaterial of [false, true]) {
     const quiz = harness();
     Object.assign(quiz.context, {t: (_key, fallback) => fallback, openPracticePanel: () => {},
-      loadPracticeScope: async () => {}, loadQuestionContext: async () => ({no_data: true})});
+      setPracticeScopeState: () => {}, loadQuestionContext: async () => ({no_data: true})});
     vm.runInContext(block('function buildFollowupText(', 'async function explainText('), quiz.context);
     vm.runInContext(block('async function generateQuestion(', 'async function evaluateAnswer('), quiz.context);
     quiz.context.studyInput.value = 'COMPSCI 734 风格：请针对 context.watch 出一道选择题';
     quiz.context.response = {question: 'Which widget rebuilds?', question_id: 'q1', attempt_id: 'a1'};
     await quiz.context.generateQuestion({fromMaterial});
-    assert.equal(quiz.calls[0].entry, 'study_generate_question');
-    assert.ok(quiz.calls[0].args.text.includes('COMPSCI 734'));
-    assert.ok(quiz.calls[0].args.text.includes('context.watch'));
+    assert.deepEqual(quiz.calls.map(call => call.entry), fromMaterial
+      ? ['study_generate_question'] : ['study_get_practice_scope', 'study_generate_question']);
+    const generated = quiz.calls.find(call => call.entry === 'study_generate_question');
+    assert.ok(generated.args.text.includes('COMPSCI 734'));
+    assert.ok(generated.args.text.includes('context.watch'));
   }
 
   const coach = block('async function handleNekoCoachAction(', 'const documentController');
