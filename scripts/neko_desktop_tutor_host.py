@@ -386,9 +386,22 @@ def apply_free_voice_route(store: Path) -> dict:
     except ValueError:
         shown = path.as_posix()
     report = {"file": shown, "changed": {}, "skipped": {}}
-    if not path.is_file():
-        report["error"] = "characters.json missing"
-        return report
+    if not path.exists():
+        # First startup has no card yet. Use the host's own defaults before its
+        # route/prompt are read, instead of requiring a second launch to speak.
+        path.parent.mkdir(parents=True, exist_ok=True)
+        runtime_root = path.parent.parent
+        seed_env = {**os.environ, "NEKO_TASK_SILENT":"1", "NEKO_DEV_TEXT_ONLY":"1",
+            "NEKO_STORAGE_SELECTED_ROOT":str(runtime_root), "NEKO_STORAGE_ANCHOR_ROOT":str(runtime_root),
+            "NEKO_STORAGE_CLOUDSAVE_ROOT":str(runtime_root), "NEKO_DO_NOT_TRACK":"1",
+            "LOCALAPPDATA":str(store), "APPDATA":str(store)}
+        subprocess.run([str(SOURCE_PYTHON), "-X", "utf8", "-B", "-c",
+            "import json,sys; from config import get_localized_default_characters; "
+            "data=get_localized_default_characters('zh-CN'); "
+            "f=open(sys.argv[1],'x',encoding='utf-8'); "
+            "json.dump(data,f,ensure_ascii=False,indent=2); f.close()", str(path)],
+            cwd=SOURCE_APP, env=seed_env, capture_output=True, check=True, timeout=20)
+        report["created_from_host_defaults"] = True
     data = json.loads(path.read_text(encoding="utf-8"))
 
     def walk(node: object) -> None:
@@ -1069,8 +1082,8 @@ def main() -> int:
     EVIDENCE.mkdir(parents=True, exist_ok=True)
     if args.source:
         ensure_react_chat_bundle()
-        character_models = ensure_character_models(store)
         voice_route = apply_free_voice_route(store) if args.voice else {}
+        character_models = ensure_character_models(store)
         # Before the character's prompt is built, not after - the host reads the
         # persona card at startup, so this is the last moment the rule can land in
         # the very first conversation turn.

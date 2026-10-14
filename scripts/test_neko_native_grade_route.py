@@ -67,7 +67,7 @@ transport_tree=replay('main_logic/omni_realtime_client/_transport.py')
 client_nodes=methods(tools_tree,tool_names)+methods(transport_tree,
     {'_capture_study_grade_pin','_take_study_grade_asr','_advance_study_grade_ingress_scope','_rearm_empty_study_question_pin',
      '_current_study_grade_phrase','_consume_study_grade_tail','_raw_transcript_was_already_scoped',
-     '_note_voice_handoff_input_open'})
+     '_note_voice_handoff_input_open','_native_phrase_protects_input'})+methods(replay('main_logic/omni_realtime_client/_audio.py'),{'clear_audio_buffer'})
 ClientBase=compile_class('ClientMethods',client_nodes,tools_ns)
 
 # The actual completed-ASR scope prefix, before its UI/transcript callbacks.
@@ -257,6 +257,8 @@ class NativeGradeRoute(unittest.IsolatedAsyncioTestCase):
                 packet=await callback('study_companion',call.name,{'arguments':call.arguments,'call_id':call.call_id})
                 return ToolResult(call_id=call.call_id,name=call.name,output=packet['output'],is_error=packet.get('is_error',False))
         self.client=Client();self.core=Core(self.client,Registry())
+        self.client._reset_input_route_identity_stream=Mock()
+        self.client._clear_uplink_resampler=Mock()
         self.client.get_study_question_pin=lambda:self.core._read_study_question_pin(self.client)
         self.client.get_study_input_authority=lambda:self.core._study_input_authority(self.client)
     async def asyncTearDown(self):
@@ -302,6 +304,10 @@ class NativeGradeRoute(unittest.IsolatedAsyncioTestCase):
         # A completed provider boundary is not itself a new user input.
         driver.note_boundary(10)
         self.assertIs(self.client._study_grade_pin,empty)
+        # Real stream_audio calls this on the next WAV's leading quiet frames.
+        await self.client.clear_audio_buffer()
+        self.assertEqual(self.client.wire,[{'type':'input_audio_buffer.clear'}])
+        self.assertIs(self.client._study_grade_pin,empty);self.assertFalse(empty['invalid'])
         self.client._capture_study_grade_pin(True,13)
         self.assertFalse(self.client._study_grade_pin['invalid'])
         self.assertEqual(self.client._study_grade_pin['question']['question_id'],'question-owned')
@@ -315,6 +321,35 @@ class NativeGradeRoute(unittest.IsolatedAsyncioTestCase):
         await self.settle()
         rows=self.store.list_qa_records();self.assertEqual(len(rows),1);self.assertEqual(rows[0]['user_answer'],'我的答案是 REZ。')
         self.assertEqual(self.h._agent.answer_evaluate.await_count,1)
+
+    async def test_clear_only_preserves_fully_retired_healthy_empty_slot(self):
+        driver,empty=await self.empty_question_phrase();driver.note_boundary(10)
+        for field,value in (('empty_question',False),('invalid',True),('scoped',False),
+                            ('empty_phrase',None),('authority',('foreign',)),('provider',object()),
+                            ('token','foreign'),('scope',-1)):
+            with self.subTest(field=field):
+                old=empty.get(field);empty[field]=value;empty['invalid']=field=='invalid'
+                before=len(self.client.wire);await self.client.clear_audio_buffer()
+                self.assertEqual(len(self.client.wire),before+1);self.assertTrue(empty['invalid'])
+                empty[field]=old;empty['invalid']=False
+        driver.epoch+=1;await self.client.clear_audio_buffer();self.assertTrue(empty['invalid'])
+        driver.epoch-=1;empty['invalid']=False
+        with patch.dict(os.environ,{'NEKO_STUDY_AUTO_GRADE':'0'}):
+            await self.client.clear_audio_buffer();self.assertTrue(empty['invalid'])
+        self.h._agent.answer_evaluate.assert_not_awaited()
+
+    async def test_clear_still_protects_pending_pcm_and_poisons_answer_or_unknown_slot(self):
+        driver,empty=await self.empty_question_phrase()
+        before=len(self.client.wire)
+        self.assertFalse(await self.client.clear_audio_buffer())
+        self.assertEqual(len(self.client.wire),before);self.assertFalse(empty['invalid'])
+        driver.note_boundary(10)
+        self.client._capture_study_grade_pin(True,13)
+        answer=self.client._study_grade_pin;self.assertIsNotNone(answer['question'])
+        await self.client.clear_audio_buffer();self.assertTrue(answer['invalid'])
+        self.client._study_grade_pin={'connection':1,'invalid':True}
+        await self.client.clear_audio_buffer();self.assertTrue(self.client._study_grade_pin['invalid'])
+        self.h._agent.answer_evaluate.assert_not_awaited()
 
     async def test_empty_slot_requires_sealed_asr_boundary_identity_and_current_authority(self):
         driver,empty=await self.empty_question_phrase()

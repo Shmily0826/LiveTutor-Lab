@@ -571,6 +571,14 @@ EMPTY_QUESTION_HELPER = '''    def _rearm_empty_study_question_pin(self, saved):
 '''
 
 DAILY_UPGRADES = {
+ 'main_logic/omni_realtime_client/_audio.py': (
+    ('        if pin is not None: pin["invalid"] = True',
+     '        # A fully retired healthy-empty input has no pending answer PCM.\n'
+     '        # Preserve only that exact sealed slot; all other clears poison it.\n'
+     '        if pin is not None and not (__import__("os").environ.get("NEKO_STUDY_AUTO_GRADE") == "1"\n'
+     '                and self._rearm_empty_study_question_pin(pin)):\n'
+     '            pin["invalid"] = True'),
+ ),
  'main_logic/omni_realtime_client/_transport.py': (
     ('    def _capture_study_grade_pin(self, speech, arrival, *, replay=False):',
      EMPTY_QUESTION_HELPER+'    def _capture_study_grade_pin(self, speech, arrival, *, replay=False):'),

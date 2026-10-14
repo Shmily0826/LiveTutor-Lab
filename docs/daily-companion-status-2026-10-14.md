@@ -69,3 +69,17 @@
 实际未过：第二轮未claim/未正式评分，仅确认答案“对吗”，grade_markers空，第二provider study_answer被受控guard拒；连续check仅健康空题/真实出题/出题不grade/追问不添grade四项true，答案链和完整Native语音失败。同conn结构check因没有accepted marker而false，不能反称三次delivery换连接。
 
 定位中：本场[study-material-audio]实际free=True且tts=True/captured=False。Core读pin/claim前置拒use_tts，因此不能仅归咎empty rearm。现host.apply_free_voice_route在launcher前调用，freshstore当时无characters.json就返回error，首次runtime之后才生成默认卡；外部TTS仍禁止，导致有provider音频但无Native排程。Main下一修fresh startup先复用官方默认角色生成再native voice/角色guidance，保留权限。独立另发现第二前缀零输入触发clear，实际_audio.clear无条件poison旧pin；两项必须分开定向offline复现，不能统统放开clear/replay守卫。尚无修后online证据。
+
+
+阶段34封版发布56b64a9（精确完整SHA待final核）codex/daily-learning-companion，9allowlist仅probe/观测测试+记录/独立report；47真实FAIL未改，raw/DB/新WAV/密钥/备份均未入Git。当前phase35为必要修后源码工作，不是全Goal已完成。
+
+阶段35源码进展：Main缺卡fresh voice先用官方get_localized_default_characters在源码Python子进程exclusive x生成默认卡，taskSilent/text-only/LOCALAPPDATA/三个storage root都指任务隔离目录，再现有yui native选择及guidance，模型asset准备移到seed后；既有角色除既定voice选择外不覆盖学习者guidance，malformed原卡拒改。实际官方seed3本地PASS，无应用/provider/audio/用户数据。原C32/41/47均未改数据。仅修voice启动，其他first text onboarding仍不冒通过。
+
+clear窄修：canonical grade patch只有AUTO1 + _rearm_empty_study_question_pin严格同driver/delivery/epoch/connection/token/scope/authority/scoped且真实boundary结束的healthyempty，静音clear才保留原槽，仍发送clear并reset resampler，不读新题/不造ASR身份；unknown/pending/poison/featureOFF仍毒化，未送完PCM仍被原protect拦。实际clear/protect AST与Core/SDK/tempSQLite38本地PASS含clear后不同新sealed batch才grade；模型/outertransport double，只SOURCE/OFFLINE。独立fresh-voice-clear-review进行中。
+
+重要交接：neko_native_grade_patch已变，真实host_audio源及manifest仍阶段33；不得启动host/在线，须独立审后oldSHA备份部署_audio.py及helper manifest、SourceGate。当前无live进程/exec，ledger746/2000/app71/null/tech0/0原round，不重试未修线路。下一继续审查→部署→必要修后场，既有47原FAIL保留；必要speaker4%不调整，mic/capture/loopback禁，完整A–F继续。
+
+
+阶段35部署完成：Main+独立首次voice3/Native route38 PASS，无新P1/P2；审报告fresh-voice-clear-review冻结。两实际host _audio旧SHA8cd3cdd8bfd960ea7919342f218385d54c1d34da6606d109024d94c5468d9bac核对后exclusive phase35-before备份，canonical仅窄clear hunk改至cee4583d4d2513ae07d65a3ea1758cd823c1b5cd53a8bd1f154e2429683872d1，重复apply already patched；manifest_audio及grade-patch helper同步，完整SourceGate PASS。host控制脚本4b3a4eba40908eae61f57d274d9cec229ac52ccccbd80aeea0370f2f681889ba、gradepatch0e9a8054860690ec3675b567507453d07c2c93fb150fde492db94cc987afec99。
+
+必要修后场48已启动，唯一exec21739，不另开并行场；全新neko-daily-speech-acceptance-20261015-48验证first launch，不修改47/旧史，复用原forwardPNG/47三WAV（不重做材料），参数与47相同output-only/phrase/speech-gate/grade-chain/prepare-picture/verify，output daily-companion-20261015-continuous48.json。本场起步ledger746/71/0，运行中未判PASS，须等同一exec终态与source/runtime/Native/SQLite/cleanup。禁mic/capture/loopback，speaker仅用户4%不调音量。47原FAIL及source/offline与真实层差异继续保留；全部A–F Goal active。

@@ -281,8 +281,11 @@
     {
       "path": "main_logic/omni_realtime_client/_audio.py",
       "base_sha256": "f82fe6723947868195b09e015823cc65ae0d3929be6cf5dbc9cf3e9f5dfb4372",
-      "patched_sha256": "8cd3cdd8bfd960ea7919342f218385d54c1d34da6606d109024d94c5468d9bac",
-      "daily_phrase_resealed_utc": "2026-10-13T23:22:42.753804+00:00"
+      "patched_sha256": "cee4583d4d2513ae07d65a3ea1758cd823c1b5cd53a8bd1f154e2429683872d1",
+      "daily_phrase_resealed_utc": "2026-10-13T23:22:42.753804+00:00",
+      "phase35_prior_sha256": "8cd3cdd8bfd960ea7919342f218385d54c1d34da6606d109024d94c5468d9bac",
+      "phase35_resealed_utc": "2026-10-14T18:40:06.354327+00:00",
+      "phase35_verified_by": "Main+independent38 route/migration PASS; exact actual clear/protect AST, only fully retired healthy-empty preserved. SOURCE/OFFLINE, post-fix live pending."
     },
     {
       "path": "app/main_server/web_app.py",
@@ -397,8 +400,9 @@
     },
     {
       "path": "scripts/neko_native_grade_patch.py",
-      "sha256": "d9b511352910333e29d71f5010cc53c65dcd4ac6449585e58f3047e38e475ada",
-      "phase33_prior_sha256": "54d9b7e1b8cf49afeae01b4231288751261e1c37dcd48c3236e69d06ff1f12e4"
+      "sha256": "0e9a8054860690ec3675b567507453d07c2c93fb150fde492db94cc987afec99",
+      "phase33_prior_sha256": "54d9b7e1b8cf49afeae01b4231288751261e1c37dcd48c3236e69d06ff1f12e4",
+      "phase35_prior_sha256": "d9b511352910333e29d71f5010cc53c65dcd4ac6449585e58f3047e38e475ada"
     },
     {
       "path": "scripts/neko_material_audio_patch.py",
