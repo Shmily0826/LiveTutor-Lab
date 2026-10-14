@@ -72,3 +72,6 @@ Main当前actual queue fixture无需改变host turn就复现never-announcing自�
 
 
 阶段43已部署/唯一场51：canonical单次join+exactnormalizer、producer exact d247…548b、8oldSHA备份部署+manifest4226…13210；Main无staging runtime2 PASS、自动/phrase40 PASS+1历史skip、handoff12/helper9/grade38 PASS，独立26与实际两树8hash/Gate/cwd imports PASS。启动前账本810/2000、app76/null、tech0/0，policy真实speaker允许/mic/capture/loopback false，原47三WAV哈希与50完全一致。唯一Main exec88660已实际返回live session，fresh store neko-daily-speech-acceptance-20261015-51，report benchmarks/raw/evidence/daily-companion-20261015-continuous51.json；output-only/speech-gate/phrase/grade-chain/prepare-picture/verify-picture，不预造题。尚未终态，不冒通过；poll同handle，不因观测超时重启，不开第二场。默认日常phrase/AUTO OFF、禁mic/capture/loopback、不调4%音量；剩余A–F/原49/50 PARTIAL/Goal active保留。
+
+
+阶段43发布终态：14精确allowlist已commit/push aa18b6a5fc74f4b09db86214cff0d10a977b03c6 到codex/daily-learning-companion，remote同SHA、publisher clean，master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb；Root index空。未发布raw/DB/WAV/备份/密钥；contract FD518…84C33及51原report851407…fef4再核不变。SourceGate结束后PASS，原ledger831/78/0，无live场/宿主/自有端口，所有设备捕获边界保持。下一44先完整四记录，从C的entry_tutor_context_support._build_learning_context/_track_learning/_record_answer_knowledge及store_qa.question_topic_candidates、knowledge_graph_guidance.match_topics接续，核跨题同概念身份与相关历史实际供给，不重复大扫/已过测试、不猜合旧数据、不另建记忆库；B两ASR晚约束保留恢复条件，不盲开52，全部A–F/最终集中human仍未完成，Goal active。
