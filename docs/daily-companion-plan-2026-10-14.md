@@ -1,4 +1,4 @@
-# 日常学习伙伴执行计划（2026-10-15，阶段36进行中）
+# 日常学习伙伴执行计划（2026-10-15，阶段36已发布，下一阶段37）
 
 完整原任务：[contract](daily-companion-contract-2026-10-14.md)，原169行/SHA256 FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33，完整A–F/权限预算/发布验收不以摘要替代、不修改。现有Goal 01a13531-0341-7611-afc2-5c472a7ccf50 active，不重建/擅改模型；小阶段、局部失败、时间或额度不是完成依据。
 
@@ -14,7 +14,7 @@
 
 ## 当前执行方向
 
-阶段36只改scripts/neko_desktop_tutor_host.py的既有role guidance：通用图片指令限定explanation；明确出题/方向题调用study_quiz、omit topic用当前像素，只说返回实际question，不draft/preface。旧ours guidance自动更新，用户自写保留。当前候选SHA475d60ff20c3f9f81f41bdd2c120be26b5d1145f4d46253ee354bca5bcdee280；fresh3再次PASS、独立无P1/P2，仍SOURCE ONLY。
+阶段36只改scripts/neko_desktop_tutor_host.py的既有role guidance：通用图片指令限定explanation；明确出题/方向题调用study_quiz、omit topic用当前像素，只说返回实际question，不draft/preface。旧ours guidance自动更新，用户自写保留。当前源码SHA475d60ff20c3f9f81f41bdd2c120be26b5d1145f4d46253ee354bca5bcdee280；fresh3再次PASS、独立无P1/P2，49真实窄链已证正确选quiz/正式grade，完整播报仍PARTIAL。
 
 必要修后场49已终结（整体PARTIAL）：exec30272、store neko-daily-speech-acceptance-20261015-49、raw evidence/daily-companion-20261015-continuous49.json。output-only/phrase-input/speech-gate/grade-chain/prepare-picture/verify-picture-state，复用原forwardPNG及47三WAV，不预造题。场前757/72/0，终态785/74/0，cleanup[]；当前无live场，不盲重复未修线路。48只走首轮，不能替代49答题证明。
 
@@ -46,3 +46,8 @@
 第三轮Native trace真实上限500（不是300），最终正好500且首wall3632.110已晚于wire ASR3623.838/3629.026，明确环形淘汰；最后窗口34frames非本轮累计45，不能将其ASR缺失称未识别，也不能按只剩后段做完整语义验收。原raw保持不重算。
 
 下一阶段37先本地：复用neko_native_telemetry的500ring观测，在既有probe观察循环逐轮积累有本地sequence的events，严格身份/容量/缺号拒绝，保留actual earlier sourceended与其后无新同token PCM的回执，将30s后空队列cleanup单独记诊断；不裁历史/重置binary计数来冒fresh、不把本地seq当provider utterance。新量具不改49原FAIL。另精确追正式reply完整feedback→owned relay文本→provider transcript→Core publish的截断边界（当前不能唯一说模型或UI），必要先无内容的len/hash诊断和离线fixture，先不在线重试/不盲改音频协议。daily AUTO OFF，Avatar typed、其他A–F仍继续。当前无live host/exec，账本785/74/0。
+
+
+阶段36发布核验：11精确allowlist（1host prompt源码、3当前记录、3原bytes归档、35/36证据与独立复审）已commit/push 2fef51ade29f3087463c811eb87aa870eb0ddd5e 到codex/daily-learning-companion，remote同SHA/publisher clean/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。Root index空/原脏树/.workbuddy/原学习历史保留；无DB/raw/WAV/密钥/备份入Git，contract169行原SHA不变。完整SourceGate再次PASS，ledger785/2000/app74/null/tech0/0，所有47–49 exec已terminal/自有进程已清理，无live场待轮询。
+
+本轮为progress，现有Goal接口再次确认active/all A–F完整，不暂停/重建/标完成。下次压缩/自动续跑先完整四文件和36/49-review，再从明确37观测/完整转述边界接续，不大扫/不重跑未修线路。下一用户真人测试待核心成熟一次集中组织，当前不需本人朗读。
