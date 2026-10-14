@@ -1,60 +1,35 @@
-# 日常学习伙伴执行计划（2026-10-15，阶段28）
+# 日常学习伙伴执行计划（2026-10-15，阶段29收尾）
 
 完整契约：[原文](daily-companion-contract-2026-10-14.md)，169行，SHA256 `FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33`，未修改。每次上下文压缩或自动续跑先完整读取 contract、plan、status、blockers；后续用户明确指令优先，同步更新记录。Goal `01a13531-0341-7611-afc2-5c472a7ccf50` 当前实查 active，不重建、不局部标完成；完成依据实际交付和证据。局部阻塞记录失败/尝试/恢复条件，转其他任务；限流停止无效重试并退避。
 
 当前权限：必要扬声器仅用户已设约4%，不调整音量；禁止房间/物理/虚拟麦克风、捕获设备初始化和回环。已结束真人场的mic授权不延续。固定WAV只走文件→内存/WS，真实发声必须output-only及8API捕获保护；文字child `NEKO_TASK_SILENT=1`。不夜间要求本人朗读；再次集中真人体验待核心可用及本人明确在场。
 
-账本沿用 `bargein-autocheck-20261012` 不重置/换轮：最新实查 DeepSeek **706/2000**、Lanlan.app **70/null**、Lanlan.tech **0/0**；仅Main调整额度和安排在线。无其他付费供应商；连接有界超时/异常停止/退避，不无限重连，不为耗额度测试。请求计数非账单金额。
+账本沿用 `bargein-autocheck-20261012` 不重置/换轮：最新实查 DeepSeek **720/2000**、Lanlan.app **70/null**、Lanlan.tech **0/0**；仅Main调整额度和安排在线。无其他付费供应商；连接有界超时/异常停止/退避，不无限重连，不为耗额度测试。请求计数非账单金额。
 
 允许项目必要修改/隔离依赖、自有测试进程清理；保留Root脏树/.workbuddy/原历史。仅审查过allowlist commit/push `codex/`功能分支，不合并主分支、不强推/覆远端；排除密钥、用户DB、raw音频与无关修改。已有两个子Agent窄范围不冲突，无新增或换模型；Sky Scout源码/索引/已有架构图只读，复用已有两对比图。复用原SQLite和CodeGraph，不另建记忆/索引系统。
 
 源码/离线、真实模型/SQLite、Native接收与播放调度、物理可听、真人体验分别报告；不能用日志/排程冒充可听或本人认可。当前人工不再逐句协助；自动验证到可用后一次约10–20分钟集中体验。
 
-## 历史阶段27末顺序（已由末段阶段28结果取代）
+## 当前方向
 
-1. 新真实场39短答暴露分段FAIL：provider把同一已完整写入phrase拆成“当前题+我的答案是WEX指向NUD”和“点评分”，没有Core claim，provider两次study_answer只存一QA，但Native说旧“已经评分”。原FAIL保留，不重复未修在线。优先成套修明确声明准入与后续同批次纯请求的scope/事务归属，不能只加regex、shield旧owner或拼接未知内容。
-2. 12项/Main独立分段诊断、原37/38只读v2已过；需用39真实事件做离线Core/SDK/SQLite/新有声PCM/换题/连接反例，review/部署清单后才必要修后单场。日常AUTO_GRADE仍OFF。
-3. 延迟定位：长输入写完→accepted7.790/9.290s，短输入首ASR约4.723s但场39语义FAIL，不能把8.564s错误回复当优化成功。保护自然停顿1.2s和普通打断，未证实协议不乱发commit。
-4. 其它完整A–F继续，局部provider分段不等于全局阻塞。核心可用后一次集中human，不逐句占本人时间。
+上一轮阶段28是progress：代码7118f5e/元数据107d76e已发布，真实40单次评分/原ASR/本次转述闭合但教学“答反了”措辞PARTIAL。本轮阶段29继续取得真实失败并修复，未重跑28链；原Goal active，不缩成单项prompt目标。
 
-| 契约范围 | 继续验收及剩余工作 |
+1. 收尾阶段29：具体错误类型、语义等价短答、时间副词与当前图指代、拒绝保存偏好和持久请求的区别。Main/独立源码及离线验证，真实41/42/43见status；最终肯定reminder收紧仅源码/离线，不能冒充重跑实时。
+2. 下一实质阶段优先C/D知识指导相关性：41 relation/arrows材料的knowledge_guidance错配为英语从句；QA topic实际一致为course::有向关系，不能混为掌握度已经散裂。先复用knowledge_graph_guidance.match_topics/_query_terms做离线精确复现，检查泛词“连接/从”及subject证据；证据不足允许不推荐，不推无关课，不重建CodeGraph或记忆库、不改旧成绩。
+3. 再完成日常启用范围和连续集成：固定入口/当前材料可见、自然追问/正式成绩、换材料换课与重启、语言/术语/失败恢复。daily AUTO_GRADE仍OFF，严格legacy/no-pin限制有待日常范围策略，不能为demo放松身份或假造pending。
+4. 自动验证到核心可用后，再一次10–20分钟集中human。当前不要求本人逐句，不采mic/capture/loopback；必要speaker仅已设4%。局部失败切其他可行任务，不能结束整个Goal。
+
+| 全契约范围 | 剩余要求与证据方向 |
 |---|---|
-| A 日常入口/真实材料 | 固定数据配置/课程、就绪与失败信息；当前图可见、换图换课用正确材料、方便图片/指定窗口入口；可靠Study vision接角色声音、密集小字诚实说明。阶段22 current-image窗口已真实DOM过，本人可见性待最终体验。 |
-| B 语音/教学 | 中文/英文/单次切换/课程语言记忆；自然停顿与普通打断；术语数字代码口语；输入结束/ASR/工具/音频/播放分段延迟；默认简短、追问、无证据诚实、纠正后重看材料。 |
-| C 对话/长期学习 | 当前题/原错答/更正、返课/重启；历史实际取用、既有SQLite四项明确长期偏好与临时区分、概念topic一致。阶段23真实SDK wrong→correct与graded重启，26 Native纠正；更宽连续与相关历史仍待。 |
-| D 源码教学 | 复用授权Sky/既有CodeGraph：结构/调用流程/行含义/改动影响；索引版本、源码引用范围、工具选择和事实/推断，不全仓反复读。Sky只读，源代码定位先CodeGraph。 |
-| E 屏幕指示 | 目标窗口代码/模块/关系指点；受控HTML/image/source先交付，滚动缩放/移动后的定位及旧版本退休；开源源码/适配/许可证证据继承；任意桌面范围诚实限定，只指示、学习者操作。 |
-| F 集成/交付 | 多轮、换材料/课、重启、网络失败恢复；启动方式、支持/已知问题/发布/体验步骤；简短耐心愿纠错基础风格；复杂人格后置。最终10–20分钟human，未验不冒PASS。 |
+| A 日常入口/材料 | 固定数据配置/课程、初次引导/就绪/失败信息；图片便捷入口与正确替换/换课、Study vision接角色声音、密集小字诚实边界。阶段19固定入口与22当前图DOM已有证据，未改变不重验；本人可见性留最终体验。 |
+| B 语音/教学 | 中英/一次切换/课程记忆、自然停顿与普通打断、术语数字代码口语、输入/ASR/工具/音频/播放延迟；简短耐心、承接追问、无证据坦白、纠正后重看。29补静音文字语言，不外推语音中英体验。 |
+| C 长期学习 | 原题/错答/更正、返课/重启、相关历史实际取用、既有SQLite四项明确长期偏好与临时区分、概念身份；不建第二套系统。23/26/28已有正式成绩与保留证据，29课语言/4QA重启，指导相关性待修。 |
+| D 真实源码 | 既有CodeGraph/授权Sky结构、调用、行、影响；索引和源码版本/引用范围、事实vs推断，不反复整仓；Sky源码/索引只读。Root无.codegraph，Sky定位先现有CodeGraph。 |
+| E 屏幕指示 | 受控HTML/图片/源码目标内指点与移动/缩放/滚动过期处理、换材料退役；开源实现/适配/许可记录继承。任意桌面范围诚实限定，只指示、学习者操作。 |
+| F 集成交付 | 多轮、换材料/课、重启、网络失败恢复；启动/范围/已知问题/发布记录/体验步骤，默认简短耐心愿纠错；复杂人格后置。实际可听/真人未验不冒PASS。 |
 
-阶段25代码已发布35abae0/元数据39f98ba；阶段26代码/量具/证据已精确发布`3016a30a8910f6e21efbf63c6b94725f276b87f4`（12 allowlist文件）。当前正确题在C32任务，下一步只读基于现状态，不能重新造pending/重置历史。详细身份/原件/时延/进程见status和phase26证据。
+## 交接
 
-## 历史承接
+阶段29代码/记录正在精确allowlist封版，最终发布SHA见status末段；已发布最新阶段28为7118f5e/107d76e。无running host/exec需轮询，账本720/70/0。Root脏master/index空/.workbuddy/原历史保留，managed codex/daily-learning-companion，master不合并/不强推。
 
-精简前plan原bytes独占归档：`docs/evidence/daily-companion-plan-history-through-phase25-and-phase26-preflight-2026-10-15.md`，SHA256 `d8a3694ecaf0e466f3d05a920dd1aa2621215b613ece26d3aeb8e38b0508f210`。此前phase18/16/14/12/10/8及human档保留。旧失败和额度是历史，不能自动当当前；四份最初报告及已过基线不从头重跑。
-
-阶段27启动前：既有phrase/grade自动分段诊断已source修及Main/独立12tests，两个诊断P2已闭；preflight8/完成7过。37/38原件不变，v2只读派生确认写完→accepted7.790/9.290s、Core比provider观察仅约3ms，保护1.2s停顿。必要一场短6.438s固定输入39将复用C32原图，因原题correct通过原Study生成新题而不改历史。SourceGate/output-only已过；本轮尚无新host/调用，ledger691/67/0，mic/capture/loopback仍禁、speaker用户4%。详phase27报告；Goal active/all A–F保留。
-
-阶段27场39收尾：exec11085 terminal/exit1/cleanup[]，任务48911/48916/9234无listener，无live场需轮询。原raw39 SHA3199f88767ef1eec3d6e73c04663d6bc71c3d49af400e09bbf1ef726413180e0，实际一个完整109782sample phrase、两个ASR、provider两次study_answer、QA4→5 current correct100及旧四QA hash保留，但没有Core grade markers，Native错误复述旧“已经评分”。新QA来自provider简写，不是完整逐字ASR；helper后续未执行false不等于实际捕获失败，八API实installed/locked且mic/capture/loopback/volumechange全false。真实偏好/语言相同，task provider恢复deepseek。账本699/2000、app68/null、tech0/0同round，+8DS/+1app，不把全DS当评分。
-
-下一轮先四文件，从phase27末段/latency-review的真实分段缺陷续：首段明确“当前题+我的答案是...”的准入和后段scope/事务必须成套，保护新PCM/换题/连接、未知修饰不拼接；单改regex后第二ASR会retire旧task，禁止复活owner。优先离线actual Core/SDK/SQLite回放再必要有界修后场；当前没有新的runtime修复/默认启用，余A–F持续。旧阶段25/26成功及37/38原FAIL/derived都保留，不外推39。
-
-阶段27发布确认：分段观测/测试/真实39失败证据共9 allowlist文件已review/commit/push `bf355bcedbad04d0c958f566560579820a862d92`，remote同SHA/candidate clean/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb；Root index未stage/原脏树保留，raw/录音/DB/密钥未提交。上一轮为progress（源码观测交付及改变下一步的真实短答失败证据），不是无进展等待。Goal active实查；无running exec/自有host待轮询，ledger699/68/0，未修短答不重复online。下轮先四文件，再按phase27末段修真实分段准入与scope/事务；不只regex，不复活owner，新PCM优先，其余A–F持续。
-
-阶段28开发接续（最末为当前）：候选明确当前pending声明+same-local-sealed纯评分尾句已Main27实际方法/SDK/SQLite回放，intent15PASS/1symlink权限skip，独立27/16(1skip)/phrase20；first-origin waiting证明、之后provider terminal清waiting仍可在严格同owner/frames/对象下吞精确一次尾请求、3s、取消/新PCM优先、异常隔离均有反例。不是线上/设备PASS，未知语义分段仍限制。原39仍真实FAIL，未再online，ledger699/68/0，host无运行。
-
-重要部署状态：Root helper/patch源码已改，manifest仍旧SHA，两个actual host未改；现在不得启动。需完成30file临时全canonical回放/幂等/AST/单helper计数、最后normalizer旧replay重插exact bundle增量补审，再旧SHAguard部署/清单/实际cwd imports/SourceGate。详phase28-short-answer报告与short-answer-tail-review。当前未发布phase28，最新远端d87a26e；Goal active/all A–F不缩，先读四文件续，不跑未修39。
-
-
-阶段28部署更新：最终迁移P2独立3PASS/Main route28，source实际26全预检，candidate仅本次3runtime旧SHA，其他23保留；两host共10runtime/helper已按旧SHAguard部署并备份，manifest/cwdimports/SourceGate过。原“不得启动”已被此部署更新取代；唯一必要修后场40 exec71445进行中，不重复启动。原WAV/图复用，正式新题NUD→REZ，固定答WEX→NUD应由真实SDK诚实评；尚无最终真实结论/新账本，mic/capture/loopback禁、speaker用户4%。详phase28报告。
-
-
-## 当前阶段28收尾与下一步
-
-阶段28已部署并完成真实场40：同批次纯评分尾句未取消原评分，QA5→6恰一正式成绩、旧五QA保留、原ASR全文写入，20项链路检查通过且Native转述本次wrong0/NUD→REZ；“答反了”措辞不准确，教学语义PARTIAL。日常AUTO_GRADE默认OFF，物理可听/human未验；原39FAIL保留。下一步修具体错误解释与短答风格，继续语言/记忆/源码/指示及全部A–F。
-
-exec71445 exit0/cleanup[]，任务三端口无listener，无待轮询host。ledger706/2000、app70/null、tech0/0同原round；不使用mic/capture/loopback，speaker仅用户4%不调。两host实际10runtime/helper旧SHAguard部署、manifest/cwdimports/SourceGate通过；Main route28、intent15+1权限skip、phrase20，independent迁移3；ordinary18/19的1旧TARGETS断言已独立确认在d87a26e存在。场40原件SHA356f05bd...875c84ab，17正PCM/926280bytes及sourceEnded，speechend→PCM10.952024秒不等于物理可听；short-answer-tail-review及phase28报告详载。
-
-下一步：精确审查/发布本轮allowlist后，修“选错连接被说成反向”的具体错误解释，再沿plan A–F连续推进；不重跑本轮已过链、不擅自开daily AUTO、不改原用户历史。当前仅此教学措辞局部缺陷，无全局阻塞或complete依据。
-
-
-阶段28发布确认：14个精确allowlist文件（8脚本/测试、host manifest、5记录）已review/commit/push `7118f5eab9f6ff3ba107e293dde5a4a7c716ad0b` 到codex/daily-learning-companion，remote同SHA、candidate clean、master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。Root index未stage，脏树/.workbuddy/原历史保留；raw/录音/DB/密钥未提交。全契约SHA仍FD518311...84C33。无待轮询进程，账本706/70/0原round。阶段28是实际progress（源码/部署/真实40窄链闭合与准确措辞缺陷证据），不是等待或Goal完成。下一次先读四文件；从现有prompt_templates.py的STUDY answer评估规则及llm_prompts.build_answer_evaluate_messages接续，约束基于真实材料的具体错因、篇幅/语言，再A–F；无需重复40或重建Goal。
+精简前本plan原bytes已独占归档 `docs/evidence/daily-companion-plan-history-through-phase28-and-phase29-start-2026-10-15.md` SHA `6d542e0f7249e1af70ed6f9fecf35234791abae9173b5cbc59021fa9cdc734c8`。所有更早归档和四份最初报告由该历史全文接续保留；旧额度/失败不能自动当当前，不从头重做已验收基线。contract原文169行及SHA不变。

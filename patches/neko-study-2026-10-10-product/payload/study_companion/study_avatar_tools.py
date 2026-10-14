@@ -201,6 +201,11 @@ def _turn_language_request(*texts: Any) -> str:
     new language while the preference itself never gets saved.
     """
     body = "\n".join(str(text or "") for text in texts)
+    # Refusing to save a preference does not request an ongoing language change.
+    body = re.sub(
+        r"(?:不要|别|不用|无需|不必)(?:(?:把|将)[^，,。！？!?;；\n]{1,30})?(?:再|也|长期|永久)?(?:保存|记住|存储|设为|记为)[^，,。！？!?;；\n]{0,20}(?:偏好|设置|习惯)|"
+        r"\b(?:do not|don't|never)\s+(?:save|remember|store|persist)\b[^,.;!?\n]{0,80}\b(?:preferences?|settings?|habits?)\b(?:\s+(?:permanently|going forward|from now on|always))?",
+        "", body, flags=re.I)
     if not body.strip() or _COURSE_LEVEL_REQUEST.search(body):
         return ""
     for language, pattern in _TURN_LANGUAGE:
@@ -840,13 +845,12 @@ class _StudyAvatarToolsMixin:
             return {"ok":False,"error":"literal_source_missing"}
         from .study_materials import material_context, material_output_target, material_context_current
         output_target = material_output_target(self, _)
-        current_picture = bool(
-            re.search(r"架构图|流程图|关系图|图片|截图|图中|图上|这张图|这个图|箭头|\b(?:diagram|picture|image|screenshot|arrows?)\b", question, re.I)
-            and re.search(r"这|图中|图上|当前|刚|屏幕|this|that|current|screen|latest|submitted|shown", question, re.I))
         literal_source_request = bool(str(text or "").strip() and re.search(
             r"代码|源码|函数|变量|标识符|笔记|这段文字|\b(?:source\s+(?:code|line)|code|function|variable|identifier|notes?)\b", question, re.I))
         explicit_picture_reference = bool(re.search(
-            r"(?:当前|刚换|刚交|最新|这张|这个)[^。!?？\n]{0,20}(?:图片|截图|图|箭头)|图中|图上|\b(?:this|that|current|latest|submitted|shown)\s+(?:study\s+)?(?:diagram|picture|image|screenshot)\b", question, re.I))
+            r"(?:当前|刚换|刚交|最新|这张|这幅|这个|这条|那张|那幅|那个|那条|屏幕上)[^。!?？\n]{0,20}(?:图片|截图|图|箭头)|图中|图上|\b(?:this|that|current|latest|submitted|shown|screen)\s+(?:study\s+)?(?:diagram|picture|image|screenshot|arrows?)\b", question, re.I))
+        # A turn modifier such as 'this time' does not select a visual source.
+        current_picture = explicit_picture_reference
         rejected_picture = bool(re.search(
             r"(?:不要|别|不用)(?:再)?(?:查看|看|使用|用)?\s*(?:当前|刚换|刚交|最新|这张|这个|任何|旧)?(?:的)?(?:图片|截图|图)|"
             r"\b(?:do not|don't)\s+(?:look at|use|inspect|read)\s+(?:(?:the|current|this|that|old|any|latest|submitted|shown|study)\s+){0,4}(?:image|picture|diagram|screenshot)\b", question, re.I))
