@@ -1,4 +1,4 @@
-# 日常学习伙伴局部问题（阶段54后，未全局阻塞）
+# 日常学习伙伴局部问题（阶段55后，未全局阻塞）
 
 完整任务以[原始 contract](daily-companion-contract-2026-10-14.md)全文为准，不摘要替代、不修改；169行，SHA256 `FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33`。Goal `01a13531-0341-7611-afc2-5c472a7ccf50` active，完整A–F不缩范围、不因局部失败结束。沿用户指定模型，不擅自换模型。
 
@@ -12,7 +12,7 @@
 | D 源码推理质量 | 59值/键混淆、cap3与DSML失败；50定位/51过滤/52输出分开修。61输出完整但30/100反例错，且无条件泛化“值交换过校验”、偏长/加stars。通用guidance并未解决。53即时Focus+明确材料62数值/拒错窄PASS，不能追改61；风格仍多句/口头禅，下一54修短答并推进UI，不硬编码Sky答案、不重复同数值场。材料范围须在fresh场问题中明确。 |
 | A/E 完整UI与指示 | 受控HTML/图/源码指示、材料重开已有窄证；47真实task初始页面仍Refreshing/未证明完整asyncReady和真实task点击。48同任务profile两次无Translate popup不是所有Chrome永久保证。任意桌面定位未证明；继续受控表面和位置更新，不冒全桌面支持。 |
 | C 范围与身份 | SDK场52旧真实bounded-history穷尽否定失败保留；SDK场53定向两句召回只补窄证，不追改旧场。登记精确别名/绑定优先已有source/offline，未知自由语义/旧多ID不猜合；跨题模型评分等余证继续，不另建记忆系统。 |
-| F 陈旧UI夹具 | 旧product-ui.test.cjs在修改前已缺$id，临时stub又缺studyMaterialRevision；尝试已撤销，不冒整套UI测试PASS。后续维护真实夹具，不能因此停全Goal。 |
+| F UI入口 | 54旧UI夹具已修PASS，65完整Ready/refresh窄PASS；55修页头裁切并67双宽度22checks/16读取及截图PASS。其它尺寸/真实用户Chrome/task点击仍独立待证，不扩大范围。 |
 | 证据/人工 | 首PCM/Native queued不等于可听或真人；当前没有新设备/真人通过。旧真人麦克风授权不延续，成熟后一次集中10–20分钟，用户重新明确准备好了才采真人输入。speaker必要仅4%，当前静音、禁capture/loopback。 |
 
 ## 操作边界
@@ -39,3 +39,4 @@
 
 54进行中：F原UI夹具维护/正式异步Ready验证；详细范围见phase54报告，当前868/78/0，无live场/音频。
 54更新：F旧UI夹具已修复并PASS；A完整异步Ready/真实刷新65窄PASS，63/64观察器失败已记录修复。新可用性缺陷：1440窗口中coach固定占宽、hero最小列宽导致按钮被裁（无页面横向overflow仍存在）；55修可用宽度适配，不将此局部项当全局block。无live进程/868/78/0，音频禁采集。
+54源码/量具与证据1f87a44已发布并核远端；55开始修页头裁切，详见phase55报告。868/78/0，无live，不mic/音频，A–F/Goal active。

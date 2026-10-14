@@ -1,0 +1,22 @@
+# 阶段55：Study页头控制区适配
+
+完整contract/A–F不变，Goal active。54七文件1f87a44d86e64ab3687f61dfe692cc54341b6c74已精确push，master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb，publisher clean。原账本868/78/0、无live。
+
+65截图实见1440窗口中左栏受固定coach挤到约690px，而hero列最小300+560+gap导致右侧toolbar被overflow:hidden裁切。只补局部CSS：按main实际容器宽度转换单/双列，允许状态卡和按钮收缩换行。沿现有主题/功能/文案/coach，不改教学、记忆、权限或全站视觉；不套用新设计。计划在同一静音离线真实host场由全局inspector测桌面+390窄屏，DOM几何加截图，不冒真实手机/音频/人体验。原base style只读，新增局部overlay避免复制整份样式。
+首轮66终态FAIL保留：窄屏11检查（包含header所有按钮44px高/边界/文字不裁）通过，桌面与窄屏截图均无浏览器错，但观察器Event未在下一页面清除，只收一份observation，不能冒双尺寸通过。修量具每个页面独立clear，并记录宽度且强制{390,1440}覆盖，新增针对前页已置Event检查，共8不同边界case PASS。不改CSS来掩盖量具缺陷；下一67为第二且最后确认轮。Impeccable detector已一次执行，overlay CSS无发现；因base样式和KaTeX来自正式base而非overlay相邻路径，静态扫描告两份CSS缺失导致字号假警，另两处img无src为既有hidden动态预览，未据此重做整站。没有宣称全面视觉/手机硬件通过。
+
+
+67终态PASS：全局shared inspector Chromium155依次390/1440，两份独立观察各11=22 checks通过，16个真实读取run均succeeded，无console/page/network错误；课程一致、真实refresh完成，防capture和文字模式成立。所有可见header按钮矩形位于hero内，文字无横向截断且高度>=44；两张PNG已实看，原65右侧按钮裁切已修复。只测这两种宽度，不认1000px容器双列分支/所有缩放档/真实手机触摸/物理user Chrome自动化或Native语音通过。首次引导仍可见但本轮未弹窗抢焦；未重做此前独立首启权限证据。
+
+66 raw SHA201f57a44ef3ba459c4c7ddd119825d08e68744f89f02f271b7122fda5f9b720，保持原FAIL；67 raw SHA60ce74cd56a39ab620c0eff2ac6b35ae9960323ea2be2f10284411246607a14b。启动前/运行中/退出后任务QA均0/SHA4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945，不冒整库所有内容不变。ledger868/2000、app78/null、tech0/0完整dict未变，原round未重置。exec33068终态0，host是owned强制退出1；creationtime核全部owned已死、48911/48916/9234/55322无listener，config provider恢复，cleanup/tracker/budget/config无错。无新音频/麦克风/loopback/模型/真人。
+
+部署：只新增overlay study-layout.css，canonical index多一条同源CSS引用，默认index仍经protected_html+原capture policy文字防护转换。base整份style/学习数据/配置未重写。8个不同probe边界case及旧UI夹具PASS，非模型证据；重复suite不重复计数。默认canonical+protected部署SHA实核匹配manifest。Impeccable最多两轮已用完，停止额外润色/截图重复。
+
+冻结SHA：
+patches/neko-study-2026-10-10-product/static/index.html 81ebd4ff60bac5bae29b801345f78b1b54f5f768549626cfc90121e023030ba6
+patches/neko-study-2026-10-10-product/static/study-layout.css 53305b8ad62ffcc5729cad481f677bef5a12c8af03fb92831126616bf513d470
+patches/neko-study-2026-10-10-product/manifest.json 463839de3a62ce7e82b22a7c46d26c6d8433591d7ea5b06ecb2ca4c6d162bc62
+scripts/neko_study_ready_probe.py 87483c212c6d5bf77972e0d308e8b35ed108f804204a428b538beddadc33b2c1
+scripts/test_neko_study_ready_probe.py f1322331477a9e545b88888bc53e78861c2f75c0a79e718bbd849714f1782cbe
+
+下一56：优先复用现Study解释/CodeGraph与Native material绑定，把D源码教学证据交给可靠Study教师再接角色朗读；先核现接口和材料/换课边界再最小修复，不因text Focus窄PASS认语音交付。简短耐心风格及B自然停顿仍待，局部block继续其它任务。完整A–F/Goal active；发布排除raw/DB/密钥/音频/截图/备份，Root脏改动与Sky只读保留。

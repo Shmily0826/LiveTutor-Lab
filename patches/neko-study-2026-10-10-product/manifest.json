@@ -110,13 +110,15 @@
     },
     {
       "path": "static/index.html",
-      "sha256": "e8326a83958fab73370a99943ed43bd9c5aa2ca9a5231a39a6f9d27aa9303ca3",
+      "sha256": "81ebd4ff60bac5bae29b801345f78b1b54f5f768549626cfc90121e023030ba6",
       "deployed_matches": false,
       "protected_deployed_matches": true,
-      "protected_deployed_sha256": "1bb5c9a2e83d425c0180a46e853ee121ccab308ff51e7f325af0231b77868569",
+      "protected_deployed_sha256": "548f61fc661687c4e83e8298bf4bc4fc714f525d36b29b0ec4935e7c34ead2b9",
       "deployment_transform": "exact protected_html(canonical index, pinned capture policy, text_only=True), Windows write_text newline conversion",
       "phase47_prior_sha256": "cb27a30693e5023dd167781165201712aed79e8662602594f984f2e7e2440928",
-      "phase47_verification": "Reviewed source/offline URL allowlist; real shared-browser shipped HTML/CSS initializer local picture load, window.closed and reopen, absent computed hidden. Silent offline launcher57 actual owned command query/current course+PNG/early guarded served initializer link visible; async readiness/click in physical task Chrome not claimed. Translate auxiliary popup recurred (original false retained); no model/audio/human proof."
+      "phase47_verification": "Reviewed source/offline URL allowlist; real shared-browser shipped HTML/CSS initializer local picture load, window.closed and reopen, absent computed hidden. Silent offline launcher57 actual owned command query/current course+PNG/early guarded served initializer link visible; async readiness/click in physical task Chrome not claimed. Translate auxiliary popup recurred (original false retained); no model/audio/human proof.",
+      "phase55_prior_sha256": "e8326a83958fab73370a99943ed43bd9c5aa2ca9a5231a39a6f9d27aa9303ca3",
+      "phase55_verification": "Shared headless Chromium 67: full real Study bootstrap/SDK and refresh at390/1440,22 DOM checks/16 reading runs; header visible controls bounds/text/44px pass, screenshots reviewed. Original QA and868/78/0 ledger unchanged. Observation-only bootstrap promise; not physical user Chrome/Native/audio/human or all responsive widths. 66 missing second observation retained FAIL."
     },
     {
       "path": "static/main.js",
@@ -200,6 +202,12 @@
       "sha256": "57f15ad0df24648086cc1add1d886b2e403371eb2fff1ce2ea48a43e2967602f",
       "deployed_matches": true,
       "base_sha256": "0069f0cae4dea26b654415e5883744576877dbe3a9163414099428bbad9af2fd"
+    },
+    {
+      "path": "static/study-layout.css",
+      "sha256": "53305b8ad62ffcc5729cad481f677bef5a12c8af03fb92831126616bf513d470",
+      "deployed_matches": true,
+      "phase55_verification": "Shared headless Chromium 67: full real Study bootstrap/SDK and refresh at390/1440,22 DOM checks/16 reading runs; header visible controls bounds/text/44px pass, screenshots reviewed. Original QA and868/78/0 ledger unchanged. Observation-only bootstrap promise; not physical user Chrome/Native/audio/human or all responsive widths. 66 missing second observation retained FAIL."
     }
   ],
   "prior_deployment": "benchmarks/raw/neko-product-data/plugin-code/study_companion",

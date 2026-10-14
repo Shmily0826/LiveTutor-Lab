@@ -1,6 +1,7 @@
 """Check observer anchoring and relay boundaries without opening a host or browser."""
 import io
 import json
+import threading
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock
@@ -82,6 +83,15 @@ class RelayBoundary(unittest.TestCase):
                      {'limit':100,'offset':10001},{'limit':1000,'offset':0},
                      {'limit':100,'offset':0,'delete':True}):
             self.assertFalse(allowed(args),args)
+
+    def test_each_new_page_waits_for_its_own_observation(self):
+        handler=self.request(probe.UI,{})
+        handler.server.done=threading.Event();handler.server.done.set()
+        handler.server.index='<html><body></body></html>'
+        handler.server.policy='/* policy fixture; no browser executed */'
+        handler.do_GET()
+        self.assertFalse(handler.server.done.is_set())
+        self.assertEqual(handler.reply.call_args.args[0],200)
 
 
 if __name__=='__main__':unittest.main(verbosity=2)

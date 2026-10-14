@@ -1,0 +1,47 @@
+/* The fixed coach narrows the workspace even when the viewport is wide. */
+.main-view {
+  container-type: inline-size;
+}
+
+.hero {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.hero__copy,
+.hero__controls {
+  min-width: 0;
+}
+
+.hero__controls {
+  justify-items: stretch;
+}
+
+.hero .summary-pills {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.hero .summary-pill {
+  min-width: 0;
+  max-width: none;
+}
+
+.hero .mode-switch {
+  min-width: 0;
+}
+
+.hero button {
+  min-height: 44px;
+}
+
+@container (min-width: 1000px) {
+  .hero {
+    grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.3fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .hero .summary-pills {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

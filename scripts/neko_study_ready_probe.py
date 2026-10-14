@@ -4,6 +4,7 @@ Only the bootstrap promise is exposed for observation; no plugin result is mocke
 The relay permits a fixed set of local reading entries and never forwards model work.
 """
 import hashlib
+import argparse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
@@ -26,7 +27,7 @@ from neko_tutor_start import plugin_server_ready, process_creation_time
 
 ROOT=Path(__file__).resolve().parents[1]
 STORE=ROOT/'benchmarks/raw/neko-daily-material-window-20261015-54'
-OUTPUT=ROOT/'benchmarks/raw/evidence/daily-companion-study-ready65.json'
+OUTPUT=ROOT/'benchmarks/raw/evidence/daily-companion-study-ready66.json'
 BASE='http://127.0.0.1:48916'
 UI='/plugin/study_companion/ui/'
 ALLOWED={'study_status','__llm_tool__study_material','study_get_practice_scope',
@@ -68,8 +69,16 @@ try {
  check('real refresh completed',lastStatusPayload!==previous&&!uiActionInFlight&&studyServiceReady);
  check('same course after refresh',String(lastStatusPayload.study_course_id||lastStatusPayload.state?.study_course_id||'')===course);
  check('status finished',!/Refreshing|刷新中|Starting\.\.\./i.test(document.getElementById('statusLine').textContent),document.getElementById('statusLine').textContent);
+ await document.fonts.ready;
+ const hero=document.querySelector('.hero').getBoundingClientRect();
+ const controls=['modeCompanionBtn','modeInteractiveBtn','modeTeachingBtn','refreshBtn','ocrBtn','learningMaterialLink']
+   .map(id=>document.getElementById(id)).filter(node=>node&&!node.hidden);
+ const bounds=controls.map(node=>{const r=node.getBoundingClientRect();return {id:node.id,left:r.left,right:r.right,top:r.top,bottom:r.bottom,
+   fits:r.width>0&&r.height>=44&&r.left>=hero.left&&r.right<=hero.right+1&&r.top>=hero.top&&r.bottom<=hero.bottom+1&&node.scrollWidth<=node.clientWidth+1};});
+ check('all visible header controls fit without clipping',bounds.every(r=>r.fits),JSON.stringify(bounds));
+ check('no page horizontal overflow',document.documentElement.scrollWidth<=document.documentElement.clientWidth);
 }catch(error){checks.push({name:'observer failure',pass:false,detail:String(error)});}
-finally{clearTimeout(timer);await fetch('/__phase54_result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(checks)});}
+finally{clearTimeout(timer);await fetch('/__phase54_result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({width:innerWidth,checks})});}
 })();'''
 
 
@@ -104,6 +113,7 @@ class Relay(BaseHTTPRequestHandler):
             self.server.done.wait(14)
             return self.reply(200,b'/* bounded observation gate released */')
         if path in (UI,UI+'index.html'):
+            self.server.done.clear()
             page=self.server.index.replace('</body>','<script src="/__phase54_observer.js"></script><script defer src="/__phase54_gate.js"></script></body>')
             page=protected_html(page,self.server.policy,text_only=True)
             return self.reply(200,page.encode(),'text/html; charset=utf-8')
@@ -114,7 +124,9 @@ class Relay(BaseHTTPRequestHandler):
         if length<0 or length>1_000_000:return self.reply(413,b'{}','application/json')
         body=self.rfile.read(length)
         if self.path=='/__phase54_result':
-            self.server.report['dom_checks']=json.loads(body)
+            observation=json.loads(body)
+            self.server.report.setdefault('dom_observations',[]).append(observation)
+            self.server.report.setdefault('dom_checks',[]).extend(observation['checks'])
             self.server.done.set()
             return self.reply(200,b'{}','application/json')
         if self.path!='/runs':return self.reply(403,b'{"error":"probe path refused"}','application/json')
@@ -153,6 +165,17 @@ class Relay(BaseHTTPRequestHandler):
 
 
 def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output',type=Path,default=OUTPUT)
+    parser.add_argument('--all-viewports',action='store_true')
+    args=parser.parse_args()
+    output=args.output.resolve()
+    if output.parent!=(ROOT/'benchmarks/raw/evidence').resolve() or output.suffix!='.json':
+        raise ValueError('output must be a new JSON directly in task evidence directory')
+    return inspect(output,args.all_viewports)
+
+
+def inspect(OUTPUT,all_viewports=False):
     if OUTPUT.exists() or OUTPUT.with_suffix('.host.log').exists():raise ValueError('preserve prior scene evidence')
     if (not STORE.is_dir() or STORE.is_symlink()
             or STORE.resolve().parent!=(ROOT/'benchmarks/raw').resolve()):
@@ -203,7 +226,9 @@ def main():
         print('Actual read-only Study host ready; no model/audio/capture',flush=True)
         client=LabClient();report['status_before']=client.call('study_status');report['qa_before']=qa_snapshot();save()
         target=f'http://127.0.0.1:{server.server_port}'+UI
-        inspector=subprocess.Popen(['node',r'D:\AI\tools\web-inspector\cli.mjs',target,'--json','--screenshot'],
+        command=['node',r'D:\AI\tools\web-inspector\cli.mjs',target,'--json','--screenshot']
+        if all_viewports:command.extend(['--desktop','--mobile'])
+        inspector=subprocess.Popen(command,
                                    cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding='utf-8')
         created=process_creation_time(inspector.pid)
         if created is None:raise RuntimeError('inspector identity unavailable')
@@ -214,7 +239,9 @@ def main():
         report['inspector_stderr']=stderr[:1000]
         report['inspector']=json.loads(stdout)
         assert all(view['success'] and not view['pageErrors'] and not view['consoleErrors']
-                   and not view['failedRequests'] for view in report['inspector']['results']),'browser reported failures'
+                   and not view['failedRequests'] and not view['horizontalOverflow'] for view in report['inspector']['results']),'browser reported failures'
+        assert len(report.get('dom_observations',[]))==(2 if all_viewports else 1),'missing viewport observation'
+        assert {entry['width'] for entry in report['dom_observations']}==({390,1440} if all_viewports else {1440}),'unexpected viewport coverage'
         assert report['main_original_sha256']==hashlib.sha256((host.PRODUCT/'static/main.js').read_bytes()).hexdigest(),'served main differs from current source'
         report['qa_after']=qa_snapshot();report['status_after']=client.call('study_status')
         assert report['qa_before_start']==report['qa_before']==report['qa_after'],'task QA changed'
@@ -223,7 +250,7 @@ def main():
         assert not report.get('refused_entries'),'unexpected entry requested'
         assert report.get('completed_runs') and all(run['status']=='succeeded' for run in report['completed_runs'].values()),'a reading run failed'
         assert set(server.runs)==set(report['completed_runs']),'a reading run was not observed to finish'
-        report['result']='PASS: complete bootstrap/real refresh/text protection; QA unchanged'
+        report['result']='PASS: complete bootstrap/real refresh/text protection/header layout; QA unchanged'
     except Exception as error:
         report['failure']=type(error).__name__+': '+str(error)
     finally:

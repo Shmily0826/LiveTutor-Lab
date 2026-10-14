@@ -1,14 +1,14 @@
-# 日常学习伙伴状态（阶段54入口就绪窄通过，整体未完成）
+# 日常学习伙伴状态（阶段55入口适配通过，整体未完成）
 
 完整任务以[原始 contract](daily-companion-contract-2026-10-14.md)全文为准，不摘要替代、不修改；169行，SHA256 `FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33`。Goal `01a13531-0341-7611-afc2-5c472a7ccf50` active，完整A–F不缩范围、不因局部失败结束。沿用户指定模型，不擅自换模型。
 
 每次压缩或自动续跑先完整读取 contract、plan、status、blockers，再读当前阶段报告；后续明确指令优先并同步记录。完成依据实际交付和证据；SOURCE/OFFLINE、真实模型/SQLite、Native接收排程、设备可听、真人体验分别记录，旧FAIL/PARTIAL不追改。
 
-## 当前阶段53
+## 当前阶段55
 
-[本阶段完整报告](evidence/daily-companion-phase53-source-reasoning-2026-10-15.md)
+[本阶段完整报告](evidence/daily-companion-phase55-study-layout-2026-10-15.md)
 
-53当前：已给明确中英源码推理请求加入既有Focus的即时question信号，保留全局/用户关闭与状态机限制；12不同离线case PASS。唯一静音真实62两轮均实际mode=focus/question1.0，4个当前CodeGraph receipts，数值30/100失败400、30/40过校验到fetchWeather及拒绝错误纠正均有源码支持，核心语义窄MODEL PASS。短答风格仍PARTIAL：第二轮4句及口头禅/收尾，第一轮末语气不理想。账本868/2000、app78/null、tech0/0；exec94567终态0/host forced-stop1/owned与三端口清空，无声音/mic/capture。全部A–F/Goal active，下一54处理角色简短风格并推进F完整UI/陈旧夹具，不重跑同数值场。
+已修Study页头被固定coach挤窄后按钮裁切；新增局部container CSS，保留主题/功能/防capture。静音离线真实67在390/1440两份独立观察22 DOM checks、16后台读取及截图通过；54完整启动/刷新65和旧UI夹具已通过。66量具跨页Event未清导致缺观察保留FAIL。没有新模型/音频/设备/真人证明。下一56优先Study教师/CodeGraph→Native角色朗读桥接及简短风格；B自然停顿仍PARTIAL，完整A–F不缩。
 
 ## 已交付与既有证据层
 
@@ -22,13 +22,11 @@
 
 ## 当前部署、发布与进程
 
-- 实际source `_streaming.py` SHA `63041b29993f92632ded27393aa67b54ad99eb89d09d4882c2b0de7574039137`；候选树保留原discard-notice差异 SHA `5cbbe7bdaa749afbe7028675a853d9da68a1e1aa7994a1b0ef7d44224423e074`，未覆写。
-- host manifest SHA `5e5e385e16b064ab9e537eee3cfbd8c00d34c6ddd74b9681336ef84896b22c2a`；product manifest沿50 `32f9da743c329d19e2e8018f52233946bdca029d72f962b942183671d2cd79a8`。52时post61 SourceGate PASS；53当前host manifest SHA `7804da9efaccc9d255d8256a6be329da898999465975d0bd41db53c81833bd00`，scorer SHA `185044e52bae217757ee10dd273779eeb94fac820fcc18d94b8e07150f96e1d1`，post62 SourceGate PASS。
-- 52源码已push `8d9bf21aaceed89c23fb9d0313e144e23be2b822`，分支codex/daily-learning-companion；remote exact，master仍 `f1e8f3f5605659f0526e43bc3b85c60ae46c85fb`。未发raw/DB/录音/密钥/备份，Root index空，publisher此前clean。
-- exec65863终态0；host有意forced-stop退出1，非自然0。cleanup/tracker无错、owned_alive=[]、48911/48916/9234无listener。无live测试场；未开Native/浏览器/声音/mic/capture/loopback，没有新UI/设备/真人通过。
-- 原账本不重置：DS868/2000、Lanlan.app78/null、Lanlan.tech0/0。下一外部场前再实核；当前静音，不使用麦克风。
-
-下一54及完整A–F见[计划](daily-companion-plan-2026-10-14.md)，局部条件见[blockers](daily-companion-blockers-2026-10-14.md)。
+- 54七文件已精确push `1f87a44d86e64ab3687f61dfe692cc54341b6c74` 到codex/daily-learning-companion，master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。55正在审后发布。52/53旧源码/部署SHA按原阶段报告，不把历史HEAD当现HEAD。
+- 55默认只改canonical index/CSS并保留protected_html文字防护，manifest实核匹配；具体SHA见55报告。main/教学/记忆/host pin无变化。
+- exec33068终态0，host有意forced-stop1，creationtime核所有owned已死/48911、48916、9234、55322无listener，无live handle。QA0前中后同SHA；不是用户历史接续的新证据。
+- 原账本DS868/2000、Lanlan.app78/null、Lanlan.tech0/0，整dict不变。下一外部场前再实核，不换轮/供应商。当前静音，禁mic/capture/loopback；必要speaker仅已设4%。
+- 下一56及完整A–F见[计划](daily-companion-plan-2026-10-14.md)，局部条件见[blockers](daily-companion-blockers-2026-10-14.md)。
 
 精简前完整原bytes历史已独占归档：[through52](evidence/daily-companion-status-history-through-phase52-2026-10-15.md)，SHA256 `7b2cfb5061de25e74202731ff3c6eefe6f0c3ed195c573e7f4b4b28cb8f2ab86`。历史原件不改；原contract不变。旧档相对链接按原docs位置理解。
 
@@ -51,3 +49,4 @@
 54冻结：UI旧夹具PASS/只读relay5 PASS；63准备验证完整bootstrap与真实refresh，原868/78/0无新模型/音频。细节见phase54报告。
 54：63观察量具来源HTTP403失败保留，不能据此认正式UI故障；已有受支持的单场精确origin配置修复，6离线case PASS，待唯一64。868/78/0，静音无mic。
 54终态：65完整bootstrap/刷新9DOM与8真实读取PASS，无浏览器错，QA0前后同SHA。63来源拒绝/64列表漏白名单失败保留。868/78/0，exec8562=0、owned forced-stop1且全死/四端口空，SourceGate PASS。截图页头裁切仍PARTIAL，55修；详见phase54报告。
+54源码/量具与证据1f87a44已发布并核远端；55开始修页头裁切，详见phase55报告。868/78/0，无live，不mic/音频，A–F/Goal active。
