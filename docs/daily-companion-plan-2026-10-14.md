@@ -1,4 +1,4 @@
-# 日常学习伙伴计划（阶段41已交付 / 40草稿隔离，2026-10-15）
+# 日常学习伙伴计划（阶段42离线审查通过 / 41已交付，2026-10-15）
 
 完整原任务：[contract](daily-companion-contract-2026-10-14.md)，原169行/SHA256 FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33；完整A–F/预算权限/验收不以当前记录摘要替代，不修改contract。现有Goal 01a13531-0341-7611-afc2-5c472a7ccf50 active，GPT-6.1 Sol High不擅改，不重建/缩scope/假完成。
 
@@ -13,6 +13,8 @@
 证据分别写SOURCE/OFFLINE、真实模型/SQLite、Native接收排程、实际可听、真人；空帧不算正PCM，本地write不算provider ACK，无证据不冒PASS。
 
 ## 当前动作
+
+阶段42终态：隔离同slot续接patch/test ceb906…67474a/23070f…bc32c4；独立26、Main相关52，最终78不同SOURCE/OFFLINE PASS。实际wire-ID、pending新PCM取消P2离线关闭；无合法终态按原3s grace安全failclose，不能说不断连恢复；替换ws在取消入口/升级前核原connection，不关新socket。生产链/宿主/manifest未动、SourceGate PASS。先发布本阶段8精确allowlist，下一43准备隔离实验接线/回退与canonical+manifest+Gate必要验证，default phrase/AUTO OFF；足够安全再受控单场，不盲重连。多ASR/第二round、双30s及provider因果限制详phase42报告；若资格不足转A/C/D/E余项。原49/50 PARTIAL/全部A–F及最终集中human不变，Goal active。
 
 上一轮37/38已实际改码、测试、审查、部署与发布，属于progress。37累计观测58离线；38反馈诊断50离线/独立7，SourceGate本轮再次PASS。源码发布60f4c1f，metadata最新f86d53b，均codex/daily-learning-companion，主分支不变。
 

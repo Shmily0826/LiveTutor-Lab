@@ -1,4 +1,4 @@
-# 日常学习伙伴局部问题（阶段41已交付 / 40草稿隔离，2026-10-15）
+# 日常学习伙伴局部问题（阶段42离线审查通过 / 41已交付，2026-10-15）
 
 完整原任务：[contract](daily-companion-contract-2026-10-14.md)，原169行/SHA256 FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33；完整A–F/预算权限/验收不以当前记录摘要替代，不修改contract。现有Goal 01a13531-0341-7611-afc2-5c472a7ccf50 active，GPT-6.1 Sol High不擅改，不重建/缩scope/假完成。
 
@@ -13,6 +13,8 @@
 证据分别写SOURCE/OFFLINE、真实模型/SQLite、Native接收排程、实际可听、真人；空帧不算正PCM，本地write不算provider ACK，无证据不冒PASS。
 
 ## 局部问题 / 恢复条件
+
+阶段42：40工具回写互等已隔离修；独立26+Main相关52共78不同离线PASS。独立wire-ID与pending新PCM取消P2均SOURCE/OFFLINE关闭，初修旧cancel关闭替换ws回归也关闭；无合法终态是<4s安全failclose，尚非不断连接续。仍未生产接线/部署/在线证明；恢复需精确实验接线、current bytes canonical/normalizer/manifest/Gate和必要回归一致，才可受控单场，不盲重连。两个30s各自计时可能producer先失败，多ASR/第二round、晚到工具及provider严格因果仍PARTIAL；本地单outstanding不是ACK，内容开始/完成后迟tool明确拒绝。详phase42与最终实现审查。局部受阻继续其他A–F，Goal active，不标全局blocked/complete。
 
 | 项目 | 具体证据、尝试与下一步 |
 |---|---|

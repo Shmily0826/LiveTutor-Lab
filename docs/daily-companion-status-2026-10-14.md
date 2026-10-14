@@ -1,4 +1,4 @@
-# 日常学习伙伴状态（阶段41已交付 / 40草稿隔离，2026-10-15）
+# 日常学习伙伴状态（阶段42离线审查通过 / 41已交付，2026-10-15）
 
 完整原任务：[contract](daily-companion-contract-2026-10-14.md)，原169行/SHA256 FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33；完整A–F/预算权限/验收不以当前记录摘要替代，不修改contract。现有Goal 01a13531-0341-7611-afc2-5c472a7ccf50 active，GPT-6.1 Sol High不擅改，不重建/缩scope/假完成。
 
@@ -13,6 +13,8 @@
 证据分别写SOURCE/OFFLINE、真实模型/SQLite、Native接收排程、实际可听、真人；空帧不算正PCM，本地write不算provider ACK，无证据不冒PASS。
 
 ## 已交付与当前运行
+
+阶段42本地完成：原slot对象资格随真实tooltask/collector传递，完整原PCM后才执行，结果同lane写回不另ticket；真实wire call_id保留/严格核验，不按合成前缀猜。独立26 PASS28.074s；Main最终自动20+phrase20 PASS13.520s、普通handoff12 PASS4.816s，78不同SOURCE/OFFLINE cases，非模型/设备/真人。wire-ID与pending取消P2均离线关闭；取消未知终态走原3s grace安全断连，未冒不断连接续。初修替换socket被旧cancel关闭的回归已修并留证。最终patch ceb906…67474a/test23070f…bc32c4，设计/实现审查/阶段报告见evidence/daily-companion-native-tool-join-{design,implementation-review}-2026-10-15.md及daily-companion-phase42-native-tool-join-2026-10-15.md。生产链/producer/host/manifest/默认开关未动，SourceGate PASS，原账本实核810/2000、app76/null、tech0/0，无在线/设备/音量操作，无live host/场/自有端口。下一精确发布本阶段可审allowlist，再准备隔离实验接线及Gate；多ASR/第二round、两个30s与provider严格因果仍PARTIAL，default phrase/AUTO OFF、原49/50与全部A–F余项保留，Goal active。
 
 37修500ring丢证据：严格累计≤12000、seq/identity/PCM计数一致，丢失拒绝；observer末段失败P2已关闭，58离线/独立closure，正常source_ended后空队列cancel只按完整证据分开。38原WireTrace扩展无正文length/hash，50离线/独立7，8目标各自oldSHA备份/canonical/AST/幂等、manifest、SourceGate当前PASS。详phase37-native-observation、phase38-feedback-trace及两独立review。
 
