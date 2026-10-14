@@ -1,6 +1,6 @@
 # 日常学习伙伴局部问题（阶段45交付 / 53定向通过，整体未完成）
 
-45当前：概念显示label不再自动当ID；已有binding/同题history优先，精确且唯一的已登记同课name/alias才复用concept。新10+binding12+history13+material14共49离线PASS；独立35、actualdefault23 PASS，四文件精确备份部署/全manifest/Gate PASS。唯一静音53实际prompt coverage生效、两句旧误读与纠正无穷尽否定，本场MODEL窄PASS；别名跨题评分仍SOURCE/OFFLINE，不冒Native/设备/human。53exec51862已terminal/清理无错误，无live host/端口，原ledger835/78/0。详[phase45](evidence/daily-companion-phase45-concept-label-2026-10-15.md)。独立53复核/发布收尾后转A/E日常材料与指示本人可见入口，B多ASR及全部余项继续。
+45当前：概念显示label不再自动当ID；已有binding/同题history优先，精确且唯一的已登记同课name/alias才复用concept。新10+binding12+history13+material14共49离线PASS；独立35、actualdefault23 PASS，四文件精确备份部署/全manifest/Gate PASS。唯一静音53实际prompt coverage生效、两句旧误读与纠正无穷尽否定，本场MODEL窄PASS；别名跨题评分仍SOURCE/OFFLINE，不冒Native/设备/human。53exec51862已terminal/清理无错误，无live host/端口，原ledger835/78/0。详[phase45](evidence/daily-companion-phase45-concept-label-2026-10-15.md)。45独立53复核与源码发布已完成；下一转A/E日常材料与指示本人可见入口，B多ASR及全部余项继续。
 
 完整原始任务：[contract](daily-companion-contract-2026-10-14.md)，原169行/SHA256 FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33，全文A–F/预算/权限/验收条件不被摘要替代，contract不修改。现有Goal01a13531-0341-7611-afc2-5c472a7ccf50 active，不重建/缩范围/假完成；GPT-6.1 Sol High不擅改。
 
@@ -42,3 +42,6 @@
 
 
 阶段45已审部署：四default文件逐oldSHA备份phase45-default-before/精确新SHA、manifest451cdf3b87db02710864e4ebbd072f4961aa255fd740abf52e385fbbbd51bc11；SourceGate PASS，实际default Store/Tracker/context/grade AST的label10+history13共23 PASS2.650s。独立source35 PASS与probe560b0015静态closure。唯一静音53实际启动exec session51862，fresh store neko-daily-relevant-history-20261015-53，raw evidence/daily-companion-relevant-history53.json；原ledger833/78/0起，4Studyquota/TASK_SILENT/source/text-only/无capture/设备。只poll同handle，未终态不声称通过，不重跑52/另开场。
+
+
+阶段45终态/发布已核：独立53原raw/actual prompt/回复语义复核关闭，本场有限历史+纠正召回窄MODEL PASS，不外推alias跨题模型grade/Native/设备/human；原52 PARTIAL保留。14精确allowlist已commit/push 97b5b9dbd38940e4c60cb53822d5ac78e0e3bc42 到codex/daily-learning-companion，remote exact、master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb、publisher clean、Root index空；无raw/DB/WAV/密钥/备份发布。最终product manifest bc4f78fa032582cf3e2a590a5274c6a0d7be9b6273cc00f19e025ecb9f043f86、全source/default与post53 SourceGate PASS、contract原SHA不变。原账本835/78/0，所有场/任务宿主已终态，无live句柄/自有端口。下一46已窄读旧phase22报告与当前launcher：现Start-Daily入口含--learning-surface，源码已attach_study_store，不能把旧“尚未接线”当当前事实；先实际UI核当前课图/指示与可见窗口流程，再按实差距修，复用原材料，不重做已过几何批次。全部A–F/Goal active继续。

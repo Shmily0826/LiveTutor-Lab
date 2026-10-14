@@ -62,3 +62,6 @@ Source venv `python -X utf8 -B scripts/<test>.py`，实际临时SQLite/Store/Tra
 - 52量具原55a581副本、原report/store不变；53只因新prompt实际改变而安排一次，不为额度重复已过场。独立原件/语义复核pending。
 
 最终product manifest SHA `bc4f78fa032582cf3e2a590a5274c6a0d7be9b6273cc00f19e025ecb9f043f86`，仅更新phase45证据说明；全source/default含protected static例外逐项再核PASS，四生产源码/测试指纹不变。下一精确allowlist发布45，再转A/E日常材料可见入口核对；其余A–F/51多ASR与最终human继续，Goal active。
+
+
+阶段45终态/发布已核：独立53原raw/actual prompt/回复语义复核关闭，本场有限历史+纠正召回窄MODEL PASS，不外推alias跨题模型grade/Native/设备/human；原52 PARTIAL保留。14精确allowlist已commit/push 97b5b9dbd38940e4c60cb53822d5ac78e0e3bc42 到codex/daily-learning-companion，remote exact、master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb、publisher clean、Root index空；无raw/DB/WAV/密钥/备份发布。最终product manifest bc4f78fa032582cf3e2a590a5274c6a0d7be9b6273cc00f19e025ecb9f043f86、全source/default与post53 SourceGate PASS、contract原SHA不变。原账本835/78/0，所有场/任务宿主已终态，无live句柄/自有端口。下一46已窄读旧phase22报告与当前launcher：现Start-Daily入口含--learning-surface，源码已attach_study_store，不能把旧“尚未接线”当当前事实；先实际UI核当前课图/指示与可见窗口流程，再按实差距修，复用原材料，不重做已过几何批次。全部A–F/Goal active继续。
