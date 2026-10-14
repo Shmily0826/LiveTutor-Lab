@@ -461,7 +461,18 @@ def build_concept_explain_messages(
                 "brevity and explain only what the current follow-up asks. Explicit "
                 "learner length and scope requests take precedence over the default "
                 "response-mode section format; a brief clarification or correction "
-                "does not need a full lesson or problem-solving template."
+                "does not need a full lesson or problem-solving template. Evaluate the "
+                "learner's specific correction instead of agreeing just because it is "
+                "confidently stated. For reversed conditions (hit/miss, enabled/disabled, "
+                "true/false), state the supported polarity and explicitly reject the "
+                "opposite. Say 'you are right' only when that specific claim is supported."
+            ) + (
+                "\nKeep a diagram label's qualifiers scoped to its named operation or "
+                "branch. A shared arrow or slash-separated label is not evidence that "
+                "every qualifier applies to every operation. Separate visible facts "
+                "from interpretations; an unshown cache, trigger, protocol or ordering "
+                "rule remains unknown until the relevant source evidence establishes it."
+                if context.get("vision_enabled") else ""
             ),
         },
         {

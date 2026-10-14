@@ -761,6 +761,11 @@ from neko_material_audio_patch import normalize_material_audio
 TARGETS, _MATERIAL_AUDIO_REPLAY = _material_audio_targets(TARGETS)
 _OWNER_TRACE_REPLAY += _MATERIAL_AUDIO_REPLAY
 
+from neko_phrase_input_patch import upgrade_targets as _phrase_input_targets
+from neko_phrase_input_patch import normalize_phrase_helpers, normalize_phrase_transport
+TARGETS, _PHRASE_INPUT_REPLAY = _phrase_input_targets(TARGETS)
+_OWNER_TRACE_REPLAY += _PHRASE_INPUT_REPLAY
+
 
 def hunks_for(path: Path):
     """The replacement list that belongs to this file."""
@@ -776,6 +781,10 @@ def state(path: Path) -> str:
     if not path.is_file():
         return "missing"
     text = path.read_text(encoding="utf-8")
+    if path.as_posix().endswith("main_logic/core/session_lifecycle.py") and normalize_phrase_helpers(text) != text:
+        return "partial(reviewed-phrase-authority-helper)"
+    if path.as_posix().endswith("main_logic/omni_realtime_client/_transport.py") and normalize_phrase_transport(text) != text:
+        return "partial(reviewed-phrase-transport-draft)"
     if path.as_posix().endswith("main_logic/omni_realtime_client/_tools.py") and normalize_ordering_helpers(text) != text:
         return "partial(reviewed-ordering-helper)"
     if path.as_posix().endswith("static/app/app-audio-playback.js") and normalize_playback_feedback(text) != text:
@@ -794,12 +803,21 @@ def apply_to(path: Path) -> str:
     if current == "patched":
         return "already patched"
     text = path.read_text(encoding="utf-8")
+    if path.as_posix().endswith("main_logic/core/session_lifecycle.py"):
+        text = normalize_phrase_helpers(text)
+    if path.as_posix().endswith("main_logic/omni_realtime_client/_transport.py"):
+        text = normalize_phrase_transport(text)
     if path.as_posix().endswith("static/app/app-audio-playback.js"):
         text = normalize_playback_feedback(text)
     if path.as_posix().endswith("main_logic/core/tool_calling.py"):
         text = normalize_material_audio(text)
     if path.as_posix().endswith("main_logic/omni_realtime_client/_tools.py"):
         text = normalize_ordering_helpers(text)
+    # A reviewed normalizer can already produce the complete canonical source.
+    # Replaying older overlapping hunks after that would insert helpers twice.
+    if all(new in text for _, new in hunks_for(path)):
+        path.write_text(text, encoding="utf-8", newline="\n")
+        return "patched"
     for relative, old, new in _OWNER_TRACE_REPLAY:
         if path.as_posix().endswith(relative) and new not in text and text.count(old) == 1:
             text = text.replace(old, new)
@@ -810,6 +828,9 @@ def apply_to(path: Path) -> str:
             raise RuntimeError(f"{path.name}: expected exactly one place for {old[:52]!r}, "
                                f"found {text.count(old)} - the vendored code has moved")
         text = text.replace(old, new)
+    # A later migration can activate an older overlapping replay hunk.
+    if path.as_posix().endswith("main_logic/omni_realtime_client/_transport.py"):
+        text = normalize_phrase_transport(text)
     path.write_text(text, encoding="utf-8", newline="\n")
     return "patched"
 

@@ -18,7 +18,7 @@ import time
 import wave
 from pathlib import Path
 
-import pyaudiowpatch as pa
+from neko_desktop_tutor_host import require_task_audio_allowed
 
 THRESHOLD = 0.02  # peak above this is audible signal, not the noise floor
 
@@ -32,7 +32,7 @@ def peak_and_rms(samples: list[int]) -> tuple[float, float]:
     return round(worst, 4), round(mean, 5)
 
 
-def pick_loopback(audio: pa.PyAudio, name: str = "") -> dict:
+def pick_loopback(audio, name: str = "") -> dict:
     """The loopback tap for one render endpoint - by name, or the current default."""
     if not name:
         return audio.get_default_wasapi_loopback()
@@ -46,6 +46,8 @@ def pick_loopback(audio: pa.PyAudio, name: str = "") -> dict:
 
 def capture(seconds: float, chunk_seconds: float = 0.25, device_name: str = "") -> tuple[list[int], list[dict], dict]:
     """Record the loopback of the current default output; no callback thread involved."""
+    require_task_audio_allowed("WASAPI loopback capture")
+    import pyaudiowpatch as pa
     with pa.PyAudio() as audio:
         device = pick_loopback(audio, device_name)
         rate = int(device["defaultSampleRate"])
@@ -83,6 +85,7 @@ def write_wav(path: Path, samples: list[int], rate: int, channels: int) -> None:
 
 def read_capture(seconds: float) -> dict:
     """Ask a separate process to capture, so PortAudio is never used twice at once."""
+    require_task_audio_allowed("loopback subprocess")
     output = subprocess.run([sys.executable, str(Path(__file__)), "--seconds", str(seconds)],
                             capture_output=True, text=True, encoding="utf-8", check=True).stdout
     return json.loads(output)
@@ -90,6 +93,8 @@ def read_capture(seconds: float) -> dict:
 
 def self_test() -> dict:
     """Silence first, then a tone played *during* a capture, in two processes."""
+    require_task_audio_allowed("speaker tone and loopback self-test")
+    import pyaudiowpatch as pa
     baseline = read_capture(1.5)
     capture_process = subprocess.Popen(
         [sys.executable, str(Path(__file__)), "--seconds", "3"],
@@ -118,7 +123,9 @@ def main() -> int:
     parser.add_argument("--list", action="store_true", help="show every loopback endpoint and exit")
     parser.add_argument("--out", default="", help="write the captured signal here (wav)")
     args = parser.parse_args()
+    require_task_audio_allowed("loopback device enumeration/capture")
     if args.list:
+        import pyaudiowpatch as pa
         with pa.PyAudio() as audio:
             print(json.dumps({"loopback_endpoints": [device["name"] for device in
                                                       audio.get_loopback_device_info_generator()],

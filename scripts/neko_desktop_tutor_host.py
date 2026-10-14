@@ -74,6 +74,22 @@ MODEL = "deepseek-flash"
 MODEL_URL = os.environ.get("LIVETUTOR_MODEL_URL", "").strip() or f"https://{ALLOWED_HOST}/v1"
 SOURCE_APP = ROOT / "benchmarks/raw/neko-product-host"
 SOURCE_PYTHON = SOURCE_APP / ".venv/Scripts/python.exe"
+
+
+def require_task_audio_allowed(action: str) -> None:
+    """Task-local silence overrides fake inputs, muted output and saved preferences."""
+    policy = ROOT / "benchmarks/raw/daily-companion-audio-policy.json"
+    silent = os.environ.get("NEKO_TASK_SILENT") == "1"
+    if policy.exists():
+        try:
+            data = json.loads(policy.read_text(encoding="utf-8"))
+            if not isinstance(data, dict) or type(data.get("audio_allowed")) is not bool:
+                raise ValueError("audio_allowed must be an explicit boolean")
+            silent = silent or not data["audio_allowed"]
+        except (OSError, ValueError):
+            raise RuntimeError("任务音频策略无法确认；拒绝启动声音设备路径。") from None
+    if silent:
+        raise RuntimeError(f"严格静音任务禁止 {action}；不启动扬声器、麦克风、虚拟输入或回环。")
 PRODUCT = ROOT / "patches/neko-study-2026-10-10-product"
 MAIN_PORT = 48911
 PLUGIN_PORT = 48916
@@ -354,6 +370,10 @@ def verify_source_audio_gate() -> None:
         path = SOURCE_APP / item["path"]
         if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != item["patched_sha256"]:
             raise RuntimeError(f"text-only host source fingerprint differs: {item['path']}")
+    for item in manifest.get("runtime_helpers", []):
+        path = ROOT / item["path"]
+        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != item["sha256"]:
+            raise RuntimeError(f"native phrase runtime helper fingerprint differs: {item['path']}")
 
 
 QUIET_BRAIN_KEYS = ("recent_memory_auto_review",)
@@ -844,6 +864,11 @@ def main() -> int:
                         help="except ONLY the native realtime audio events out of the "
                              "development mute; external TTS stays refused")
     args = parser.parse_args()
+
+    if not args.stop and args.voice:
+        require_task_audio_allowed("Native voice host")
+    if not args.stop and not args.source:
+        require_task_audio_allowed("unverified packaged host")
 
     pid_file = ROOT / "benchmarks/raw/neko-desktop-host.pid"
     if args.stop:

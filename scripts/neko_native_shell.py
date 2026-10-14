@@ -152,6 +152,8 @@ def shell_environment(store: Path) -> dict[str, str]:
 def launch(store: Path, wait_seconds: int = 150, chat_surface: str = "full",
            cdp_port: int | None = None, audio_input: str | None = None) -> dict:
     """Start the avatar shell and prove it attached to the host we control."""
+    from neko_desktop_tutor_host import require_task_audio_allowed
+    require_task_audio_allowed("Native avatar shell")
     if not EXE.is_file():
         raise RuntimeError(f"找不到 N.E.K.O 桌面程序：{EXE}")
     if not host_ready():

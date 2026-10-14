@@ -90,7 +90,8 @@ class OfflineManager:
             ("main_logic/core/asr_runtime.py", ("note_native_speech_playback_state", "_begin_native_barge_in_handoff",
                 "_recover_native_barge_in", "_route_microphone_audio_unfiltered")),
             ("main_logic/core/lifecycle.py", ("_restart_message_handler_after_session_reconnect",)),
-            ("main_logic/core/session_lifecycle.py", ("_bind_owned_output_callbacks",)),
+            ("main_logic/core/session_lifecycle.py", ("_bind_owned_output_callbacks",
+                "_native_phrase_input_authority", "_native_phrase_transport_written")),
             ("main_logic/core/tts_runtime.py", ("_audio_chunk_header",)),
         ):
             for name in names:

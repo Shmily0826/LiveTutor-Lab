@@ -1,5 +1,6 @@
 """Native wrapper -> actual explain entry/finalizer, fresh SQLite and fake model only."""
 import asyncio
+from copy import deepcopy
 import importlib
 import threading
 import unittest
@@ -116,11 +117,200 @@ class NativeMaterialGuard(language_tests.ExplanationLanguage):
                 changes=materials.material_changes(h,before,'image')
                 self.assertEqual([item['target_lanlan'] for item in changes],['CurrentRole'])
 
+    async def test_current_picture_discarded_language_text_cannot_override_course_default(self):
+        for course_language, stale_text in (
+            ('zh-CN', 'Old response: Teach this in English.'),
+            ('en-US', '旧解释：请用中文回答。'),
+        ):
+            with self.subTest(course_language=course_language):
+                h=await self.prepare()
+                h._state.teaching_language_by_course={'course-A':course_language}
+                await h._persist_state()
+                h._build_learning_context=language_tests.ProductHarness._build_learning_context.__get__(h)
+                preferences_before=self.store.get_raw(language_tests.prefs.PREFERENCES_KEY)
+                course_preferences_before=deepcopy(h._state.teaching_language_by_course)
+                seen=[]
+                async def model(source,**kwargs):
+                    seen.append((h._cfg.language,source,kwargs['context']))
+                    return models.TutorReply(operation='concept_explain',input_text=source,reply='current image correction')
+                h._agent.concept_explain=AsyncMock(side_effect=model)
+                result=await h.study_explain_tool(question='请核对当前图片中的天气未命中，不是天气命中。',text=stale_text)
+                self.assertFalse(result.get('degraded'),result)
+                self.assertEqual(len(seen),1)
+                self.assertEqual(seen[0][0],course_language)
+                self.assertEqual(seen[0][2]['vision_image_base64'],'image-A')
+                self.assertNotIn(stale_text,seen[0][1])
+                self.assertEqual(h._cfg.language,course_language)
+                self.assertEqual(self.store.get_raw(language_tests.prefs.PREFERENCES_KEY),preferences_before)
+                self.assertEqual(h._state.teaching_language_by_course,course_preferences_before)
+                self.assertEqual(self.store.load_state(models.StudyState()).teaching_language_by_course,
+                                 course_preferences_before)
+
+    async def test_current_picture_explicit_turn_language_survives_discarded_old_text(self):
+        for question, explicit_language in (
+            ('请核对当前图片，这次用两句英文纠正。',''),
+            ('请核对当前图片，使用中文。','en-US'),
+        ):
+            with self.subTest(explicit_language=explicit_language):
+                h=await self.prepare()
+                h._state.teaching_language_by_course={'course-A':'zh-CN'}
+                await h._persist_state()
+                h._build_learning_context=language_tests.ProductHarness._build_learning_context.__get__(h)
+                preferences_before=self.store.get_raw(language_tests.prefs.PREFERENCES_KEY)
+                seen=[]
+                async def model(source,**kwargs):
+                    seen.append((h._cfg.language,source,kwargs['context']))
+                    return models.TutorReply(operation='concept_explain',input_text=source,reply='English correction.')
+                h._agent.concept_explain=AsyncMock(side_effect=model)
+                result=await h.study_explain_tool(question=question,text='旧解释：请用中文回答。',language=explicit_language)
+                self.assertFalse(result.get('degraded'),result)
+                self.assertEqual(len(seen),1)
+                self.assertEqual(seen[0][0],'en-US')
+                self.assertIn('Teach this in English',seen[0][1])
+                self.assertNotIn('旧解释',seen[0][1])
+                self.assertEqual(seen[0][2]['vision_image_base64'],'image-A')
+                self.assertEqual(h._cfg.language,'zh-CN')
+                self.assertEqual(self.store.get_raw(language_tests.prefs.PREFERENCES_KEY),preferences_before)
+                self.assertEqual(self.store.load_state(models.StudyState()).teaching_language_by_course,
+                                 {'course-A':'zh-CN'})
+
     async def test_current_picture_without_image_never_accepts_native_summary_as_evidence(self):
         h=await self.prepare();h._state.last_vision_image_base64=''
         output=await h.study_explain_tool(question='Explain this current picture',text='WEX -> NUD -> REZ')
         self.assertTrue(output['degraded']);self.assertEqual(output['diagnostic'],'visual_context_missing')
         h._agent.concept_explain.assert_not_awaited()
+
+    async def test_bare_correction_rechecks_last_bound_picture_and_discards_old_summary(self):
+        h=await self.prepare();role={'lanlan_name':'CurrentRole'}
+        h._build_learning_context=language_tests.ProductHarness._build_learning_context.__get__(h)
+        await h.study_explain_tool(question='解释当前图片',_ctx=role)
+        h._agent.concept_explain.reset_mock()
+        result=await h.study_explain_tool(question='你读错了，不是天气命中，是天气未命中，请重新检查。',
+            text='Old response: Teach this in English. 天气命中。',_ctx=role)
+        self.assertFalse(result.get('degraded'),result)
+        context=h._agent.concept_explain.call_args.kwargs['context']
+        self.assertEqual(context['vision_image_base64'],'image-A')
+        self.assertNotIn('Old response',context['source_text'])
+        self.assertIn('天气未命中',context['source_text'])
+        self.assertEqual(result['_study_material_binding']['context'],materials.material_context(h))
+        self.assertEqual(h._cfg.language,'zh-CN')
+
+    async def test_ambiguous_correction_never_uses_replaced_unbound_or_other_role_picture(self):
+        for change in ('image','text','course','session','role','no_binding','later_source','later_summary'):
+            with self.subTest(change=change):
+                h=await self.prepare();role={'lanlan_name':'CurrentRole'}
+                await h.study_explain_tool(question='解释当前图片',_ctx=role)
+                if change=='image':h._state.last_vision_image_base64='image-B'
+                elif change=='text':h._state.last_ocr_text='source-B'
+                elif change=='course':h._state.study_course_id='course-B'
+                elif change=='session':await h._restart_study_session(course_id='course-A')
+                elif change=='role':role={'lanlan_name':'OtherRole'}
+                elif change=='no_binding':h._study_material_output_targets={}
+                elif change=='later_source':
+                    await h.study_explain_tool(question='解释这段代码',text='return 17;',_ctx=role)
+                elif change=='later_summary':
+                    self.store.append_interaction(kind='summarize_session',input_text='summary request',
+                        output_text='summary only',metadata={'material_context':materials.material_context(h)},
+                        history_limit=100,session_id=h._study_session_id)
+                before=self.store.list_interactions(30)
+                h._agent.concept_explain.reset_mock()
+                result=await h.study_explain_tool(question='你读错了，请重新检查。',text='old claim',_ctx=role)
+                self.assertEqual(result['error'],'correction_source_ambiguous')
+                h._agent.concept_explain.assert_not_awaited()
+                self.assertEqual(self.store.list_interactions(30),before)
+
+    async def test_explicit_picture_source_rechecks_even_without_previous_native_binding(self):
+        h=await self.prepare()
+        h._build_learning_context=language_tests.ProductHarness._build_learning_context.__get__(h)
+        result=await h.study_explain_tool(question='不是命中，是未命中，请重新检查。',
+            text='old invented summary',material_source='current_picture')
+        self.assertFalse(result.get('degraded'),result)
+        context=h._agent.concept_explain.call_args.kwargs['context']
+        self.assertEqual(context['vision_image_base64'],'image-A')
+        self.assertNotIn('old invented',context['source_text'])
+
+    async def test_literal_correction_keeps_code_and_never_uses_bound_picture(self):
+        h=await self.prepare();role={'lanlan_name':'CurrentRole'}
+        h._build_learning_context=language_tests.ProductHarness._build_learning_context.__get__(h)
+        await h.study_explain_tool(question='解释当前图片',_ctx=role)
+        result=await h.study_explain_tool(question='你解释错了，请重新检查这段源码。',
+            text='return request.uri;',material_source='literal_text',_ctx=role)
+        self.assertFalse(result.get('degraded'),result)
+        context=h._agent.concept_explain.call_args.kwargs['context']
+        self.assertEqual(context['vision_image_base64'],'')
+        self.assertIn('return request.uri;',context['source_text'])
+        self.assertNotIn('material_identity',result['_study_material_binding']['context'])
+
+    async def test_source_choice_invalid_empty_or_against_learner_never_calls_model(self):
+        h=await self.prepare()
+        for source,question,text in (('invented','what?',''),('literal_text','check',''),
+                                    ('current_picture','不要看图片，只看这段代码','return 17;')):
+            with self.subTest(source=source,question=question):
+                result=await h.study_explain_tool(question=question,text=text,material_source=source)
+                self.assertFalse(result['ok'])
+                h._agent.concept_explain.assert_not_awaited()
+
+    async def test_auto_rejected_picture_keeps_plain_supplied_text_and_omits_cached_pixels(self):
+        h=await self.prepare()
+        h._build_learning_context=language_tests.ProductHarness._build_learning_context.__get__(h)
+        for question in ('Do not use the current picture; check the text I supplied.',
+                         'Do not use that picture; check the supplied text.',
+                         'Do not use the latest submitted Study image; check the supplied text.',
+                         'Do not use the shown screenshot; check the supplied text.',
+                         '不要看最新的图片，请看我提供的文字。'):
+            for text in ('This supplied text is the requested material.', ''):
+                result=await h.study_explain_tool(question=question,text=text)
+                self.assertFalse(result.get('degraded'),result)
+                context=h._agent.concept_explain.call_args.kwargs['context']
+                self.assertEqual(context['vision_image_base64'],'')
+                self.assertFalse(context['vision_enabled'])
+                self.assertNotIn('material_identity',result['_study_material_binding']['context'])
+                if text:self.assertIn(text,context['source_text'])
+                h._agent.concept_explain.reset_mock()
+                refused=await h.study_explain_tool(question=question,text=text,material_source='current_picture')
+                self.assertEqual(refused['error'],'material_source_conflict')
+                h._agent.concept_explain.assert_not_awaited()
+
+    async def test_literal_source_parameter_cannot_override_this_or_that_picture_reference(self):
+        h=await self.prepare()
+        for question in ('Explain this diagram.','Recheck that picture.'):
+            result=await h.study_explain_tool(question=question,text='old remembered summary',material_source='literal_text')
+            self.assertEqual(result['error'],'material_source_conflict')
+            h._agent.concept_explain.assert_not_awaited()
+
+    async def test_auto_correction_rechecks_source_after_sql_wait(self):
+        h=await self.prepare();role={'lanlan_name':'CurrentRole'}
+        await h.study_explain_tool(question='解释当前图片',_ctx=role)
+        entered=threading.Event();release=threading.Event();original=self.store.list_interactions
+        def paused_read(*args,**kwargs):
+            rows=original(*args,**kwargs);entered.set()
+            if not release.wait(3):raise RuntimeError('test reader not released')
+            return rows
+        self.store.list_interactions=paused_read
+        request=asyncio.create_task(h.study_explain_tool(question='你读错了，请重新检查。',text='old summary',_ctx=role))
+        self.assertTrue(await asyncio.to_thread(entered.wait,2))
+        self.store.list_interactions=original
+        await h.study_explain_tool(question='解释这段源码',text='return 17;',_ctx=role)
+        h._agent.concept_explain.reset_mock();before=original(30)
+        release.set();result=await request
+        self.assertEqual(result['error'],'correction_source_ambiguous')
+        h._agent.concept_explain.assert_not_awaited();self.assertEqual(original(30),before)
+
+    async def test_auto_correction_rechecks_latest_row_after_language_lock_queue(self):
+        h=await self.prepare();role={'lanlan_name':'CurrentRole'}
+        await h.study_explain_tool(question='解释当前图片',_ctx=role)
+        h._study_explanation_language_lock=asyncio.Lock()
+        await h._study_explanation_language_lock.acquire()
+        request=asyncio.create_task(h.study_explain_tool(question='你读错了，请重新检查。',text='old summary',_ctx=role))
+        await asyncio.sleep(.03)
+        self.assertFalse(request.done())
+        # The actual UI entry can commit independently of the Native wrapper lock.
+        await h.study_explain_text(text='Explain literal code: return 17;',
+                                  _material_context=materials.material_context(h,include_material=False))
+        h._agent.concept_explain.reset_mock();before=self.store.list_interactions(30)
+        h._study_explanation_language_lock.release();result=await request
+        self.assertEqual(result['error'],'correction_source_ambiguous')
+        h._agent.concept_explain.assert_not_awaited();self.assertEqual(self.store.list_interactions(30),before)
 
     async def test_literal_image_identifiers_and_rejected_picture_keep_requested_code(self):
         for question in ('解释这段代码里的 imageUrl 是什么意思',

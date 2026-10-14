@@ -92,6 +92,7 @@ def material_retirement_observed(replacement, snapshot):
 
 
 async def main(args):
+    host.require_task_audio_allowed("voice acceptance probe")
     if args.output.exists(): raise RuntimeError("do not overwrite or repeat a voice attempt")
     if args.teaching_text_chain:
         raise ValueError('fixed text on a superseded controller is intentionally unauthorized; use --teaching-wav')

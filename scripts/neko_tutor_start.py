@@ -71,6 +71,7 @@ def plugin_server_ready(timeout: float, launcher: subprocess.Popen) -> tuple[boo
 
 
 def chrome_command(url: str) -> list[str]:
+    host.require_task_audio_allowed("product browser with audio capabilities")
     candidates = [Path(os.environ[name]) / "Google/Chrome/Application/chrome.exe"
                   for name in ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA") if os.environ.get(name)]
     chrome = next((path for path in candidates if path.is_file()), None)
@@ -444,6 +445,7 @@ def main() -> int:
                              "never open a dialog (a driver that cannot answer one hangs); with no "
                              "--code-root at all, a console gets the picker.")
     args = parser.parse_args()
+    host.require_task_audio_allowed("avatar/product UI startup")
     if not (args.voice_connects.isdigit() or args.voice_connects == "unlimited"):
         parser.error("voice-connects must be a nonnegative number or unlimited")
     if args.minutes <= 0 or args.api_budget < 0 or args.egress_budget < 0:

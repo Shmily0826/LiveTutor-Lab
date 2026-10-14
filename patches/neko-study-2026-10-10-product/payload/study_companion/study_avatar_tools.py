@@ -309,6 +309,10 @@ class _StudyAvatarToolsMixin:
         "zh-CN": ("请用简体中文教学，代码标识符与技术术语保持原文。"
                   "先讲重点，细节留给追问，不要一次念完整篇。"),
         "en-US": ("Teach this in English, keeping code identifiers and technical terms exact. "
+                  "Use English for natural-language labels too: translate diagram labels by "
+                  "meaning while retaining literal code identifiers. Quote a non-English "
+                  "label only if the learner explicitly requests its original wording; "
+                  "an English-only request forbids even that quotation. "
                   "Lead with the main point and leave detail for follow-up; "
                   "do not read out an essay."),
     }
@@ -800,6 +804,9 @@ class _StudyAvatarToolsMixin:
             "tool must inspect the latest submitted image, not a remembered summary "
             "or your guessed module names and arrows. Put literal learner-supplied "
             "code/notes in text only when those are the requested source. "
+            "For a correction/recheck of the current picture set material_source=current_picture; "
+            "for supplied code/notes use literal_text. Auto only resumes an unchanged, "
+            "previously bound picture explanation; if the correction target is unclear, ask. "
             "This tool has no live Realtime screen feed; OCR words alone do not "
             "establish arrows. This is the main teaching tool."
         ),
@@ -810,33 +817,88 @@ class _StudyAvatarToolsMixin:
                              "description": "What the learner wants explained, in their words."},
                 "text": {"type": "string", "default": "",
                          "description": "Literal source code or notes requested by the learner. Omit for the current Study picture/diagram or captured window. Never fill with an earlier picture summary or guessed arrows."},
+                "material_source": {"type":"string", "enum":["auto","current_picture","literal_text"], "default":"auto",
+                                    "description":"Use current_picture to recheck submitted pixels, ignoring an old summary in text. Use literal_text only for learner-supplied code/notes; never override a learner who rejects pictures."},
                 "language": {"type":"string", "enum":["zh-CN","en-US"],
                              "description":"Explicit reply language for this explanation only. Set it for a one-time language switch; does not save or pin a course preference."},
             },
         },
         timeout=150.0,
     )
-    async def study_explain_tool(self, *, question: str = "", text: str = "", language: str = "", **_):
+    async def study_explain_tool(self, *, question: str = "", text: str = "", language: str = "",
+                                 material_source: str = "auto", **_):
         if not isinstance(language, str) or language not in {"", "zh-CN", "en-US"}:
             return {"ok":False,"error":"unsupported_one_turn_language"}
-        requested = language or _turn_language_request(question, text) or str((getattr(self, "_study_turn_preferences", None) or {}).get("language") or "")
+        if not isinstance(material_source, str) or material_source not in {"auto","current_picture","literal_text"}:
+            return {"ok":False,"error":"unsupported_material_source"}
+        if material_source == "literal_text" and not str(text or "").strip():
+            return {"ok":False,"error":"literal_source_missing"}
+        from .study_materials import material_context, material_output_target, material_context_current
+        output_target = material_output_target(self, _)
         current_picture = bool(
             re.search(r"架构图|流程图|关系图|图片|截图|图中|图上|这张图|这个图|箭头|\b(?:diagram|picture|image|screenshot|arrows?)\b", question, re.I)
-            and re.search(r"这|图中|图上|当前|刚|屏幕|this|current|screen|latest|submitted|shown", question, re.I))
+            and re.search(r"这|图中|图上|当前|刚|屏幕|this|that|current|screen|latest|submitted|shown", question, re.I))
         literal_source_request = bool(str(text or "").strip() and re.search(
-            r"代码|源码|函数|变量|标识符|\b(?:source\s+(?:code|line)|code|function|variable|identifier)\b", question, re.I))
+            r"代码|源码|函数|变量|标识符|笔记|这段文字|\b(?:source\s+(?:code|line)|code|function|variable|identifier|notes?)\b", question, re.I))
         explicit_picture_reference = bool(re.search(
-            r"(?:当前|刚换|刚交|最新|这张|这个)[^。!?？\n]{0,20}(?:图片|截图|图|箭头)|图中|图上|\b(?:current|latest|submitted)\s+(?:study\s+)?(?:diagram|picture|image|screenshot)\b", question, re.I))
+            r"(?:当前|刚换|刚交|最新|这张|这个)[^。!?？\n]{0,20}(?:图片|截图|图|箭头)|图中|图上|\b(?:this|that|current|latest|submitted|shown)\s+(?:study\s+)?(?:diagram|picture|image|screenshot)\b", question, re.I))
         rejected_picture = bool(re.search(
-            r"(?:不要|别|不用)(?:再)?(?:查看|看|使用|用)?\s*(?:当前|这张|这个|任何|旧)?(?:图片|截图|图)|\b(?:do not|don't)\s+(?:look at|use|inspect|read)\s+(?:the\s+)?(?:(?:current|this|old|any)\s+)?(?:image|picture|diagram|screenshot)\b", question, re.I))
+            r"(?:不要|别|不用)(?:再)?(?:查看|看|使用|用)?\s*(?:当前|刚换|刚交|最新|这张|这个|任何|旧)?(?:的)?(?:图片|截图|图)|"
+            r"\b(?:do not|don't)\s+(?:look at|use|inspect|read)\s+(?:(?:the|current|this|that|old|any|latest|submitted|shown|study)\s+){0,4}(?:image|picture|diagram|screenshot)\b", question, re.I))
         if literal_source_request and (rejected_picture or not explicit_picture_reference):
             current_picture = False
+        if rejected_picture:
+            current_picture = False
+        if material_source == "current_picture":
+            if rejected_picture:
+                return {"ok":False,"error":"material_source_conflict"}
+            current_picture = True
+        elif material_source == "literal_text":
+            if explicit_picture_reference and not rejected_picture:
+                return {"ok":False,"error":"material_source_conflict"}
+            current_picture = False
+        correction = bool(re.search(
+            r"你(?:读|看|讲|说|理解|解释)(?:错|反)|请(?:重新|再)(?:检查|核对)|"
+            r"\b(?:you (?:misread|got .* wrong)|that(?:'s| is) wrong|recheck|misread)\b", question, re.I))
+        recheck_context = None
+        recheck_binding = None
+        recheck_row_id = None
+        def ambiguous_correction():
+            wanted = language or _turn_language_request(question, "") or self._study_effective_language()
+            reply = ("Please specify the current picture or the source code to recheck; I cannot confirm the correction target."
+                     if wanted == "en-US" else "请明确要核对当前图片还是某段代码；我无法确认这次纠正的对象。")
+            return {"ok":False,"error":"correction_source_ambiguous","reply":reply,
+                    "relay":RELAY_NOTE + " Ask only this clarification; do not invent a correction."}
+        if (material_source == "auto" and correction and not current_picture
+                and not literal_source_request and not rejected_picture):
+            async with self._lock:
+                binding = (getattr(self, "_study_material_output_targets", {}) or {}).get(output_target, {})
+                expected = dict(binding.get("context") or {})
+                bound_current = bool(binding.get("boot_id") == getattr(self, "_study_material_boot_id", None)
+                    and "material_identity" in expected and material_context_current(self, expected))
+            rows = []
+            if bound_current:
+                # One existing row validates the previous source; no new memory store.
+                rows = await asyncio.to_thread(self._store.list_interactions, 1, session_id=expected["session_id"])
+            async with self._lock:
+                if (bound_current and rows and rows[0]["kind"] == "concept_explain"
+                        and (rows[0].get("metadata") or {}).get("material_context") == expected
+                        and (getattr(self, "_study_material_output_targets", {}) or {}).get(output_target) is binding
+                        and material_context_current(self, expected)):
+                    current_picture = True
+                    recheck_context = expected
+                    recheck_binding = binding
+                    recheck_row_id = rows[0]["id"]
+                else:
+                    return ambiguous_correction()
         if current_picture:
             # A native model can pass an OLD picture summary as `text` even
             # while asking to verify the latest image. The learner's current
             # picture request must keep vision and image identity binding.
             # Literal code/notes questions remain independent of saved images.
             text = ""
+        # Discarded picture summaries cannot supply this turn's language request.
+        requested = language or _turn_language_request(question, text) or str((getattr(self, "_study_turn_preferences", None) or {}).get("language") or "")
         cached_image = str(getattr(getattr(self, "_state", None), "last_vision_image_base64", "") or "").strip()
         has_image_context = bool(getattr(getattr(self, "_cfg", None), "llm_vision_enabled", False) and cached_image)
         if current_picture and not has_image_context:
@@ -847,25 +909,36 @@ class _StudyAvatarToolsMixin:
                 failure_language=requested or self._study_effective_language()))
         # A proxy may issue overlapping explanations. Serialize their temporary
         # cfg overrides so one cannot restore another's temporary language.
-        from .study_materials import material_context, material_output_target
-        output_target = material_output_target(self, _)
-        observed = material_context(self, include_material=not str(text or "").strip())
+        include_material = not str(text or "").strip() and not rejected_picture
+        observed = recheck_context or material_context(self, include_material=include_material)
         await self._ensure_active_study_session()
         async with self._lock:
             # Snapshot before waiting behind another explanation. Never adopt a
             # different course/image when this queued request finally starts.
-            context = material_context(self, include_material=not str(text or "").strip())
+            context = material_context(self, include_material=include_material)
             # Only an initially absent session may be initialized here. A
             # replaced or expired existing session requires a fresh question.
             if any(context.get(key) != value for key, value in observed.items()
                    if key != "session_id" or value):
                 return {"ok":False,"error":"course_context_changed","reply":"课程已切换或材料已更新，请使用当前材料重新提问。"}
-            image = str(getattr(self._state, "last_vision_image_base64", "") or "") if has_image_context and not str(text or "").strip() else ""
+            image = str(getattr(self._state, "last_vision_image_base64", "") or "") if has_image_context and include_material else ""
             captured_text = str(getattr(self._state, "last_ocr_text", "") or "")
         lock = getattr(self, "_study_explanation_language_lock", None)
         if lock is None:
             lock = self._study_explanation_language_lock = asyncio.Lock()
         async with lock:
+            if recheck_context:
+                # Recheck after SQL and language-lock waits, coordinating with short
+                # history commits under the existing state lock, never across model IO.
+                async with self._lock:
+                    rows = await asyncio.to_thread(self._store.list_interactions, 1,
+                                                   session_id=recheck_context["session_id"])
+                    if ((getattr(self, "_study_material_output_targets", {}) or {}).get(output_target) is not recheck_binding
+                            or not material_context_current(self, recheck_context)
+                            or not rows or rows[0]["id"] != recheck_row_id
+                            or rows[0]["kind"] != "concept_explain"
+                            or (rows[0].get("metadata") or {}).get("material_context") != recheck_context):
+                        return ambiguous_correction()
             return await self._study_explain_for_turn(question=question, text=text, requested=requested,
                                                      context=context, image=image, captured_text=captured_text,
                                                      output_target=output_target)

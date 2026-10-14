@@ -129,14 +129,19 @@ class ProductStartTest(unittest.TestCase):
         self.assertIn("lesson.terminate()", source)
 
     def test_task_browser_profile_and_mute(self):
+        import tempfile
         url = "http://127.0.0.1:48916/plugin/study_companion/ui/"
-        command = start.chrome_command(url)
+        # Command construction only; an absent task policy preserves normal use.
+        with tempfile.TemporaryDirectory() as directory, patch.object(start.host, "ROOT", Path(directory)), \
+                patch.dict(start.os.environ, {"NEKO_TASK_SILENT":"0"}):
+            command = start.chrome_command(url)
+            second_command = start.chrome_command(url)
         profile = next(arg.split("=", 1)[1] for arg in command if arg.startswith("--user-data-dir="))
         self.assertTrue(Path(profile).is_relative_to(ROOT / "benchmarks/raw/neko-product-browser"))
         self.assertIn("--mute-audio", command)
         self.assertIn(f"--app={url}", command)
         self.assertEqual(profile, str(start.BROWSER_PROFILE))
-        self.assertEqual(next(arg for arg in start.chrome_command(url) if arg.startswith("--user-data-dir=")), f"--user-data-dir={profile}")
+        self.assertEqual(next(arg for arg in second_command if arg.startswith("--user-data-dir=")), f"--user-data-dir={profile}")
         self.assertNotIn("webbrowser", (ROOT / "scripts/neko_tutor_start.py").read_text(encoding="utf-8"))
 
     def test_cleanup_stops_the_tree_it_owns_and_nothing_else(self):

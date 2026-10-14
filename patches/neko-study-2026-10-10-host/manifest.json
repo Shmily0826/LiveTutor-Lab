@@ -39,7 +39,7 @@
     {
       "path": "main_logic/omni_realtime_client/_transport.py",
       "base_sha256": "2d6c058206c1beafc3e1d35a8f5111042ff509a31f398053ce7b97a825242423",
-      "patched_sha256": "9ce6a44928b967b1260aff49c0be217b6727bb47c357c70228222111bbccb28c",
+      "patched_sha256": "042af91f557431e981ce588565f1dc827bb466109a8155c6c2179fdd83f7b3c8",
       "resealed_utc": "2026-10-13T14:38:47.980810+00:00",
       "resealed_reason": "Bounded free-route late-ASR raw tool dispatch, pinned original connection/session, one expected scope advance, foreign retirement rejects; onset, PCM, response lifecycle unchanged; 6 candidate, 5 existing tool lifecycle and 19 barge guards passed; actual role/voice not yet verified.",
       "verified_by": {
@@ -57,7 +57,8 @@
       "prior_native_handoff_verified_by": {
         "offline": "19 barge-in tests (including passive owner trace) + 5 tool lifecycle tests passed; no live audio verification",
         "reproduce": "python scripts/neko_voice_host_patch.py"
-      }
+      },
+      "daily_phrase_resealed_utc": "2026-10-13T23:22:42.753804+00:00"
     },
     {
       "path": "app/agent_server/capabilities.py",
@@ -101,7 +102,7 @@
     {
       "path": "main_logic/core/asr_runtime.py",
       "base_sha256": "e5679d7773a431e9df23c3cfcea7e53209c07f4e63875de0c9f93474de87df5b",
-      "patched_sha256": "b83c5267504927d5ffa4261795de3a1078fb276482ada88bebb55b2088d50400",
+      "patched_sha256": "b44ccbf261283e6f20396c7ce0de5d9004159b3aa460faf6c5b3068c7c83ad9e",
       "resealed_utc": "2026-10-13T04:00:57.027387+00:00",
       "resealed_reason": "Bounded 0.65s native overlap eligibility from fresh actually-playing owner receipt; rate-limited decision diagnostics. No VAD or PCM replay changes.",
       "verified_by": {
@@ -113,20 +114,22 @@
         "offline": "11 production handoff tests + production frontend playback checks + 19 existing barge-in tests + 5 tool lifecycle tests; patch replay/idempotence and syntax verified.",
         "live_real_microphone": "UNVERIFIED; no network, provider, microphone or CONNECT use.",
         "reproduce": "python -B scripts/neko_voice_host_patch.py; python -B scripts/test_neko_native_barge_in.py; node scripts/test_neko_native_barge_in_playback.js"
-      }
+      },
+      "daily_phrase_resealed_utc": "2026-10-13T23:22:42.753804+00:00"
     },
     {
       "path": "main_logic/core/session_lifecycle.py",
       "base_sha256": null,
       "pre_native_handoff_sha256": "356ebc0e5bbcb87514b34594856d9425d56793ea88d47b986a160d90195ef326",
-      "patched_sha256": "4f4446282a741623adcfd3dc1679497a097a72d521a99cbabbe58c34b931671d",
+      "patched_sha256": "47561debfef3aea5fbf8d5a8557043c7502eed5b1a591c6e97972667694670c2",
       "resealed_utc": "2026-10-12T07:18:29.850643+00:00",
       "resealed_reason": "Native free-proxy barge-in connection isolation, bounded PCM replay, selective old-connection playback cancellation.",
       "verified_by": {
         "offline": "11 production handoff tests + production frontend playback checks + 19 existing barge-in tests + 5 tool lifecycle tests; patch replay/idempotence and syntax verified.",
         "live_real_microphone": "UNVERIFIED; no network, provider, microphone or CONNECT use.",
         "reproduce": "python -B scripts/neko_voice_host_patch.py; python -B scripts/test_neko_native_barge_in.py; node scripts/test_neko_native_barge_in_playback.js"
-      }
+      },
+      "daily_phrase_resealed_utc": "2026-10-13T23:22:42.753804+00:00"
     },
     {
       "path": "main_logic/core/lifecycle.py",
@@ -259,6 +262,12 @@
         "scope": "reuses prior exact native-token cancellation algorithm; not new human/barge-in acceptance",
         "sealed_utc": "2026-10-13T20:29:59.048061+00:00"
       }
+    },
+    {
+      "path": "main_logic/omni_realtime_client/_audio.py",
+      "base_sha256": "f82fe6723947868195b09e015823cc65ae0d3929be6cf5dbc9cf3e9f5dfb4372",
+      "patched_sha256": "1a00099aa9ab848ffe9f43a3573e36b91bef281f9d68225644b03a578d29eaef",
+      "daily_phrase_resealed_utc": "2026-10-13T23:22:42.753804+00:00"
     }
   ],
   "native_barge_in_handoff": {
@@ -309,5 +318,20 @@
     "quiz": "real current-picture question committed but scope-retired before Native relay, 0 PCM/0 loud bins",
     "summary": "18 Native PCM/37 loud bins but no study_summary tool, wrong return-flow gloss; not grounded-tool acceptance",
     "scope": "fixed WAV, no room mic/volume change, one CONNECT, complete245s capture; human pending; post-review probe/guidance only source"
+  },
+  "runtime_helpers": [
+    {
+      "path": "scripts/neko_phrase_input_buffer.py",
+      "sha256": "2bb1a65c72ac4bbf122ea9327de58df9d806572d6fa30f04c3eeca3132d9e99b"
+    },
+    {
+      "path": "scripts/neko_phrase_input_transport.py",
+      "sha256": "79cff29ca529ebc2e2e421288f48f0a384ed6d88399707d24711223ecfa324bb"
+    }
+  ],
+  "daily_phrase_input_update": {
+    "scope": "default OFF; real Core authority/receipt and owned unsent normal16k free-app uplink; legacy/handoff entire input bypass",
+    "offline": "20 actual Core/Omni socket cases including reviewed logging-failure cleanup and preroll-only route exit; fresh LF replay; no audio devices/model/Native for phrase",
+    "report": "docs/evidence/daily-companion-phrase-input-implementation-2026-10-14.md"
   }
 }
