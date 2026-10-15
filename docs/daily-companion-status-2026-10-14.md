@@ -1,16 +1,18 @@
-# 日常学习伙伴状态（阶段56源码教师窄通过，整体未完成）
+# 日常学习伙伴状态（阶段57 Native源码教师窄通过，整体未完成）
 
 完整任务以[原始 contract](daily-companion-contract-2026-10-14.md)全文为准，不摘要替代、不修改；169行，SHA256 `FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33`。Goal `01a13531-0341-7611-afc2-5c472a7ccf50` active，完整A–F不缩范围、不因局部失败结束。沿用户指定模型，不擅自换模型。
 
 每次压缩或自动续跑先完整读取 contract、plan、status、blockers，再读当前阶段报告；后续明确指令优先并同步记录。完成依据实际交付和证据；SOURCE/OFFLINE、真实模型/SQLite、Native接收排程、设备可听、真人体验分别记录，旧FAIL/PARTIAL不追改。
 
-## 当前阶段56
+## 当前阶段57
 
-[完整报告](evidence/daily-companion-phase56-project-teacher-2026-10-15.md)
+[完整报告](evidence/daily-companion-phase57-native-source-2026-10-15.md)
 
-已新增现Study教师project_code来源，复用授权CodeGraph/既有SQLite/Native绑定，最多3个有界请求/单窗120行/总证据24000字符，拒模型粘贴源码、旧图片混入、空证据/混合版本/上下文变更。新增8离线边界及原material26/language6/binding5通过。68教师内容正确但角色多话/多读PARTIAL；据实发现fresh text缺卡跳过教学guidance，复用既有官方冷初始化修复，原3+新text1通过。
+56已发布9858528；57唯一70用已审output-only固定WAV9.423秒、原69任务store和授权，实际free Native单条ASR后直接选study_explain project_code，真实file1–29@7aae20f；教师两句存原SQLite，Native转写去空格/代码标记后逐字一致。材料binding入场有效，Native27帧/1653360字节、WebAudio运行/排程结束/队列零；provider/renderer窄PASS，不是物理可听/发音/真人通过。
 
-修后真实69：规则逐字落盘，角色自动study_explain project_code内部读取file21–28@7aae20f，两句回复与原SQLite concept_explain逐字一致，未猜上层catch，窄CASE MODEL PASS。仍一次多余前置file读取/19.442秒；结构/impact、其它题型、free Native语音/设备/真人不扩大通过。原868→874→880，app78不变/tech0。exec59739终态0、host强制1、owned全清/三端口空，SourceGate PASS。下一57验证free Native输出专用取用/转述与音频，不mic；整体A–F继续。
+原3 interactions SHA不变，新增code_question+concept_explain、QA0。exec40093终态0，cleanup无错、own host/Native PID不存在/三服务端口空、SourceGate PASS；原账本888/2000、app79/null、tech0/0。未mic/虚拟capture/loopback/调音量。摘要旧字段空值已修且仅在冻结70上投影验证，不重开付费测试。
+
+本例信号末端→首PCM14.686s→排程15.231s；工具9.909s最大，其中源码/上下文准备到semantic4.690s、语义2.915s、解释2.269s，余到PCM3.035s。不能全归因索引/不能跨不同输入宣称提速。下一58核重复工作且保留课程/历史/概念保护，Native中文转写空格先查；完整A–F继续。
 
 ## 已交付与既有证据层
 
@@ -24,10 +26,10 @@
 
 ## 当前部署、发布与进程
 
-- 54七文件已精确push `1f87a44d86e64ab3687f61dfe692cc54341b6c74` 到codex/daily-learning-companion，master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。55已发布f70fb84，56正在审后发布。52/53旧源码/部署SHA按原阶段报告，不把历史HEAD当现HEAD。
+- 54七文件已精确push `1f87a44d86e64ab3687f61dfe692cc54341b6c74` 到codex/daily-learning-companion，master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。55已发布f70fb84，56已发布9858528。52/53旧源码/部署SHA按原阶段报告，不把历史HEAD当现HEAD。
 - 55默认只改canonical index/CSS并保留protected_html文字防护，manifest实核匹配；具体SHA见55报告。main/教学/记忆/host pin无变化。
 - exec33068终态0，host有意forced-stop1，creationtime核所有owned已死/48911、48916、9234、55322无listener，无live handle。QA0前中后同SHA；不是用户历史接续的新证据。
-- 原账本DS880/2000、Lanlan.app78/null、Lanlan.tech0/0，整dict不变。下一外部场前再实核，不换轮/供应商。当前静音，禁mic/capture/loopback；必要speaker仅已设4%。
+- 原账本DS888/2000、Lanlan.app79/null、Lanlan.tech0/0，整dict不变。下一外部场前再实核，不换轮/供应商。当前静音，禁mic/capture/loopback；必要speaker仅已设4%。
 - 下一56及完整A–F见[计划](daily-companion-plan-2026-10-14.md)，局部条件见[blockers](daily-companion-blockers-2026-10-14.md)。
 
 精简前完整原bytes历史已独占归档：[through52](evidence/daily-companion-status-history-through-phase52-2026-10-15.md)，SHA256 `7b2cfb5061de25e74202731ff3c6eefe6f0c3ed195c573e7f4b4b28cb8f2ab86`。历史原件不改；原contract不变。旧档相对链接按原docs位置理解。
@@ -58,3 +60,7 @@
 56唯一68正在运行：exec87680，仅poll此handle；未终态不重启/不冒实际选择或教学通过。仍静音无Native/浏览器/设备/麦克风。
 56：68终态教师源码讲解窄MODEL PASS/角色风格与多读PARTIAL；账本874/78/0，owned全清。发现fresh text缺卡跳过guidance，复用既有cold默认初始化已修，本地原3+新1通过；随后唯一69验证变化，不重启68。
 56唯一69已启动exec59739，host ready；只poll同handle，不重复启动。新fresh-card fix后的规则取用/质量仍待终态，原874/78/0/无音频mic。
+
+56发布确认：9858528a665c2f960be22cb284e5efd59f18894a已核远端exact/主分支不变/publisher clean/Root index空/contract原SHA，原880/78/0且无live。下一57 Native输出专用集成，不mic；详见56报告。
+57开始：已审现有output-only固定输入/Native观察器，准备一条本地合成源码短问；原880/78/0，无live。详见phase57报告。
+57唯一Native输出专用70已启动exec40093；复用69store/原3 interactions SHA基线/QA0，固定WAV9.423秒，原880/78/0。只poll同handle，未终态不重启；不mic/capture/loopback，不调音量。

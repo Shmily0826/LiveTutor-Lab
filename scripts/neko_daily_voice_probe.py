@@ -846,8 +846,8 @@ async def main(args):
             from neko_native_grade_acceptance import grade_chain_acceptance
             report['grade_chain_acceptance'] = grade_chain_acceptance(report)
         save()
-        print(json.dumps({"report": str(args.output), "failure": report.get("failure"), "reply": report.get("reply"),
-                          "audio_bytes": report.get("socket_audio_bytes"), "loopback_loud": (report.get("loopback") or {}).get("loud_chunks"),
+        print(json.dumps({"report": str(args.output), "failure": report.get("failure"), "reply": report.get("native_reply") or report.get("reply"),
+                          "audio_bytes": ((report.get("native_final") or {}).get("trace") or {}).get("binaryBytes") if output_only else report.get("socket_audio_bytes"), "loopback_loud": (report.get("loopback") or {}).get("loud_chunks"),
                           "spent": report["after"]["spent"], "acceptance": report.get('acceptance')}, ensure_ascii=False), flush=True)
         if output_only and (report.get('failure') or report.get('cleanup_errors')):
             raise SystemExit(1)

@@ -21,3 +21,4 @@ patches/neko-study-2026-10-10-product/manifest.json 32f3df9b39af0085cb5cb0485251
 scripts/neko_desktop_tutor_host.py e85238d45cd913b66f37bdffc4baa72b1bf1502ab459921dab9dd30b253b574d
 scripts/test_neko_project_code_teaching.py 822ae420bed72dbbc0bfe0a9bf287c098ec1d6f89845851aa76cf2659de56c3f
 scripts/test_neko_first_voice_start.py 4b7a0fa02f1da1cf00ce921b6db75c3881a6c6c687fab3dd00171d2e2a55653b
+56已精确commit/push 9858528a665c2f960be22cb284e5efd59f18894a 到codex/daily-learning-companion，remote exact/master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb/publisher clean/Root index空/contract原SHA。仅12个源码、测试和文档（包含55发布后metadata），未发raw/DB/音频/截图/备份/密钥。原账本880/2000、app78/null、tech0/0，无live宿主/端口；完整Goal active。下一57先读取四记录和本报告；复用原output-only Native会话与固定/文字输入，核选新教师、绑定、音频与语义，禁mic/capture/loopback，不无效重跑69。此发布后段及本地current记录随下一相关阶段发布。
