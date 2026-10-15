@@ -6,9 +6,9 @@
 - audio_allowed=false；禁止采集/回环/改音量；固定WAV仅output-only。原日常数据/日志只读。
 - P1：角色指导冲突修复；新增2项测试通过、SourceGate PASS、补丁全patched。
 - P2：6个固定WAV场完成；KEEP=100/HOLD=1500连续2场1条ASR+教师+音频，普通句最大增加0.426s识别/0.299s首包；已设默认。
-- P3：核对旧教师仅读15–24行及一句原答；实际文字SDK确认中。P4～P8待推进。
+- P3：教师控制流/逐句relay/序列化对象窄修；无预读新库Native唯一修后重试完整两句成功；P4进行中，P5～P8待推进。
 - 开工基线105模块：98通过，7个历史失败原始输出已保存；最终逐测试签名比较。
-- P1已发布8a28e98；P2发布中。仅既有codex/daily-learning-companion工作树，不合并主分支。
+- P1已发布8a28e98；P2已发布4d5f242；P3发布中。仅既有codex/daily-learning-companion工作树，不合并主分支。
 - P2完成账本1361/116，第二轮已用91/400；P3实际文字场另记每场前后。
 - 打断/Realtime/暂扣离线12+19+7通过；可听性/真人未验收。
 
@@ -98,3 +98,19 @@
 - R2 p2-k300-h1000-control 场后 {'api.deepseek.com': 1361, 'www.lanlan.app': 116}; probe exit=0。详见 raw/evidence/codex-r2-p2-k300-h1000-control.json。
 
 - R2 SDK codex-r2-p3-sdk 场前 {'api.deepseek.com': 1361, 'www.lanlan.app': 116}；任务库 neko-r2-p3-sdk、文字模式。
+
+- R2 SDK codex-r2-p3-sdk 场后 {'api.deepseek.com': 1363, 'www.lanlan.app': 116}。
+
+- R2 SDK codex-r2-p3-sdk-after 场前 {'api.deepseek.com': 1363, 'www.lanlan.app': 116}；任务库 neko-r2-p3-sdk-after、文字模式。
+
+- R2 Native p3-native-a 场前 {'api.deepseek.com': 1365, 'www.lanlan.app': 116}；任务库neko-r2-p3-native-a，固定WAV/output-only。
+
+- R2 SDK codex-r2-p3-sdk-after 场后 {'api.deepseek.com': 1365, 'www.lanlan.app': 116}。
+
+- R2 Native p3-native-a 场后 {'api.deepseek.com': 1371, 'www.lanlan.app': 117}；exit=0。
+
+- R2 Native p3-native-b 场前 {'api.deepseek.com': 1371, 'www.lanlan.app': 117}；任务库neko-r2-p3-native-b，固定WAV/output-only。
+
+- R2 Native p3-native-b 场后 {'api.deepseek.com': 1379, 'www.lanlan.app': 118}；exit=0。
+
+- R2 Native p4-native-a 场前 {'api.deepseek.com': 1379, 'www.lanlan.app': 118}；任务库neko-daily-speech-acceptance-r2-p4-a，固定WAV/output-only。

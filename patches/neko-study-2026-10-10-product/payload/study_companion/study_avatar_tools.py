@@ -22,9 +22,8 @@ from plugin.sdk.plugin import llm_tool
 from .models import public_current_question_payload
 
 RELAY_NOTE = (
-    "Pass the reply text on to the learner as spoken by you. Keep its wording, "
-    "language and code identifiers unchanged; do not translate, lengthen or "
-    "summarize it. Add nothing except, at most, one short transition."
+    "Read every sentence in reply to the learner. Keep the wording, language and code "
+    "identifiers unchanged; do not translate, shorten, summarize or add a transition."
 )
 
 _OBJECT = {"type": "object", "properties": {}}
@@ -855,6 +854,8 @@ class _StudyAvatarToolsMixin:
             "Set material_source=project_code; do not substitute study_code for this teaching call. "
             "For a named file, pass code_requests as objects, for example "
             "[{\"mode\":\"file\",\"file\":\"weather_service.dart\",\"offset\":1,\"limit\":40}]. "
+            "For guards/error handling, include the statement after the guard in the bounded window "
+            "so the teacher can explain whether it executes. "
             "For follow-ups on the last source window, omit code_requests and keep the learner's "
             "whole question in question, not in an explore query. "
             "Explain a concept, a piece of code, or the last window the learner had you "

@@ -52,6 +52,15 @@ def coerce_code_requests(requests):
         if not isinstance(item, str):
             coerced.append(item)
             continue
+        if item.lstrip().startswith('{'):
+            try:
+                decoded = json.loads(item) if len(item) <= 8000 else item
+            except (ValueError, RecursionError):
+                decoded = item
+            # Serialized objects still go through the exact same field/window validator.
+            # Malformed structured input must not become an unrelated previous window.
+            coerced.append(decoded)
+            continue
         match = _FILE_REF.match(item.strip())
         if match:
             if match['end']:
@@ -82,9 +91,18 @@ def target_list_omitted(requests):
 
 def request_shape(requests):
     """Types and key names only, never values: enough to see what a provider actually sent."""
+    def shape(item):
+        if isinstance(item, dict):
+            return sorted(item)
+        if isinstance(item, str) and len(item) <= 8000:
+            try:
+                if isinstance(json.loads(item), dict):
+                    return 'str:json_object'
+            except (ValueError, RecursionError):
+                pass
+        return type(item).__name__
     if isinstance(requests, list):
-        return 'list[%d]:%s' % (len(requests), [sorted(item) if isinstance(item, dict) else type(item).__name__
-                                                  for item in requests[:4]])
+        return 'list[%d]:%s' % (len(requests), [shape(item) for item in requests[:4]])
     return type(requests).__name__
 
 
@@ -178,6 +196,8 @@ async def _explain_project_code(plugin, *, question, requests, language, output_
                       'The course, session or authorized project changed. Please ask again about the current material.')
     shape = request_shape(requests)
     requests = coerce_code_requests(requests)
+    if 'str:json_object' in shape and getattr(plugin, 'logger', None) is not None:
+        plugin.logger.info(f'study_explain project_code decoded request shape={shape}')
     def invalid(detail):
         log = getattr(plugin, 'logger', None)
         if log is not None:
@@ -256,6 +276,11 @@ async def _explain_project_code(plugin, *, question, requests, language, output_
                 'A "what if it were changed to X" question proposes an edit to the shown code: apply that edit '
                 'mentally and explain its effect; never answer that X is missing from the code or fall back to the '
                 'current behavior. '
+                'For a guard/error-handling question, trace whether the next shown statement executes '
+                'and cite its actual line when it is in the evidence; use the second short sentence '
+                'for that control-flow consequence, not speculation about unseen callers. '
+                'For a proposed edit, do not assume an unseen response body or claim a likely parsing '
+                'failure without evidence; state parsing outcomes conditionally. '
                 'Default to two short, patient sentences without greetings or filler; explicit length preferences win.\n'
                 + (('This is a follow-up: the windows above are the source most recently read '
                     + ('in an earlier session of this course' if from_earlier_session else 'in this session')
