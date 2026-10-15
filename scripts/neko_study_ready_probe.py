@@ -250,7 +250,7 @@ def inspect(OUTPUT,all_viewports=False):
         assert not report.get('refused_entries'),'unexpected entry requested'
         assert report.get('completed_runs') and all(run['status']=='succeeded' for run in report['completed_runs'].values()),'a reading run failed'
         assert set(server.runs)==set(report['completed_runs']),'a reading run was not observed to finish'
-        report['result']='PASS: complete bootstrap/real refresh/text protection/header layout; QA unchanged'
+        report['result']='PASS: recorded Study DOM checks and real reading runs; QA unchanged'
     except Exception as error:
         report['failure']=type(error).__name__+': '+str(error)
     finally:

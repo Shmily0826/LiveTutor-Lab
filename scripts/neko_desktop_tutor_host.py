@@ -473,7 +473,9 @@ def verify_source_audio_gate() -> None:
         if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != item["sha256"]:
             raise RuntimeError(f"native phrase runtime helper fingerprint differs: {item['path']}")
     from neko_runtime_helpers import verify_runtime_helpers
-    verify_runtime_helpers(ROOT, SOURCE_APP, manifest, SOURCE_PYTHON)
+    from neko_voice_host_patch import HOSTS
+    for host_root in HOSTS:
+        verify_runtime_helpers(ROOT, host_root, manifest, SOURCE_PYTHON)
 
 
 QUIET_BRAIN_KEYS = ("recent_memory_auto_review",)
