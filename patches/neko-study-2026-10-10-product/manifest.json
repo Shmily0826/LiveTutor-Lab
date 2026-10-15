@@ -156,7 +156,7 @@
     },
     {
       "path": "payload/study_companion/study_code_tools.py",
-      "sha256": "c3df2774fc0637746bd414dcff7e9adb2e333f4e183c9b8699e891044c2bf035",
+      "sha256": "70c4e831331bd239e0a253fc95a1fe45f92ff55d3bed8b91fc4716c7be0d116b",
       "deployed_matches": true,
       "reason": "Required existing avatar code-tool mixin; included during publication dependency closure",
       "phase50_prior_sha256": "8ff871153a7eadf5ab7e4b9203cd5eea760be62e8ab1528f26e0091226412897",
@@ -164,7 +164,9 @@
       "phase59_prior_sha256": "a080b174bc918e234f891403b0455d72164bc053a9441bdd6395d56ba2d75ba0",
       "phase59_verification": "Per-call content-free timings; offline isolation/cancellation and existing boundaries checked. No provider performance or audible/human acceptance claimed.",
       "claude_m1_prior_sha256": "6e29c608df5d7040bd91941ee512a1e6b46d50ec6c3aa1490cdbcd1df39b8b41",
-      "claude_m2_prior_sha256": "6fac1e770cb14f67d032027aac746019f15c436715e9b871ce5fdd6bb2c72b72"
+      "claude_m2_prior_sha256": "6fac1e770cb14f67d032027aac746019f15c436715e9b871ce5fdd6bb2c72b72",
+      "codex_followup_prior_sha256": "c3df2774fc0637746bd414dcff7e9adb2e333f4e183c9b8699e891044c2bf035",
+      "codex_followup_verification": "Timing only: filter/leak/shown/window/empty-retry phases; normalized AST unchanged. No filters, authorization, revision checks or retry behavior changed. See docs/evidence/codex-followup-gap-emptyturn-2026-10-15.md."
     },
     {
       "path": "payload/study_companion/entry_tutor_explain_entries.py",

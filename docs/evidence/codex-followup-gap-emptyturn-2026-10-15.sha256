@@ -1,0 +1,5 @@
+70c4e831331bd239e0a253fc95a1fe45f92ff55d3bed8b91fc4716c7be0d116b  patches/neko-study-2026-10-10-product/payload/study_companion/study_code_tools.py
+2bcd71e50ae35184b19ade69a9a95d29b55b7214b6f279be04ff7f3555f0227f  patches/neko-study-2026-10-10-product/manifest.json
+02e36a86aaa0c05174746c1e36754f29f0d3096687f765d3252a31b742bac90f  scripts/test_neko_code_timing.py
+e32b51a5e742effcc6888c3fe8c7a9f59ea084acda2944f4f1af9163827b0786  docs/claude-goal-status.md
+c9b11289e911acd8c1c2d1afec382c59a8a84be52a4ca33a2f8c8fd73daaa6c3  docs/evidence/codex-followup-gap-emptyturn-2026-10-15.md

@@ -625,7 +625,8 @@ class _StudyCodeToolsMixin:
                     inventory_stdout = await self._code_inventory(cli, authorized)
                 if not isinstance(inventory_stdout, str):
                     return {"ok": False, "error": f"CODEGRAPH_EXIT_{inventory_stdout}"}
-                candidates = _indexed_file_candidates(inventory_stdout, authorized, file or text, offset, limit)
+                with phase('file_candidates'):
+                    candidates = _indexed_file_candidates(inventory_stdout, authorized, file or text, offset, limit)
             except Exception as error:
                 return {"ok": False, "error": "SOURCE_FILE_LOOKUP_FAILED", "detail": str(error)[:200]}
             if len(candidates) != 1:
@@ -651,17 +652,21 @@ class _StudyCodeToolsMixin:
                     "detail": str(done.stderr or "")[:240]}
         raw = done.stdout
         if index_file:
-            raw = _code_file_window(raw, index_file, offset, limit)
+            with phase('source_file_window'):
+                raw = _code_file_window(raw, index_file, offset, limit)
             if not raw:
                 return {"ok": False, "error": "SOURCE_WINDOW_UNAVAILABLE", "next": "The requested window was not returned by the index. Do not claim the file is absent; verify its indexed path or choose a shown symbol."}
         if sub == "files":
-            raw = _structure_lines(done.stdout, authorized["prefix"])
+            with phase('source_structure'):
+                raw = _structure_lines(done.stdout, authorized["prefix"])
             if not raw:
                 return {"ok": False, "error": "STRUCTURE_UNREADABLE",
                         "next": "No usable authorized file entries were returned. Say the structure request failed; "
                                 "this does not prove the project or a file is absent. Offer a specific source query."}
-        kept, stats = self._code_filter(raw, authorized)
-        leak = self._code_leak(kept, authorized)
+        with phase('source_filter'):
+            kept, stats = self._code_filter(raw, authorized)
+        with phase('source_leak'):
+            leak = self._code_leak(kept, authorized)
         log = getattr(self, "logger", None)
         if leak:
             # Boundary 3: if the filter cannot be vouched for, the evidence stops here rather
@@ -671,12 +676,14 @@ class _StudyCodeToolsMixin:
             return {"ok": False, "error": "EVIDENCE_FILTER_UNSURE",
                     "next": "Say that the project index returned evidence the read-only filter "
                             "could not safely keep; nothing was sent. Narrow the question."}
-        evidence = "\n".join(kept).strip()
-        shown = _shown(kept, authorized["root"], authorized["prefix"])
-        if index_file:
-            numbers = sorted({int(hit.group(1)) for line in kept if (hit := _FENCED_LINE.match(line))
-                              and offset <= int(hit.group(1)) < offset + limit})
-            shown = [{"file": index_file, "lines": numbers}] if numbers else []
+        with phase('source_evidence'):
+            evidence = "\n".join(kept).strip()
+        with phase('source_shown'):
+            shown = _shown(kept, authorized["root"], authorized["prefix"])
+            if index_file:
+                numbers = sorted({int(hit.group(1)) for line in kept if (hit := _FENCED_LINE.match(line))
+                                  and offset <= int(hit.group(1)) < offset + limit})
+                shown = [{"file": index_file, "lines": numbers}] if numbers else []
         if sub != "files" and not index_file and not shown and synced in ("throttled", "unchanged"):
             # Measured: a file added seconds before a question stayed invisible behind the
             # throttle, and "not found" then reads like "does not exist". When the throttle is
@@ -684,18 +691,25 @@ class _StudyCodeToolsMixin:
             # unthrottled sync and ask once more - one extra second, no retry loop.
             # A file tree never qualifies: it has no line numbers to be missing, so the retry
             # would only burn a second indexer run and replace the folded shape with raw JSON.
-            forced = await self._code_sync(cli, authorized, force=True)
+            with phase('source_retry_sync'):
+                forced = await self._code_sync(cli, authorized, force=True)
             if forced == "synced":
                 try:
-                    retry = await _run(command)
+                    with phase('source_retry_query'):
+                        retry = await _run(command)
                 except Exception:
                     retry = None
                 if retry is not None and retry.returncode == 0:
                     synced = "synced-after-empty"
-                    kept, stats = self._code_filter(retry.stdout, authorized)
-                    if not self._code_leak(kept, authorized):
-                        evidence = "\n".join(kept).strip()
-                        shown = _shown(kept, authorized["root"], authorized["prefix"])
+                    with phase('source_retry_filter'):
+                        kept, stats = self._code_filter(retry.stdout, authorized)
+                    with phase('source_retry_leak'):
+                        retry_leak = self._code_leak(kept, authorized)
+                    if not retry_leak:
+                        with phase('source_retry_evidence'):
+                            evidence = "\n".join(kept).strip()
+                        with phase('source_retry_shown'):
+                            shown = _shown(kept, authorized["root"], authorized["prefix"])
         with phase('source_record'):
             self._code_receipt(sub, text, authorized, stats, evidence, shown, synced, head)
             await self._code_record(sub, text, authorized, shown, stats, repo_commit=head or authorized["commit"])
