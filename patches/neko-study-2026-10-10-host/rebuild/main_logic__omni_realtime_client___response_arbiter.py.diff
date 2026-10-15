@@ -1,0 +1,283 @@
+diff --git a/main_logic/omni_realtime_client/_response_arbiter.py b/main_logic/omni_realtime_client/_response_arbiter.py
+index 7b19521..83f2c56 100644
+--- a/main_logic/omni_realtime_client/_response_arbiter.py
++++ b/main_logic/omni_realtime_client/_response_arbiter.py
+@@ -226,6 +226,15 @@ class _QueuedResponse:
+     bypass_count: int = field(default=0, compare=False)
+     response_send_started: bool = field(default=False, compare=False)
+     item_driven: bool = field(default=False, compare=False)
++    automatic_audio: bool = field(default=False, compare=False)
++    native_tool_origin: object = field(default_factory=object, compare=False)
++    native_tool_connection_check: object = field(default=None, compare=False)
++    native_tools_pending: set = field(default_factory=set, compare=False)
++    native_tools_written: set = field(default_factory=set, compare=False)
++    native_tools_changed: asyncio.Event = field(default_factory=asyncio.Event, compare=False)
++    native_join_lock: asyncio.Lock = field(default_factory=asyncio.Lock, compare=False)
++    native_start_wait_budget: float = field(default=5.0, compare=False)
++    native_input_sequence: int | None = field(default=None, compare=False)
+     submitted_item_event_ids: list[str] = field(default_factory=list, compare=False)
+     # Once the first pre-response event enters the transport send, the item is
+     # committed to the provider. Admission invalidation after that point must
+@@ -638,6 +647,142 @@ class RealtimeResponseArbiter:
+             return owner.source
+         return None
+ 
++    _NATIVE_TOOL_RESPONSE_WAIT_SECONDS = 30.0
++
++    def _native_tool_owner(self, origin):
++        owner = self._response_owner
++        if (origin is None or owner is None or owner is not self._current
++                or not owner.automatic_audio or owner.native_tool_origin is not origin
++                or owner.interrupted or not self._connection_available
++                or owner.terminal is None or owner.terminal.done()
++                or (owner.admission_check is not None and not owner.admission_check())):
++            raise ResponseAdmissionRejected("native tool input origin retired")
++        return owner
++
++    def capture_native_tool_origin(self, call_id, *, wire_call_id=None, connection_check=None):
++        owner = self._response_owner
++        if owner is None or not owner.automatic_audio:
++            return None
++        owner = self._native_tool_owner(owner.native_tool_origin)
++        if not owner.response_send_started or owner.ticket.started.done():
++            raise ResponseAdmissionRejected("native tool arrived outside the supported pre-content slot")
++        if (not isinstance(wire_call_id, str) or not wire_call_id
++                or len(wire_call_id) > 1000 or call_id != wire_call_id):
++            raise ValueError("native continuation needs an actual bounded call id")
++        if (call_id in owner.native_tools_written or call_id in owner.native_tools_pending
++                or len(owner.native_tools_pending | owner.native_tools_written) >= 32):
++            raise RuntimeError("duplicate or excessive native tool continuation")
++        owner.native_tools_pending.add(call_id)
++        if owner.native_tool_connection_check is None:
++            owner.native_tool_connection_check = connection_check
++        owner.native_tools_changed.set()
++        return owner.native_tool_origin
++
++    def native_tool_origin_is_current(self, origin):
++        try:
++            self._native_tool_owner(origin)
++            return True
++        except ResponseAdmissionRejected:
++            return False
++
++    async def wait_native_tool_input(self, origin):
++        owner = self._native_tool_owner(origin)
++        async with asyncio.timeout(8):
++            await asyncio.shield(owner.ticket.sent)
++        self._native_tool_owner(origin)
++
++    def reject_native_tool_origin(self, origin):
++        try:
++            owner = self._native_tool_owner(origin)
++        except ResponseAdmissionRejected:
++            return
++        error = RuntimeError("native tool continuation was abandoned")
++        self._fail_ticket(owner.ticket, error)
++        if owner.terminal is not None and not owner.terminal.done():
++            owner.terminal.set_exception(error)
++        owner.native_tools_changed.set()
++
++    async def join_native_tool_results(self, origin, events, *, event_sender, admission_check):
++        owner = self._native_tool_owner(origin)
++        call_ids = [event.get("item", {}).get("call_id") for event in events]
++        if (not events or len(events) > 32 or len(set(call_ids)) != len(call_ids)
++                or any(event.get("type") != "conversation.item.create"
++                    or event.get("item", {}).get("type") != "function_call_output"
++                    or not isinstance(event.get("item", {}).get("output"), str)
++                    for event in events)
++                or any(call_id not in owner.native_tools_pending for call_id in call_ids)):
++            raise ValueError("native continuation contains an unregistered tool output")
++        def current():
++            return (self.native_tool_origin_is_current(origin) and admission_check())
++        try:
++            async with asyncio.timeout(8):
++                await asyncio.shield(owner.ticket.sent)
++                async with owner.native_join_lock:
++                    if not current() or any(call_id not in owner.native_tools_pending for call_id in call_ids):
++                        raise ResponseAdmissionRejected("native tool continuation retired before write")
++                    for event in events:
++                        event.setdefault("event_id", "event_arbiter_" + uuid.uuid4().hex)
++                    owner.event_ids |= frozenset(event["event_id"] for event in events)
++                    for event in events:
++                        if not current():
++                            raise ResponseAdmissionRejected("native tool continuation retired during write")
++                        owner.submitted_item_event_ids.append(event["event_id"])
++                        self._worker_send_in_flight = True
++                        try:
++                            await event_sender(event)
++                        finally:
++                            self._worker_send_in_flight = False
++                        if not current():
++                            raise ResponseAdmissionRejected("native tool continuation retired after write")
++                    owner.native_tools_pending.difference_update(call_ids)
++                    owner.native_tools_written.update(call_ids)
++                    owner.native_tools_changed.set()
++        except BaseException:
++            # A partially sent batch must never fall back to a second submission.
++            self.reject_native_tool_origin(origin)
++            raise
++
++    async def _wait_native_audio_started(self, owner):
++        loop = asyncio.get_running_loop()
++        started_at = loop.time()
++        overall_deadline = started_at + self._NATIVE_TOOL_RESPONSE_WAIT_SECONDS
++        idle_deadline = started_at + owner.response_started_timeout
++        while not owner.ticket.started.done():
++            if owner.interrupt_event.is_set():
++                if (owner.native_tool_connection_check is not None
++                        and not owner.native_tool_connection_check()):
++                    raise ResponseAdmissionRejected("native tool connection retired during cancellation")
++                raise asyncio.TimeoutError("native automatic response interrupted before content")
++            pending = bool(owner.native_tools_pending)
++            deadline = overall_deadline if pending else min(overall_deadline, idle_deadline)
++            owner.native_start_wait_budget = deadline - started_at
++            remaining = deadline - loop.time()
++            if remaining <= 0:
++                raise asyncio.TimeoutError("native automatic response start timed out")
++            owner.native_tools_changed.clear()
++            changed = asyncio.create_task(owner.native_tools_changed.wait())
++            interrupted = asyncio.create_task(owner.interrupt_event.wait())
++            try:
++                with self._report_wait_margin("native response/tool wait", remaining):
++                    await asyncio.wait((owner.ticket.started, changed, interrupted), timeout=remaining,
++                                       return_when=asyncio.FIRST_COMPLETED)
++            finally:
++                changed.cancel()
++                interrupted.cancel()
++                await asyncio.gather(changed, interrupted, return_exceptions=True)
++            if not owner.native_tools_pending and changed.done() and not changed.cancelled():
++                idle_deadline = loop.time() + owner.response_started_timeout
++        await asyncio.shield(owner.ticket.started)
++
++    def native_input_sequence_for(self, response_id):
++        owner = self._response_owner
++        if (owner is not None and owner is self._current and owner.automatic_audio and not owner.interrupted
++                and owner.response_id is not None and owner.response_id == _response_id_text(response_id)
++                and owner.ticket.started.done() and not owner.ticket.started.cancelled()
++                and owner.ticket.started.exception() is None):
++            return owner.native_input_sequence
++        return None
++
+     @property
+     def has_live_response(self) -> bool:
+         """Whether a response the provider already knows about is in flight.
+@@ -695,7 +840,19 @@ class RealtimeResponseArbiter:
+         cancel_timeout: float = 3.0,
+         admission_check: Callable[[], bool] | None = None,
+         pre_commit: Callable[[dict[str, Any]], None] | None = None,
++        automatic_audio: bool = False,
++        native_input_sequence: int | None = None,
+     ) -> ResponseTicket:
++        if (type(automatic_audio) is not bool or (not automatic_audio and native_input_sequence is not None)
++                or (automatic_audio and (type(native_input_sequence) is not int or native_input_sequence <= 0
++                or source != "native_phrase" or response_event is not None or ack_expected or pre_commit is not None
++                or self._protocol_capabilities.route_key != "lanlan_app_gemini"
++                or not self._protocol_capabilities.accepts_id_bearing_content_start
++                or not events_before_response or any(not isinstance(event, dict)
++                    or event.get("type") != "input_audio_buffer.append"
++                    or not isinstance(event.get("audio"), str) or not event["audio"]
++                    for event in events_before_response)))):
++            raise ValueError("automatic audio requires the explicit native phrase route and PCM events")
+         loop = asyncio.get_running_loop()
+         ticket = ResponseTicket(
+             sent=loop.create_future(),
+@@ -754,6 +911,8 @@ class RealtimeResponseArbiter:
+             ticket=ticket,
+             admission_check=admission_check,
+             pre_commit=pre_commit,
++            automatic_audio=automatic_audio,
++            native_input_sequence=native_input_sequence,
+             event_ids=frozenset(ids),
+             completed=loop.create_future(),
+         )
+@@ -1736,6 +1895,9 @@ class RealtimeResponseArbiter:
+         """Attribute a terminal and report whether transport may finalize it."""
+ 
+         owner = self._response_owner
++        if (owner is not None and owner.automatic_audio
++                and (owner.response_id is None or self._event_response_id(event) != owner.response_id)):
++            return False  # Neither terminal-only nor id-less events prove this native response.
+         owner_was_unannounced = bool(
+             owner is not None and not owner.ticket.started.done()
+         )
+@@ -1923,6 +2085,10 @@ class RealtimeResponseArbiter:
+                 # response outcome separate so cancellation/timeout cleanup
+                 # does not mistake a non-success terminal for a missing
+                 # terminal and fail-close a healthy connection.
++                if owner.automatic_audio and owner.native_tools_pending:
++                    terminal_error = RuntimeError("native tool outputs were not fully submitted")
++                if owner.automatic_audio and response_status not in {"completed", "success", "succeeded"}:
++                    terminal_error = RuntimeError("native audio response did not complete successfully")
+                 owner.terminal_error = terminal_error
+                 owner.terminal.set_result(None)
+             if owner_was_unannounced and response_id is None:
+@@ -2831,10 +2997,11 @@ class RealtimeResponseArbiter:
+         # parked waiting for the lane.
+         queued.adoption.arm_on_selection(self._vad_epoch)
+         loop = asyncio.get_running_loop()
+-        item_acked = not queued.ack_expected
++        item_acked = not queued.ack_expected and not queued.automatic_audio
+         queued.item_acked = item_acked
+         requeued = False
+-        item_driven = bool(
++        # Both modes generate from their real pre-events; neither sends response.create.
++        item_driven = bool(queued.automatic_audio or (
+             self._protocol_capabilities.responds_to_conversation_items
+             and queued.events_before_response
+             and all(
+@@ -2849,7 +3016,7 @@ class RealtimeResponseArbiter:
+                 )
+                 for event in queued.events_before_response
+             )
+-        )
++        ))
+         queued.item_driven = item_driven
+ 
+         try:
+@@ -3164,13 +3331,11 @@ class RealtimeResponseArbiter:
+                 # accepted. On a congested shared route this is the bound most
+                 # likely to be wrong, and a queued create is invisible to every
+                 # other log line.
+-                with self._report_wait_margin(
+-                    "response announcement", queued.response_started_timeout
+-                ):
+-                    await asyncio.wait_for(
+-                        asyncio.shield(queued.ticket.started),
+-                        queued.response_started_timeout,
+-                    )
++                if queued.automatic_audio:
++                    await self._wait_native_audio_started(queued)
++                else:
++                    with self._report_wait_margin("response announcement", queued.response_started_timeout):
++                        await asyncio.wait_for(asyncio.shield(queued.ticket.started), queued.response_started_timeout)
+             except asyncio.TimeoutError as started_timeout:
+                 # Before giving up: the create may have produced nothing
+                 # because this provider had already started answering the
+@@ -3179,6 +3344,8 @@ class RealtimeResponseArbiter:
+                 # else would have left this request's own create to be
+                 # rejected or announced, and either resolves ``started``
+                 # instead of timing out.
++                if queued.automatic_audio and queued.interrupted:
++                    await self._cancel_after_timeout(queued, started_timeout)
+                 adopted_id = self._adoptable_id_for(queued)
+                 if self._trace:
+                     self._trace_decision(
+@@ -3188,7 +3355,7 @@ class RealtimeResponseArbiter:
+                             "source": queued.source,
+                             "owner_response_id": queued.response_id,
+                             "adopted_response_id": adopted_id,
+-                            "timeout_s": queued.response_started_timeout,
++                            "timeout_s": (queued.native_start_wait_budget if queued.automatic_audio else queued.response_started_timeout),
+                         },
+                     )
+                 if adopted_id is not None:
+@@ -3329,6 +3496,9 @@ class RealtimeResponseArbiter:
+                         "cancel_write_failed": cancel_write_failed,
+                     },
+                 )
++            if (queued.automatic_audio and queued.native_tool_connection_check is not None
++                    and not queued.native_tool_connection_check()):
++                raise ResponseAdmissionRejected("native tool connection retired during cancel grace")
+             await self._escalate(
+                 "response lifecycle could not reach a terminal state",
+                 observed=queued,

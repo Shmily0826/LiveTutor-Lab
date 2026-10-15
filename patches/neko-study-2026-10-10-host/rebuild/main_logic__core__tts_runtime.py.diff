@@ -1,0 +1,58 @@
+diff --git a/main_logic/core/tts_runtime.py b/main_logic/core/tts_runtime.py
+index 172c30b..b59461f 100644
+--- a/main_logic/core/tts_runtime.py
++++ b/main_logic/core/tts_runtime.py
+@@ -81,6 +81,7 @@ from .tts_records import (
+ # those names here: a from-import snapshots the value at import time and the
+ # facade patch would no longer reach this module's methods.
+ from main_logic import core as _core_facade
++from utils import dev_text_only
+ 
+ 
+ class _GameSpeechPreloadCancelled(Exception):
+@@ -687,6 +688,8 @@ class TtsRuntimeMixin:
+ 
+     def _build_tts_runtime_key(self) -> tuple:
+         """Return the effective TTS worker identity for ready-state reuse."""
++        if dev_text_only.ENABLED:
++            return ("dev_text_only",)
+         try:
+             core_config = self._config_manager.get_core_config()
+             if core_config.get('DISABLE_TTS', False):
+@@ -762,6 +765,8 @@ class TtsRuntimeMixin:
+ 
+     def _resolve_tts_worker_spec(self):
+         """Resolve the current project TTS worker without mutating runtime state."""
++        if dev_text_only.block("tts_worker_selection_blocked"):
++            return dummy_tts_worker, "", self.voice_id or "", None, True, {}
+         core_config = self._config_manager.get_core_config()
+         route_voice_id = self.voice_id or ""
+         if core_config.get("DISABLE_TTS", False):
+@@ -2292,6 +2297,8 @@ class TtsRuntimeMixin:
+ 
+     async def _write_audio_frame(self, websocket, header: dict, tts_audio) -> None:
+         """Write one header/payload pair. The caller holds the frame lock."""
++        if dev_text_only.block("audio_frame_blocked"):
++            return
+         async def write_frame():
+             try:
+                 async with asyncio.timeout(TTS_FRAME_WRITE_TIMEOUT_SECONDS):
+@@ -2331,6 +2338,9 @@ class TtsRuntimeMixin:
+             "speech_id": effective_speech_id
+         }
+         correlation_id = self._game_speech_correlation_for(effective_speech_id)
++        source = getattr(self, "session", None)
++        if not correlation_id and getattr(source, "_is_free_proxy", False) and not self.use_tts:
++            correlation_id = getattr(source, "_native_output_connection_token", "")
+         if correlation_id:
+             header["sdk_speech_correlation_id"] = correlation_id
+         playback_gain = self.speech_playback_gain(effective_speech_id)
+@@ -2406,6 +2416,8 @@ class TtsRuntimeMixin:
+ 
+     async def send_speech(self, tts_audio, speech_id: Optional[str] = None):
+         """Send speech data to the frontend, sending the speech_id header first for precise interruption control"""
++        if dev_text_only.block("speech_output_blocked"):
++            return False
+         try:
+             # Pinned once. The lock keeps other SENDERS out, but ``self.websocket``
+             # is reassigned by reconnect/teardown, which are not senders and do not

@@ -1,0 +1,956 @@
+diff --git a/main_logic/omni_realtime_client/_transport.py b/main_logic/omni_realtime_client/_transport.py
+index f04aba0..bfb6d0a 100644
+--- a/main_logic/omni_realtime_client/_transport.py
++++ b/main_logic/omni_realtime_client/_transport.py
+@@ -251,6 +251,9 @@ class _TransportMixin:
+             None,
+         ):
+             self._voice_handoff_input_open = False
++            driver = getattr(self, "_native_phrase_uplink", None)
++            if driver is not None:
++                driver.note_boundary(expected_sequence)
+ 
+     def can_handoff_voice_input(self) -> bool:
+         """Whether native microphone input is at a safe connection boundary.
+@@ -513,13 +516,157 @@ class _TransportMixin:
+         self._reset_input_route_identity_stream()
+         return identity
+ 
+-    async def _deliver_input_transcript(self, transcript: str, *, item_id: object = None) -> None:
++    def _current_study_grade_phrase(self, *, require_waiting=False):
++        driver = getattr(self, "_native_phrase_uplink", None)
++        delivery = getattr(self, "_native_phrase_last_delivery", None)
++        if (driver is None or not isinstance(delivery, dict) or driver.bypass
++                or driver.buffer is not None or driver.writer is not None
++                or driver.current(driver.snapshot) is not True
++                or type(driver.epoch) is not int or driver.epoch < 0
++                or delivery.get("result") != "written_waiting_provider_boundary"
++                or type(delivery.get("input_sequence")) is not int or delivery["input_sequence"] <= 0
++                or delivery["input_sequence"] != getattr(self, "_voice_handoff_input_sequence", 0)
++                or type(delivery.get("connection_generation")) is not int
++                or delivery.get("connection_generation") != self._connection_generation
++                or type(delivery.get("output_samples")) is not int or delivery["output_samples"] <= 0
++                or type(delivery.get("written_samples")) is not int
++                or delivery["written_samples"] != delivery["output_samples"]
++                or type(delivery.get("completed_wall")) not in (int, float)
++                or not __import__("math").isfinite(delivery["completed_wall"]) or delivery["completed_wall"] <= 0):
++            return None
++        waiting = driver.waiting
++        if (waiting is None and require_waiting) or (waiting is not None and (
++                not isinstance(waiting, tuple) or len(waiting) != 2
++                or type(waiting[1]) is not int or waiting[1] != delivery["input_sequence"])):
++            return None
++        # Local sealed input identity, never a fabricated provider utterance ID.
++        return (driver, delivery, driver.epoch)
++
++    def _consume_study_grade_tail(self, transcript, provider, generation):
++        if __import__("os").environ.get("NEKO_STUDY_AUTO_GRADE") != "1": return False
++        callback = getattr(self, "consume_study_grade_tail", None)
++        if not callable(callback) or __import__("inspect").iscoroutinefunction(callback): return False
++        try:
++            return callback(transcript, provider, generation) is True
++        except Exception:
++            return False
++
++    def _rearm_empty_study_question_pin(self, saved):
++        # Called only by a new positive, non-replayed frame, before admission.
++        # A failed read, replay, overlap or scope poison never reaches this path.
++        if (not saved.get("empty_question") or saved.get("invalid")
++                or saved.get("scoped") is not True
++                or saved.get("connection") != self._connection_generation
++                or saved.get("provider") is not self.ws
++                or saved.get("token") != getattr(self, "_native_output_connection_token", None)
++                or saved.get("scope") != getattr(self, "_tool_scope_generation", 0)):
++            return False
++        reader = getattr(self, "get_study_input_authority", None)
++        authority = reader() if callable(reader) else None
++        if authority is None or authority != saved.get("authority"):
++            return False
++        sealed = saved.get("empty_phrase")
++        current = self._current_study_grade_phrase()
++        return bool(isinstance(sealed, tuple) and len(sealed) == 3 and current is not None
++            and sealed[0] is current[0] and sealed[1] is current[1] and sealed[2] == current[2]
++            and current[0].waiting is None)
++
++    def _capture_study_grade_pin(self, speech, arrival, *, replay=False):
++        if __import__("os").environ.get("NEKO_STUDY_AUTO_GRADE") != "1":
++            return
++        reader = getattr(self, "get_study_question_pin", None)
++        if not callable(reader):
++            return
++        if replay:
++            # Replayed old input cannot acquire the question on a new connection.
++            self._study_grade_pin = {"connection": self._connection_generation, "invalid": True}
++            return
++        if speech is not True:
++            return
++        saved = getattr(self, "_study_grade_pin", None)
++        previous_empty_phrase = None
++        if saved is not None and self._rearm_empty_study_question_pin(saved):
++            previous_empty_phrase = saved["empty_phrase"]
++            self._study_grade_pin = saved = None
++        if saved is not None:
++            if (saved["connection"] != self._connection_generation
++                    or arrival - saved.get("last_speech", arrival) > 1.2):
++                saved["invalid"] = True # Ambiguous overlapping inputs: no rebinding.
++            saved["last_speech"] = arrival
++            return
++        authority_reader = getattr(self, "get_study_input_authority", None)
++        authority = authority_reader() if callable(authority_reader) else None
++        pin = reader()
++        empty = bool(isinstance(pin, dict) and pin.get("_question_empty") is True
++            and set(pin) == {"_question_empty", "course_id", "session_id"}
++            and all(isinstance(pin[key], str) and pin[key].strip() for key in ("course_id", "session_id")))
++        self._study_grade_pin = {"connection": self._connection_generation,
++            "question": None if empty else pin, "empty_question": empty,
++            "previous_empty_phrase": previous_empty_phrase,
++            "last_speech": arrival, "invalid": pin is None or authority is None,
++            "authority": authority, "provider": self.ws,
++            "token": getattr(self, "_native_output_connection_token", None),
++            "scope": getattr(self, "_tool_scope_generation", 0), "scoped": False}
++
++    def _advance_study_grade_ingress_scope(self):
++        saved = getattr(self, "_study_grade_pin", None)
++        if not saved or saved.get("invalid"): return
++        if saved.get("scoped") or saved["scope"] != getattr(self, "_tool_scope_generation", 0):
++            saved["invalid"] = True
++            return
++        # Only the protocol's actual user-turn boundary may advance this pin.
++        saved["scope"] += 1
++        saved["scoped"] = True
++
++    def _take_study_grade_asr(self, provider, generation):
++        if __import__("os").environ.get("NEKO_STUDY_AUTO_GRADE") != "1":
++            return None
++        saved = getattr(self, "_study_grade_pin", None)
++        if saved is not None and saved.get("previous_empty_phrase") is not None:
++            previous = saved["previous_empty_phrase"]
++            current = self._current_study_grade_phrase(require_waiting=True)
++            if (current is None or current[0] is not previous[0]
++                    or current[1] is previous[1] or current[2] != previous[2]
++                    or current[1]["input_sequence"] <= previous[1]["input_sequence"]):
++                saved["invalid"] = True # Old/early ASR cannot adopt the new question.
++        if saved is not None and not saved.get("invalid") and not saved.get("empty_question"):
++            self._study_grade_pin = None
++        # A poisoned slot stays poisoned until an actual connection replacement.
++        reader = getattr(self, "get_study_input_authority", None)
++        authority = reader() if callable(reader) else None
++        binding_current = bool(saved and saved["connection"] == generation
++                and provider is self.ws and generation == self._connection_generation
++                and saved.get("provider") is provider
++                and saved.get("scope") == getattr(self, "_tool_scope_generation", 0)
++                and saved.get("token") == getattr(self, "_native_output_connection_token", None)
++                and authority is not None and saved.get("authority") == authority)
++        if binding_current and not saved.get("invalid") and saved.get("empty_question"):
++            saved["empty_phrase"] = self._current_study_grade_phrase(require_waiting=True)
++        if (not saved or saved.get("invalid") or saved["connection"] != generation
++                or provider is not self.ws or generation != self._connection_generation
++                or saved.get("provider") is not provider
++                or saved.get("scope") != getattr(self, "_tool_scope_generation", 0)
++                or saved.get("token") != getattr(self, "_native_output_connection_token", None)
++                or authority is None or saved.get("authority") != authority):
++            pin = None
++        else:
++            pin = saved.get("question")
++        owner = self._capture_tool_task_owner(provider, connection_generation=generation)
++        owner = __import__("dataclasses").replace(owner, turn_pair_fence_applies=False)
++        return {"client": self, "owner": owner, "pin": pin,
++                "token": getattr(self, "_native_output_connection_token", None),
++                "frames": getattr(self, "_voice_handoff_input_sequence", 0),
++                "input_authority": authority if binding_current else None,
++                "sealed_phrase": self._current_study_grade_phrase(require_waiting=True) if binding_current else None}
++
++    async def _deliver_input_transcript(self, transcript: str, *, item_id: object = None, study_input_owner=None) -> None:
+         identity = self._take_input_route_identity(item_id)
+         routed_callback = getattr(self, "on_input_transcript_with_route", None)
+         if callable(routed_callback):
+             await routed_callback(
+                 transcript,
+                 source_game_route_identity=identity,
++                **({"study_input_owner": study_input_owner} if study_input_owner is not None else {}),
+             )
+             return
+         if self.on_input_transcript:
+@@ -528,6 +675,7 @@ class _TransportMixin:
+     async def connect(self, instructions: str, native_audio=True) -> None:
+         """Establish WebSocket connection with the Realtime API."""
+         self._native_audio = native_audio
++        self._study_grade_pin = None # Physical connection replacement retires ambiguous ingress.
+         # Validate turn_detection_mode BEFORE any side effect (websockets.connect,
+         # silence-check task, or Gemini SDK init). Applies uniformly to all providers.
+         if self.turn_detection_mode not in (TurnDetectionMode.MANUAL, TurnDetectionMode.SERVER_VAD):
+@@ -605,6 +753,7 @@ class _TransportMixin:
+         # that never answers is still force-aborted after this bounded wait.
+         self.ws = await websockets.connect(url, additional_headers=headers, close_timeout=2.0)
+         self._on_connection_attached()
++        self._late_raw_connection_foreign_scope = getattr(self, "_late_raw_foreign_scope", 0)
+         # Do not reopen the arbiter until the replacement transport exists.
+         # A failed reconnect must leave the prior shutdown state intact.
+         self._response_arbiter.reset_connection_state()
+@@ -1088,6 +1237,9 @@ class _TransportMixin:
+                     else None
+                 )
+                 await transport.send(payload)
++                trace_relay = getattr(wire_trace, "record_study_relay_write", None)
++                if callable(trace_relay) and event.get("type") == "conversation.item.create":
++                    trace_relay(payload, generation=trace_generation)
+                 if wire_trace is not None:
+                     wire_trace.record_send(
+                         event,
+@@ -1214,13 +1366,343 @@ class _TransportMixin:
+             if not waiter.done():
+                 waiter.cancel()
+ 
++    # How long the learner has to talk before it counts as an interruption. Same
++    # 0.5 s the RNNoise branch already means by `_speech_sustain_threshold`; measured on the
++    # audio timeline rather than by frame count because the uplink chunk period here is ~10 ms.
++    _LOCAL_BARGE_IN_SECONDS = 0.5
++    # A short run counts as talking even though it is not unbroken. Measured 2026-10-12 by
++    # replaying a real recorded question through the host's own
++    # `utils.audio_processor.AudioProcessor` (`scripts/neko_speech_signal_probe.py`): 27% of
++    # the 48 kHz frames clear the int16 RMS gate, but the longest run with no dip at all is
++    # 0.08 s raw / 0.07 s denoised (a second pass over the same file put the raw figure at
++    # 0.45 s - either way, far short of half a second). Natural speech breathes, so an
++    # unbroken window is a threshold no learner meets. 0.15 s is the smallest tolerance in
++    # that table whose spans reach 0.5 s on both columns (0.65 s raw, 0.57 s denoised), and
++    # the 0.5 s span requirement still has to be satisfied inside it.
++    _LOCAL_BARGE_IN_GAP_SECONDS = 0.15
++    # How long the answer stays suppressed when no new response id ever shows up. The mute must
++    # expire, because a wedge is the failure this project already paid for once.
++    _LOCAL_MUTE_MAX_SECONDS = 12.0
++    # `_ai_recent_activity_time` is written at the delivery site, so it is the only
++    # "something is being spoken right now" signal that survives a route that never announces a
++    # response. Outside this window there is nothing to interrupt.
++    _LOCAL_TALKING_WINDOW_SECONDS = 2.0
++
++    def _note_output_delivery(self, event: dict) -> None:
++        """Track which response the spoken output belongs to; release a mute that it overran."""
++
++        response_id = event.get("response_id")
++        if not isinstance(response_id, str) or not response_id:
++            return
++        muted = getattr(self, "_muted_response_id", None)
++        if muted == response_id:
++            return
++        if muted is not None:
++            logger.info(
++                "local playback mute released on a new response: released=%s incoming=%s "
++                "suppressed_events=%d",
++                muted, response_id, getattr(self, "_local_mute_suppressed", 0),
++            )
++            self._muted_response_id = None
++        self._last_delivered_response_id = response_id
++
++    def _output_locally_muted(self, event: dict) -> bool:
++        """True while the learner is talking over the response this event belongs to."""
++
++        muted = getattr(self, "_muted_response_id", None)
++        if muted is None:
++            return False
++        import time as _time
++
++        if _time.monotonic() - self._muted_at > self._LOCAL_MUTE_MAX_SECONDS:
++            logger.warning(
++                "local playback mute expired without a new response: response=%s "
++                "suppressed_events=%d - the route gave no id boundary, delivering again",
++                muted, getattr(self, "_local_mute_suppressed", 0),
++            )
++            self._muted_response_id = None
++            return False
++        response_id = event.get("response_id")
++        if isinstance(response_id, str) and response_id != muted:
++            return False
++        self._local_mute_suppressed = getattr(self, "_local_mute_suppressed", 0) + 1
++        return True
++
++    def _count_gemini_local_onset_suppression(self) -> None:
++        """Count the output frames the local onset stopped on the Gemini-shaped route.
++
++        Counting only - the shipped gate does the suppressing, so a frame attributed to us while
++        the provider had interrupted itself inflates a log number and changes no behaviour.
++        """
++        import time
++        armed = getattr(self, "_local_onset_armed_at", 0.0)
++        if armed and time.time() - armed < 30.0:
++            self._local_mute_suppressed = getattr(self, "_local_mute_suppressed", 0) + 1
++
++    def _note_barge_in_meter(self, speaking: bool, loud: bool, raw_samples,
++                             audio_timeline_at: float) -> None:
++        """Two seconds of what the local onset gate was actually fed, then say it out loud.
++
++        Seven sessions were needed to find the last cause and every one of them was blind:
++        a missing `local speech onset` line cannot tell "nobody spoke" from "spoke, and the
++        signal I read never rose". This reports both signals side by side - what the caller's
++        verdict saw, and what the int16 gate saw - in the shape the host already uses for its
++        own `[voice-rnnoise]` line, so the next session can be read instead of re-litigated.
++        """
++        bucket = getattr(self, "_barge_in_bucket", None)
++        if bucket is None or audio_timeline_at - bucket["from"] >= 2.0:
++            if bucket is not None and bucket["frames"]:
++                values = sorted(bucket["rms"])
++                # Same units as `_client_vad_threshold` (raw int16 amplitude): the first version
++                # of this line scaled an already-raw RMS by 32767 again and printed numbers over
++                # the int16 ceiling, which made the live session unreadable.
++                logger.info(
++                    "[barge-in-meter] from=%.1f frames=%d speaking=%d raw_loud=%d "
++                    "rms_p50=%.0f rms_p90=%.0f rms_max=%.0f gate=%d",
++                    bucket["from"], bucket["frames"], bucket["speaking"], bucket["loud"],
++                    values[len(values) // 2],
++                    values[min(len(values) - 1, int(len(values) * 0.9))],
++                    values[-1], getattr(self, "_client_vad_threshold", 0),
++                )
++            bucket = {"from": audio_timeline_at, "frames": 0, "speaking": 0, "loud": 0, "rms": []}
++            self._barge_in_bucket = bucket
++        level = float(np.sqrt(np.mean(raw_samples.astype(np.float32) ** 2))) if len(raw_samples) else 0.0
++        bucket["frames"] += 1
++        bucket["speaking"] += int(bool(speaking))
++        bucket["loud"] += int(bool(loud))
++        bucket["rms"].append(level)
++
++    def _note_local_onset_declined(self, reason: str) -> None:
++        """Say why a completed speech streak did not mute, at most once every 20 s.
++
++        Four live sessions produced zero onset lines and no way to tell "never armed" from
++        "armed, but nothing was playing". The decline is the only case that is invisible
++        otherwise, so it gets one rate-limited line instead of silence.
++        """
++        import time
++        now = time.time()
++        if now - getattr(self, "_local_onset_declined_logged_at", 0.0) < 20.0:
++            return
++        self._local_onset_declined_logged_at = now
++        logger.info("local speech onset declined: %s", reason)
++
++    def _remember_native_barge_in_overlap(self, audio_timeline_at):
++        self._local_barge_in_overlap = None
++        getter = getattr(self, "get_native_barge_in_generation", None)
++        generation = getter() if callable(getter) else None
++        owner = getattr(self, "_native_playback_owner", None)
++        now = time.monotonic()
++        playback_at = getattr(self, "_native_playback_state_at", 0.0)
++        if (self._is_free_proxy and generation is not None and owner
++                and owner[:3] == (self._native_output_connection_token,
++                                  self._connection_generation, generation)
++                and getattr(self, "_native_playback_active", False)
++                and getattr(self, "_native_playback_audible", False)
++                and playback_at and 0 <= now - playback_at <= self._LOCAL_TALKING_WINDOW_SECONDS):
++            # Only a real playback receipt can carry this utterance across the end.
++            self._local_barge_in_overlap = (owner, now, audio_timeline_at)
++
++    def _capture_native_barge_in_pcm(self, pcm, speech_active, captured_at):
++        if not self._is_free_proxy or speech_active is None or not pcm:
++            return False
++        getter = getattr(self, "get_native_barge_in_generation", None)
++        generation = getter() if callable(getter) else None
++        if generation is None:
++            return False
++        from main_logic.voice_input.activation.buffer import BoundedAudioFrameBuffer
++        from main_logic.voice_input.activation.contracts import AudioFrame
++        from main_logic.voice_input.activation.controller import VoiceActivationConfig
++        pending = getattr(self, "_native_barge_in_pending", False)
++        if generation != getattr(self, "_native_barge_in_generation", None):
++            if pending:
++                self._native_barge_in_overflow = True
++                return True
++            config = VoiceActivationConfig()
++            self._native_barge_in_buffer = BoundedAudioFrameBuffer(
++                max_seconds=config.buffer_seconds, max_bytes=config.buffer_bytes,
++            )
++            self._native_barge_in_config = config
++            self._native_barge_in_generation = generation
++            self._native_barge_in_sequence = self._native_barge_in_samples = 0
++            self._native_barge_in_candidate = None
++            self._native_barge_in_last_voice = 0.0
++            self._native_barge_in_replayed_candidate = None
++        when = captured_at if isinstance(captured_at, (int, float)) and captured_at > 0 else time.time()
++        sequence = self._native_barge_in_sequence
++        start = self._native_barge_in_samples
++        frame = AudioFrame(sequence, start, start + len(pcm) // 2, when,
++                           16_000, pcm, generation, bool(speech_active))
++        result = self._native_barge_in_buffer.append(frame)
++        self._native_barge_in_sequence += 1
++        self._native_barge_in_samples = frame.sample_end
++        if pending and any(seq >= self._native_barge_in_cursor for seq in result.evicted_sequences):
++            self._native_barge_in_overflow = True
++        if speech_active:
++            if (self._native_barge_in_candidate is None
++                    or when - self._native_barge_in_last_voice > self._local_quiet_seconds):
++                self._native_barge_in_candidate = sequence
++            self._native_barge_in_last_voice = when
++        return pending
++
++    def _prepare_native_barge_in_replay(self):
++        candidate = getattr(self, "_native_barge_in_candidate", None)
++        if candidate is None or candidate == getattr(self, "_native_barge_in_replayed_candidate", None):
++            return False
++        self._native_barge_in_cursor = self._native_barge_in_buffer.replay_start_sequence(
++            candidate, pre_roll_seconds=self._native_barge_in_config.pre_roll_seconds,
++        )
++        self._native_barge_in_overflow = False
++        return True
++
++    def _native_phrase_mode_allowed(self):
++        route = getattr(getattr(self, "_realtime_protocol_capabilities", None), "route_key", None)
++        return bool(getattr(self, "_native_phrase_input_enabled", False)
++                    and route == "lanlan_app_gemini" and self._is_free_proxy
++                    and not self._has_server_vad and not self._is_gemini)
++
++    def _native_phrase_driver(self):
++        driver = getattr(self, "_native_phrase_uplink", None)
++        if driver is None:
++            from neko_phrase_input_transport import NativePhraseUplink
++            driver = self._native_phrase_uplink = NativePhraseUplink(self)
++        return driver
++
++    def _native_phrase_protects_input(self):
++        driver = getattr(self, "_native_phrase_uplink", None)
++        return bool(driver is not None and driver.protect_clear())
++
++    def _retire_native_phrase_input(self):
++        driver = getattr(self, "_native_phrase_uplink", None)
++        if driver is not None:
++            driver.retire()
++
++    def _trace_local_playback_owner(self) -> None:
++        import time
++        now = time.monotonic()
++        if now - getattr(self, "_local_owner_trace_at", 0.0) < 2.0:
++            return
++        self._local_owner_trace_at = now
++        owner = getattr(self, "_local_audio_dispatch_owner", (None, None, None))
++        logger.info(
++            "[barge-in-owner] connection=%s dispatch_connection=%s "
++            "dispatch_speech=%s current_speech=%s dispatch_response=%s mute_anchor=%s",
++            self._connection_generation, owner[0], owner[1], self._read_host_turn_id(),
++            owner[2], getattr(self, "_last_delivered_response_id", None),
++        )
++
++    async def _handle_local_speech_onset(self, evidence: str) -> None:
++        """Stop the current answer from being spoken, without asking the provider to cancel it.
++
++        Narrow on purpose: `_LOCAL_BARGE_IN_SECONDS` of talking, where a gap longer than
++        `_LOCAL_BARGE_IN_GAP_SECONDS` restarts the clock (real speech breathes, measured: 0.45 s
++        is the longest unbroken loud run a spoken sentence produces), never on a route whose
++        server VAD already interrupts, never when nothing has
++        been audible in the last `_LOCAL_TALKING_WINDOW_SECONDS`. NEKO_LOCAL_BARGE_IN=0 restores
++        shipped behaviour without touching this file; whether the speaker's own echo can trip it
++        is a listening test, not something an offline run can answer.
++
++        Two shapes, because the route the learner is actually on is not the one the id-keyed mute
++        was written for. Measured 2026-10-12 03:14 on a live session: `route=lanlan_app_gemini`,
++        audio delivered through `_gemini_support.py`, zero onset lines - the Gemini client never
++        reaches the `_transport.py` gate, and this handler used to return on `_is_gemini`. On that
++        route the shipped code already honours `_interrupted` at the delivery site and clears it
++        itself once the AI has been quiet for `_ai_recent_activity_window`, so the local onset
++        raises the product's own flag and lets its own turn detection release it. The id-bearing
++        route keeps the response-keyed mute, because there `_interrupted` is only cleared by a
++        `response.created` this proxy never sends.
++        """
++        import os
++        import time
++
++        if os.environ.get("NEKO_LOCAL_BARGE_IN", "1").strip() == "0":
++            return
++        if self._has_server_vad and getattr(self, "_speech_started_total", 0):
++            # A server that does announce its own boundaries owns the interruption; standing
++            # aside is what keeps this from being a second, competing arbiter. Advertising
++            # server VAD and never sending one event is the case that has to be armed here.
++            self._note_local_onset_declined("server VAD owns the boundaries")
++            return
++        self._trace_local_playback_owner()
++        now = time.time()
++        playback_at = getattr(self, "_native_playback_state_at", 0.0)
++        if playback_at and time.monotonic() - playback_at <= self._LOCAL_TALKING_WINDOW_SECONDS:
++            audible = getattr(self, "_native_playback_active", False)
++        else:
++            audible = now - getattr(self, "_ai_recent_activity_time", 0.0) <= self._LOCAL_TALKING_WINDOW_SECONDS
++        overlap = getattr(self, "_local_barge_in_overlap", None)
++        getter = getattr(self, "get_native_barge_in_generation", None)
++        generation = getter() if callable(getter) else None
++        playback_owner = getattr(self, "_native_playback_owner", None)
++        playback_owner_matches = bool(playback_owner and playback_owner[:3] == (
++            getattr(self, "_native_output_connection_token", None), self._connection_generation, generation))
++        if self._is_free_proxy and playback_owner and not playback_owner_matches:
++            audible = False
++        overlap_matches = bool(overlap and overlap[0][:3] == (
++            getattr(self, "_native_output_connection_token", None),
++            self._connection_generation, generation))
++        if (evidence == "speech-sustained" and overlap_matches
++                and 0 <= time.monotonic() - overlap[1] <= self._LOCAL_BARGE_IN_SECONDS + self._LOCAL_BARGE_IN_GAP_SECONDS
++                and self._LOCAL_BARGE_IN_SECONDS <= self._local_barge_in_loud_at - overlap[2]
++                    <= self._LOCAL_BARGE_IN_SECONDS + self._LOCAL_BARGE_IN_GAP_SECONDS):
++            audible = True
++        if not audible:
++            age = time.monotonic() - playback_at if playback_at else -1.0
++            feedback = ("missing" if not playback_at else "stale" if age > self._LOCAL_TALKING_WINDOW_SECONDS
++                        else "active" if getattr(self, "_native_playback_active", False) else "inactive")
++            self._note_local_onset_declined(
++                "nothing audible for %.1fs feedback=%s playback_active=%s playback_audible=%s heartbeat_age=%.3fs "
++                "feedback_rejected=%s playback_owner_match=%s overlap_owner_match=%s speech_sustained=%s" % (
++                    now - getattr(self, "_ai_recent_activity_time", 0.0), feedback,
++                    getattr(self, "_native_playback_active", None), getattr(self, "_native_playback_audible", None), age,
++                    getattr(self, "_native_playback_rejected", None), playback_owner_matches, overlap_matches,
++                    evidence == "speech-sustained"))
++            return
++        native_handoff = getattr(self, "on_native_barge_in", None)
++        if self._is_free_proxy and callable(native_handoff):
++            if await native_handoff():
++                logger.info("local speech onset (%s): isolating old native connection", evidence)
++            return
++        if self._is_gemini:
++            if self._interrupted:
++                return
++            self._local_onset_armed_at = now
++            self._local_mute_suppressed = 0
++            self._interrupted = True
++            logger.info(
++                "local speech onset (%s): interrupting the answer in the speaker "
++                "route=gemini ai_last_spoke=%.2fs ago - released by the product's own new-turn "
++                "detection", evidence, now - getattr(self, "_ai_recent_activity_time", 0.0),
++            )
++            return
++        anchor = getattr(self, "_last_delivered_response_id", None)
++        if anchor is None:
++            logger.info(
++                "local speech onset (%s) with no response anchor: not muting - the route is "
++                "not identifying which answer this output belongs to", evidence,
++            )
++            return
++        if getattr(self, "_muted_response_id", None) == anchor:
++            return
++        self._muted_response_id = anchor
++        self._muted_at = time.monotonic()
++        self._local_mute_suppressed = 0
++        logger.info(
++            "local speech onset (%s): suppressing the rest of response=%s deltas_delivered=%d "
++            "ai_last_spoke=%.2fs ago",
++            evidence, anchor, getattr(self, "_audio_delta_count", 0),
++            now - getattr(self, "_ai_recent_activity_time", 0.0),
++        )
++
+     async def stream_audio(
+         self,
+         audio_chunk: bytes,
+         *,
+         captured_at: float | None = None,
++        speech_active: bool | None = None,
+         raise_on_error: bool = False,
+         require_output_commit: bool = False,
++        _native_barge_in_replay: bool = False,
++        _native_phrase_single_frame: bool = False,
+     ) -> bool | None:
+         """Stream raw audio data to the API.
+ 
+@@ -1236,7 +1718,24 @@ class _TransportMixin:
+         ordinary microphone path deliberately keeps the BASE return value of
+         ``None`` even when the transport reports a definitive result.
+         """
++        self._capture_study_grade_pin(speech_active, captured_at if captured_at is not None else time.time(), replay=_native_barge_in_replay)
++        phrase_driver = self._native_phrase_driver() if self._native_phrase_mode_allowed() else None
++        if phrase_driver is None:
++            previous_driver = getattr(self, "_native_phrase_uplink", None)
++            if previous_driver is not None:
++                if previous_driver.buffer is not None or previous_driver.writer is not None or previous_driver.preroll:
++                    previous_driver.fail("phrase_route_changed_with_unsent_input")
++                    return False if require_output_commit else None
++                previous_driver.retire()
++        phrase_bypass = True
++        if phrase_driver is not None:
++            phrase_bypass = phrase_driver.bypass_frame(
++                replay=_native_barge_in_replay, single_frame=_native_phrase_single_frame,
++                speech=speech_active, arrival=captured_at if captured_at is not None else time.time())
+         # 检查是否已发生致命错误，如果是则直接返回
++        if not _native_barge_in_replay and self._capture_native_barge_in_pcm(
++                audio_chunk, speech_active, captured_at):
++            return False if self._native_barge_in_overflow else None
+         if self._fatal_error_occurred:
+             return False if require_output_commit else None
+ 
+@@ -1258,7 +1757,8 @@ class _TransportMixin:
+         if len(raw_samples) > 0:
+             local_rms = np.sqrt(np.mean(raw_samples.astype(np.float32) ** 2))
+             raw_loud = local_rms > self._client_vad_threshold
+-        if raw_loud:
++        input_has_speech = speech_active if speech_active is not None else raw_loud
++        if input_has_speech:
+             # Publish user engagement before waiting on the shared admission
+             # boundary. A proactive callback holding that lock must see speech
+             # that arrived during its media transaction and defer its response;
+@@ -1272,7 +1772,7 @@ class _TransportMixin:
+         # 48kHz: 480 samples (10ms) = 960 bytes
+         # 16kHz: 512 samples (~32ms) = 1024 bytes
+         num_samples = len(audio_chunk) // 2  # 16-bit = 2 bytes per sample
+-        is_48khz = (num_samples == 480)  # RNNoise frame size
++        is_48khz = (num_samples == 480 and speech_active is None)  # Host-scored PCM is already 16 kHz.
+ 
+ 
+         use_rnnoise_path = is_48khz and self._audio_processor is not None
+@@ -1294,6 +1794,11 @@ class _TransportMixin:
+             and audio_processor._denoiser is not None
+         )
+ 
++        if speech_active is None and (input_has_speech or (_rnnoise_vad_live and audio_processor.speech_probability > 0.4)):
++            # Legacy unscored DSP has no trustworthy pre-await pin yet.
++            # Refuse automatic grading instead of reading a newer question.
++            self._capture_study_grade_pin(True, audio_timeline_at, replay=True)
++
+         # Serialize at the actual user-audio admission boundary, not inside the
+         # provider receive loop. A callback that already owns the boundary can
+         # finish its native image+text transaction before new PCM is admitted;
+@@ -1323,7 +1828,8 @@ class _TransportMixin:
+                     self._capture_input_route_identity_snapshot(
+                         ingress_route_identity
+                     )
+-            elif raw_loud:
++            elif input_has_speech:
++                # Host-scored PCM retains its speech verdict; other input uses RMS.
+                 # RMS is the only local onset signal for 16 kHz/mobile input or
+                 # when RNNoise is unavailable. Commit the pre-await ingress
+                 # owner, never the route that happens to be active afterwards.
+@@ -1338,23 +1844,89 @@ class _TransportMixin:
+                             audio_timeline_at - self._speech_detect_start
+                             >= self._speech_sustain_threshold
+                         ):
++                            sustained_onset = not self._client_vad_active
+                             self._client_vad_last_speech_time = audio_timeline_at
+                             self._client_vad_active = True
++                            if sustained_onset:
++                                await self._handle_local_speech_onset("rnnoise-sustain")
+                     else:
+                         self._speech_detect_start = 0.0
+-                elif raw_loud:
++                elif input_has_speech:
+                     self._client_vad_last_speech_time = audio_timeline_at
+                     self._client_vad_active = True
+ 
++            if not _native_barge_in_replay and not getattr(self, "_speech_started_total", 0):
++                # Whichever sustained-speech signal this frame actually carries. There are two
++                # input routes and they are not interchangeable: the browser-shaped 48 kHz path
++                # lets this client run its own denoiser, while the desktop path hands
++                # `stream_audio` frames the host already scored and denoised to 16 kHz. Measured
++                # on the real microphone (learner session 2026-10-12 11:35-11:48, 18 turns): the
++                # int16 RMS>500 gate held for half a second **zero** times, while the host's own
++                # RNNoise reported `probability_peak=0.9998, peak_ge_0_5_chunks=138/200` for the
++                # same speech - and 8.45 MB of that microphone PCM demonstrably reached
++                # `stream_audio` (`asr_runtime.py` counts it only after a successful send), so
++                # the frames were here and the signal I was reading was the wrong one. The
++                # caller's verdict is therefore the primary evidence; it is produced by the
++                # host's own `_voice_session_activation_has_speech`, not by a threshold added
++                # here. `None` means this route has no verdict, which is the 48 kHz case.
++                _speaking_now = (
++                    speech_active
++                    if speech_active is not None else
++                    ((audio_processor.speech_probability > 0.4)
++                     if _rnnoise_vad_live else raw_loud)
++                )
++                self._note_barge_in_meter(_speaking_now, raw_loud, raw_samples,
++                                          audio_timeline_at)
++                if _speaking_now:
++                    _loud_since = getattr(self, "_local_barge_in_loud_at", 0.0)
++                    if (getattr(self, "_local_barge_in_from", None) is None
++                            or audio_timeline_at - _loud_since > self._LOCAL_BARGE_IN_GAP_SECONDS):
++                        self._local_barge_in_from = audio_timeline_at
++                        self._local_barge_in_overlap = None
++                        if speech_active is True:
++                            self._remember_native_barge_in_overlap(audio_timeline_at)
++                    self._local_barge_in_loud_at = audio_timeline_at
++                    if (audio_timeline_at - self._local_barge_in_from
++                            >= self._LOCAL_BARGE_IN_SECONDS):
++                        self._local_barge_in_from = None
++                        try:
++                            await self._handle_local_speech_onset("speech-sustained")
++                        finally:
++                            self._local_barge_in_overlap = None
++                elif (audio_timeline_at - getattr(self, "_local_barge_in_loud_at", 0.0)
++                      > self._LOCAL_BARGE_IN_GAP_SECONDS):
++                    self._local_barge_in_from = None
++                    self._local_barge_in_overlap = None
++
+             # 静音清 buffer：有 RNNoise 以 RNNoise 为准，否则 VAD + 连续本地静音。
+-            if self._should_clear_audio_buffer_on_silence(
++            if not self._native_phrase_protects_input() and self._should_clear_audio_buffer_on_silence(
+                 audio_timeline_at,
+                 use_rnnoise_path,
+             ):
+                 self._silence_reset_pending = False
+                 await self.clear_audio_buffer()
+ 
++            if getattr(self, "_native_barge_in_pending", False) and not _native_barge_in_replay:
++                if phrase_driver is not None:
++                    phrase_driver.retire()
++                    phrase_driver.bypass = True
++                    phrase_driver.bypass_loud_at = audio_timeline_at
++                return None  # This frame is retained for the replacement, not written to A.
++
++            # Actual DSP, local onset and pending-handoff decision have already run.
++            if phrase_driver is not None and not phrase_bypass:
++                accepted = phrase_driver.accept(audio_chunk, speech_active, audio_timeline_at)
++                return None if accepted else False
++
+             # Gemini uses different API (16kHz, no uplink resample needed)
++            if (not _native_barge_in_replay and not require_output_commit
++                    and getattr(self, "_is_free_proxy", False) and not self._is_gemini
++                    and __import__("os").environ.get("NEKO_PAUSE_HOLD") == "1"):
++                audio_chunk = self._livetutor_pause_hold(audio_chunk, bool(
++                    speech_active if speech_active is not None else (
++                        audio_processor.speech_probability > 0.4 if _rnnoise_vad_live else raw_loud)))
++                if not audio_chunk:
++                    return None  # Held locally; nothing reaches the provider yet.
+             if self._is_gemini:
+                 await self._stream_audio_gemini(
+                     audio_chunk,
+@@ -1388,6 +1960,36 @@ class _TransportMixin:
+                 self._rollback_voice_handoff_input_open(handoff_input_sequence)
+             return sent if require_output_commit else None
+ 
++    def _livetutor_pause_hold(self, chunk: bytes, voiced: bool) -> bytes:
++        """What to send now for one 16 kHz PCM16 frame: b"" while a pause is held."""
++        os_env = __import__("os").environ
++        # Counted in 16 kHz samples, so pacing and float drift cannot move the limits.
++        keep = int(os_env.get("NEKO_PAUSE_HOLD_KEEP_MS", "300")) * 16
++        hold = int(os_env.get("NEKO_PAUSE_HOLD_MS", "1000")) * 16
++        state = getattr(self, "_livetutor_hold", None)
++        if state is None or state["generation"] != self._connection_generation:
++            state = self._livetutor_hold = {"generation": self._connection_generation,
++                                            "quiet": 0, "speech": False, "held": []}
++        if voiced:
++            if state["held"]:
++                dropped = sum(len(part) for part in state["held"]) // 2
++                state["held"].clear()
++                logger.info("[pause-hold] speech resumed; dropped %.2fs of a %.2fs pause",
++                            dropped / 16000, state["quiet"] / 16000)
++            state["quiet"] = 0
++            state["speech"] = True
++            return chunk
++        state["quiet"] += len(chunk) // 2
++        if not state["speech"] or state["quiet"] <= keep:
++            return chunk
++        if state["quiet"] <= keep + hold:
++            state["held"].append(chunk)
++            return b""
++        released = b"".join(state["held"]) + chunk
++        state["held"].clear()
++        state["speech"] = False
++        return released
++
+     async def _analyze_image_with_vision_model(
+         self,
+         image_b64: str,
+@@ -2423,6 +3025,12 @@ class _TransportMixin:
+         if pending is None or not self.on_output_transcript:
+             return
+         text, is_first = pending
++        trace = getattr(getattr(self, "_wire_trace", None), "record_study_text", None)
++        if callable(trace):
++            trace("omni_callback", text, generation=getattr(self, "_connection_generation", None),
++                  response_id=getattr(self, "_current_response_id", None), cumulative=True,
++                  scope=getattr(self, "_tool_scope_generation", None),
++                  token=getattr(self, "_native_output_connection_token", None))
+         await self.on_output_transcript(text, is_first)
+ 
+     def _clear_turn_response_state(self) -> None:
+@@ -2453,11 +3061,14 @@ class _TransportMixin:
+         self._turn_epoch += 1
+         self._current_turn_epoch = self._turn_epoch
+         self._current_turn_host_id = self._read_host_turn_id()
+-        self._voice_handoff_response_input_sequence = getattr(
+-            self,
+-            "_voice_handoff_input_sequence",
+-            0,
+-        )
++        if self._current_response_source == "native_phrase":
++            bound_sequence = arbiter.native_input_sequence_for(response_id)
++            self._voice_handoff_response_input_sequence = (bound_sequence
++                if type(bound_sequence) is int and bound_sequence > 0 else 0)
++        else:
++            self._voice_handoff_response_input_sequence = getattr(
++                self, "_voice_handoff_input_sequence", 0)
++
+         self._interrupted = False
+         # A stable successor id also closes the id-less quarantine opened by
+         # a fail-open release; ordered socket delivery puts this evidence
+@@ -2617,7 +3228,9 @@ class _TransportMixin:
+                 self._current_turn_host_id,
+             )
+             return
+-        if not self._has_server_vad and step_timeout is None:
++        # Native phrase input is retired only by its fully-written successful ticket.
++        if (not self._has_server_vad and step_timeout is None
++                and getattr(self, "_current_response_source", None) != "native_phrase"):
+             # This provider family has no speech_stopped event. Reaching the
+             # owned response terminal is its authoritative native-input
+             # boundary. The ownership checks above ensure a late terminal can
+@@ -3130,6 +3743,10 @@ class _TransportMixin:
+                         return
+                     continue
+ 
++                if (getattr(self, "_native_barge_in_pending", False)
++                        and message_generation == self._native_barge_in_origin_connection):
++                    continue  # A's late transcript/output cannot enter the replacement turn.
++
+                 if event_type == "session.updated":
+                     self._notify_session_updated(event)
+                     handler = self.extra_event_handlers.get(event_type)
+@@ -3328,6 +3945,7 @@ class _TransportMixin:
+                                 ),
+                                 call_id=call_id,
+                                 raw_arguments=raw_args,
++                                provider_meta={"native_wire_call_id": event.get("call_id")},
+                             ),
+                             owner,
+                             # Groups this call with the parallel siblings the
+@@ -3439,6 +4057,7 @@ class _TransportMixin:
+                     logger.info("input_audio_buffer.committed observed (total=%d)", self._input_audio_committed_total)
+                 # Handle interruptions
+                 elif event_type == "input_audio_buffer.speech_started":
++                    self._advance_study_grade_ingress_scope()
+                     self.note_user_turn_started()
+                     self._ensure_voice_handoff_audio_timeline()
+                     self._voice_handoff_server_item_id = event.get("item_id")
+@@ -3502,6 +4121,9 @@ class _TransportMixin:
+                     self._client_vad_last_speech_time = _now
+                     self._user_recent_activity_time = _now
+                 elif event_type == "conversation.item.input_audio_transcription.completed":
++                    if self._consume_study_grade_tail(event.get("transcript", ""), message_ws, message_generation):
++                        continue # Same sealed input, exact redundant request; no scope revival.
++                    self._native_barge_in_candidate = None
+                     already_scoped = self._raw_transcript_was_already_scoped(
+                         event.get("item_id")
+                     )
+@@ -3510,16 +4132,24 @@ class _TransportMixin:
+                         # boundary events. The completed transcript is then the
+                         # first authoritative signal that a new user turn has
+                         # begun, so stale tool work must retire here.
+-                        self.note_user_turn_started()
++                        self._late_raw_expected_asr_advance = True
++                        try:
++                            self._advance_study_grade_ingress_scope()
++                            self.note_user_turn_started()
++                        finally:
++                            self._late_raw_expected_asr_advance = False
++                    self._begin_raw_input_transcript()
+                     self._print_input_transcript = True
+                     transcript = event.get("transcript", "")
+                     if self.on_input_transcript or self.on_input_transcript_with_route:
+                         await self._deliver_input_transcript(
+                             transcript,
+                             item_id=event.get("item_id"),
++                            study_input_owner=self._take_study_grade_asr(message_ws, message_generation),
+                         )
+                         if await retire_if_replaced():
+                             return
++                    self._finish_raw_input_transcript()
+                 elif event_type in ["response.audio_transcript.done", "response.output_audio_transcript.done"]:
+                     self._print_input_transcript = False
+                     # [ISSUE4b] Voice-without-text fix. Audio deltas and transcript
+@@ -3540,13 +4170,21 @@ class _TransportMixin:
+                             or _audio_already_spoken
+                         )
+                     ):
++                        trace = getattr(getattr(self, "_wire_trace", None), "record_study_text", None)
++                        if callable(trace):
++                            trace("omni_callback", self._output_transcript_buffer, generation=getattr(self, "_connection_generation", None),
++                                  response_id=getattr(self, "_current_response_id", None), cumulative=True,
++                                  scope=getattr(self, "_tool_scope_generation", None),
++                                  token=getattr(self, "_native_output_connection_token", None))
+                         await self.on_output_transcript(self._output_transcript_buffer, self._is_first_transcript_chunk)
+                         if await retire_if_replaced():
+                             return
+                         self._is_first_transcript_chunk = False
+                     self._output_transcript_buffer = ""
+ 
+-                if not self._skip_until_next_response and not self._interrupted:
++                self._note_output_delivery(event)
++                if (not self._skip_until_next_response and not self._interrupted
++                        and not self._output_locally_muted(event)):
+                     if event_type in ["response.text.delta", "response.output_text.delta"]:
+                         if self.on_text_delta:
+                             if "glm" not in self._model_lower:
+@@ -3564,6 +4202,11 @@ class _TransportMixin:
+                         if self.on_audio_delta:
+                             audio_bytes = base64.b64decode(event["delta"])
+                             self._ai_recent_activity_time = time.time()
++                            # Dispatch intent, not a frontend playback receipt.
++                            self._local_audio_dispatch_owner = (
++                                self._connection_generation, self._read_host_turn_id(),
++                                event.get("response_id"),
++                            )
+                             await self.on_audio_delta(audio_bytes)
+                             if await retire_if_replaced():
+                                 return
+@@ -3590,6 +4233,12 @@ class _TransportMixin:
+                         if self.on_output_transcript and self._is_first_transcript_chunk:
+                             transcript = event.get("transcript", "")
+                             if transcript:
++                                trace = getattr(getattr(self, "_wire_trace", None), "record_study_text", None)
++                                if callable(trace):
++                                    trace("omni_callback", transcript, generation=getattr(self, "_connection_generation", None),
++                                          response_id=getattr(self, "_current_response_id", None), cumulative=True,
++                                          scope=getattr(self, "_tool_scope_generation", None),
++                                          token=getattr(self, "_native_output_connection_token", None))
+                                 await self.on_output_transcript(transcript, True)
+                                 if await retire_if_replaced():
+                                     return
+@@ -3604,11 +4253,23 @@ class _TransportMixin:
+                             else:
+                                 if self._output_transcript_buffer:
+                                     # logger.info(f"{self._output_transcript_buffer} is_first_chunk: True")
++                                    trace = getattr(getattr(self, "_wire_trace", None), "record_study_text", None)
++                                    if callable(trace):
++                                        trace("omni_callback", self._output_transcript_buffer, generation=getattr(self, "_connection_generation", None),
++                                              response_id=getattr(self, "_current_response_id", None), cumulative=True,
++                                              scope=getattr(self, "_tool_scope_generation", None),
++                                              token=getattr(self, "_native_output_connection_token", None))
+                                     await self.on_output_transcript(self._output_transcript_buffer, self._is_first_transcript_chunk)
+                                     if await retire_if_replaced():
+                                         return
+                                     self._is_first_transcript_chunk = False
+                                     self._output_transcript_buffer = ""
++                                trace = getattr(getattr(self, "_wire_trace", None), "record_study_text", None)
++                                if callable(trace):
++                                    trace("omni_callback", delta, generation=getattr(self, "_connection_generation", None),
++                                          response_id=getattr(self, "_current_response_id", None), cumulative=True,
++                                          scope=getattr(self, "_tool_scope_generation", None),
++                                          token=getattr(self, "_native_output_connection_token", None))
+                                 await self.on_output_transcript(delta, self._is_first_transcript_chunk)
+                                 if await retire_if_replaced():
+                                     return
+@@ -3792,7 +4453,22 @@ class _TransportMixin:
+         theirs.
+         """
+ 
++        self._retire_native_phrase_input()
++        driver = getattr(self, "_native_phrase_uplink", None)
++        if driver is not None:
++            driver.bypass = bool(getattr(self, "_native_barge_in_pending", False))
+         self._connection_generation += 1
++        self._native_output_connection_token = "native_connection_" + uuid.uuid4().hex
++        self._native_playback_state_at = 0.0
++        self._native_playback_owner = None
++        self._local_barge_in_overlap = None
++        if (getattr(self, "_native_barge_in_pending", False) and
++                (not getattr(self, "_native_barge_in_reconnecting", False) or
++                 self._connection_generation != self._native_barge_in_origin_connection + 1)):
++            self._native_barge_in_pending = False
++            self._native_barge_in_overflow = True
++            self._native_barge_in_buffer.clear()
++            self._native_barge_in_candidate = None
+         self._clear_input_route_identities()
+         self._advance_tool_scope()
+         # A pending proactive outcome belongs to the connection that created
+@@ -4030,6 +4706,7 @@ class _TransportMixin:
+         # before the task's first line must not be a window where they still
+         # think the transport is healthy.
+         self._fatal_error_occurred = True
++        self._retire_native_phrase_input()
+         await self._own_teardown(
+             "_failed_transport_close_task",
+             lambda: self._detach_for_failed_transport(reason),
+@@ -4114,6 +4791,7 @@ class _TransportMixin:
+ 
+     async def close(self) -> None:
+         """Close the WebSocket connection."""
++        self._retire_native_phrase_input()
+         # Before the teardown, and deliberately not inside ``_detach_for_close``
+         # (which is synchronous by contract). These copies belong to THIS
+         # instance's own set, so a replacement session attaching mid-teardown

@@ -1,0 +1,25 @@
+diff --git a/main_logic/omni_realtime_client/_audio.py b/main_logic/omni_realtime_client/_audio.py
+index 42774b7..d7fbdd9 100644
+--- a/main_logic/omni_realtime_client/_audio.py
++++ b/main_logic/omni_realtime_client/_audio.py
+@@ -227,12 +227,20 @@ class _AudioMixin:
+ 
+     async def clear_audio_buffer(self):
+         """Send an input_audio_buffer.clear event to clear the server-side buffer."""
++        if self._native_phrase_protects_input():
++            return False  # A local silence reset cannot consume pending owned phrase PCM.
+         self._input_route_identity = None
+         self._input_route_identity_captured = False
+         self._reset_input_route_identity_stream()
+         if self._is_gemini:
+             logger.debug("Gemini mode: no WebSocket input_audio_buffer.clear event")
+             return
++        pin = getattr(self, "_study_grade_pin", None)
++        # A fully retired healthy-empty input has no pending answer PCM.
++        # Preserve only that exact sealed slot; all other clears poison it.
++        if pin is not None and not (__import__("os").environ.get("NEKO_STUDY_AUTO_GRADE") == "1"
++                and self._rearm_empty_study_question_pin(pin)):
++            pin["invalid"] = True
+         await self.send_event({"type": "input_audio_buffer.clear"})
+         # The server is discarding this buffer; drop the uplink resampler's
+         # held tail too so it isn't prepended to the next utterance.

@@ -1,0 +1,14 @@
+diff --git a/app/main_server/web_app.py b/app/main_server/web_app.py
+index c62e0ac..c17ac25 100644
+--- a/app/main_server/web_app.py
++++ b/app/main_server/web_app.py
+@@ -40,6 +40,9 @@ _get_app_root = runtime.get_app_root
+ _resolve_user_plugin_base = runtime.resolve_user_plugin_base
+ app = runtime.app
+ logger = runtime.logger
++
++from main_logic.livetutor_output_only import install_output_only
++install_output_only(app)
+ _AVATAR_TOOL_ASSET_DIGEST_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+ 
+ 

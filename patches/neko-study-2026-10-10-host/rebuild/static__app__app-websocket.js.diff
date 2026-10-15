@@ -1,0 +1,25 @@
+diff --git a/static/app/app-websocket.js b/static/app/app-websocket.js
+index 5940177..68ef6b9 100644
+--- a/static/app/app-websocket.js
++++ b/static/app/app-websocket.js
+@@ -3610,6 +3610,7 @@
+                         turnId: resolveAssistantLifecycleTurnId(response.turn_id),
+                         shouldSkip: shouldSkip,
+                         playbackGain: playbackGain,
++                        correlationId: speechCorrelationId,
+                         epoch: S.incomingAudioEpoch,
+                         receivedAt: Date.now()
+                     });
+@@ -3657,7 +3658,11 @@
+                     var cancelledCorrelationId = String(
+                         response.sdk_speech_correlation_id || ''
+                     );
+-                    if (
++                    if (cancelledCorrelationId.indexOf('native_connection_') === 0) {
++                        if (window.appAudioPlayback && typeof window.appAudioPlayback.cancelNativeConnectionPlayback === 'function') {
++                            window.appAudioPlayback.cancelNativeConnectionPlayback(cancelledCorrelationId);
++                        }
++                    } else if (
+                         cancelledCorrelationId
+                         && cancelledCorrelationId === S.currentPlayingSpeechCorrelationId
+                     ) {

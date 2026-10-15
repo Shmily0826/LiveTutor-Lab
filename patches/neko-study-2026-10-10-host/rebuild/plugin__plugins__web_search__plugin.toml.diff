@@ -1,0 +1,13 @@
+diff --git a/plugin/plugins/web_search/plugin.toml b/plugin/plugins/web_search/plugin.toml
+index 809fbf6..e09c54e 100644
+--- a/plugin/plugins/web_search/plugin.toml
++++ b/plugin/plugins/web_search/plugin.toml
+@@ -20,7 +20,7 @@ locales_dir = "i18n"
+ 
+ [plugin_runtime]
+ enabled = true
+-auto_start = true
++auto_start = false
+ 
+ [plugin.store]
+ enabled = true

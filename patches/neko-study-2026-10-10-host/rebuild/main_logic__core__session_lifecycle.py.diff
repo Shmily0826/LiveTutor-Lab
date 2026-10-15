@@ -1,0 +1,74 @@
+diff --git a/main_logic/core/session_lifecycle.py b/main_logic/core/session_lifecycle.py
+index beff9cc..2876086 100644
+--- a/main_logic/core/session_lifecycle.py
++++ b/main_logic/core/session_lifecycle.py
+@@ -10,7 +10,7 @@ import asyncio
+ import contextvars
+ import inspect
+ import json
+-from functools import wraps
++from functools import partial, wraps
+ 
+ from ._shared import FRONTEND_START_SESSION_TIMEOUT_SECONDS, logger
+ from .session_records import (
+@@ -343,6 +343,30 @@ class SessionOwnershipMixin:
+                 self._close_connection_record(record)
+                 raise
+ 
++    def _native_phrase_input_authority(self, session):
++        # This callback is bound to the exact installed Core session, not a game route.
++        record = self._connection_record(session)
++        if (session is not self.session or record is None or record.retired
++                or not self.is_active or self._asr_route_mode != "native"
++                or self._voice_lease_owner != "core" or self._takeover_active
++                or self.session_closed_by_server or self.websocket is None or not self._voice_input_accepts_pcm()
++                or getattr(session, "_fatal_error_occurred", False)
++                or getattr(session, "ws", None) is None):
++            return None
++        generation = getattr(session, "_connection_generation", None)
++        if type(generation) is not int or generation <= 0:
++            return None
++        activation = self._capture_voice_session_activation_generation()
++        ingress = self._capture_native_ingress_token()
++        return (activation.session_id, (ingress, activation, self.websocket), generation)
++
++    def _native_phrase_transport_written(self, session, count, authority):
++        if (type(count) is not int or count <= 0
++                or self._native_phrase_input_authority(session) != authority):
++            return False
++        self._record_omni_microphone_audio(count)
++        return True
++
+     def _bind_owned_output_callbacks(self, session):
+         """Track real callback tasks so retirement can drain in-flight writes.
+ 
+@@ -351,7 +375,20 @@ class SessionOwnershipMixin:
+         """
+         # Binding occurs before connect. Registration (and capacity reservation)
+         # happens immediately before the actual external connect operation.
++        if hasattr(session, "_capture_native_barge_in_pcm"):
++            session.on_native_barge_in = partial(self._begin_native_barge_in_handoff, session)
++            session.get_native_barge_in_generation = self._capture_voice_session_activation_generation
++            import os
++            session._native_phrase_input_enabled = (os.environ.get("NEKO_EXPERIMENTAL_PHRASE_INPUT") == "1" or os.environ.get("NEKO_STUDY_AUTO_GRADE") == "1")
++            session.get_native_phrase_input_authority = partial(self._native_phrase_input_authority, session)
++            session.on_native_phrase_transport_written = partial(self._native_phrase_transport_written, session)
++        if hasattr(session, "_capture_tool_task_owner") and __import__("os").environ.get("NEKO_STUDY_AUTO_GRADE") == "1":
++            session.consume_study_grade_tail = partial(self._accept_study_grade_tail, session)
++            session.get_study_question_pin = partial(self._read_study_question_pin, session)
++            session.get_study_input_authority = partial(self._study_input_authority, session)
++            session.on_input_transcript_with_route = self._make_study_input_handler(session)
+         for name in (
++            "on_native_barge_in",
+             "on_text_delta", "on_audio_delta", "on_audio_done", "on_new_message",
+             "on_input_transcript", "on_input_transcript_with_route",
+             "on_output_transcript", "on_response_done", "on_response_discarded",
+@@ -388,7 +425,7 @@ class SessionOwnershipMixin:
+         # end it sends would be dropped). It and ``on_idle`` close or settle
+         # the host's current turn, which a reply on a retired or not yet
+         # installed client never owns.
+-        for name in ('get_host_turn_id', 'on_response_displaced', 'on_idle'):
++        for name in ('get_native_barge_in_generation', 'get_host_turn_id', 'on_response_displaced', 'on_idle'):
+             callback = getattr(session, name, None)
+             if not callable(callback) or getattr(callback, '_session_owner', None) is session:
+                 continue

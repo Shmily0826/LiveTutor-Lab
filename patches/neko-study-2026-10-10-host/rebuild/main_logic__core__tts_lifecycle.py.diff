@@ -1,0 +1,13 @@
+diff --git a/main_logic/core/tts_lifecycle.py b/main_logic/core/tts_lifecycle.py
+index e6d7d72..68a747a 100644
+--- a/main_logic/core/tts_lifecycle.py
++++ b/main_logic/core/tts_lifecycle.py
+@@ -53,6 +53,8 @@ class TtsLifecycleMixin:
+         )
+ 
+     def _tts_output_is_current(self):
++        if self._study_material_native_output_held():
++            return False
+         return self._tts_runtime_is_current(tts_output_runtime.get())
+ 
+     def _live_tts_runtime_count(self):

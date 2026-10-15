@@ -1,0 +1,101 @@
+diff --git a/main_routers/characters_router/language_preference.py b/main_routers/characters_router/language_preference.py
+index 3355f56..f452098 100644
+--- a/main_routers/characters_router/language_preference.py
++++ b/main_routers/characters_router/language_preference.py
+@@ -23,6 +23,7 @@ from fastapi import Request
+ from fastapi.responses import JSONResponse
+ 
+ from config import MEMORY_SERVER_PORT
++from main_logic.session_state import session_reply_in_progress
+ from utils.internal_http_client import get_internal_http_client
+ from utils.character_memory import character_config_mutation_lock
+ from utils.language_utils import is_supported_language_code, normalize_language_code
+@@ -40,6 +41,14 @@ from ._shared import (
+ from .crud import _clear_character_recent_history
+ 
+ 
++# How long a language change waits for a reply that is already being spoken before
++# rotating the session anyway. One model turn tops out around 90 s, so this bounds
++# the delay at "the answer the learner is waiting for" without ever leaving the new
++# preference unapplied.
++REPLY_SETTLE_POLL_SECONDS = 0.5
++REPLY_SETTLE_WAIT_SECONDS = 90.0
++
++
+ class LanguagePreferenceConflictError(Exception):
+     """A newer language preference was persisted while this request was in flight.
+ 
+@@ -263,12 +272,15 @@ async def _reconcile_after_language_change(
+     # clear that startup's queued input or tear down the session it just promoted.
+     # Let the startup keep its lifecycle ownership; the durable/live language
+     # update above and the guarded recent-history clear below still take effect.
++    expected_session = None
+     if manager is not None and not getattr(manager, "is_starting", False):
+         expected_session = (
+             getattr(manager, "session", None)
+             if getattr(manager, "is_active", False)
+             else None
+         )
++
++    async def reset_captured_session() -> None:
+         if expected_session is not None:
+             notify_session_ended = getattr(
+                 manager,
+@@ -332,11 +344,55 @@ async def _reconcile_after_language_change(
+                     exc,
+                 )
+ 
++    if (
++        manager is not None
++        and expected_session is not None
++        and session_reply_in_progress(expected_session)
++    ):
++        # This request reached the character from inside its own reply: a learner
++        # sentence like 「以后这门课用英文教学」 is answered by a tool call, and
++        # ending the session here cancelled the answer to the very sentence that
++        # asked for it (measured 2026-10-10 07:15Z in the native chat window - the
++        # message stayed up with no reply and no error). The locale and the durable
++        # preference are already written above, so only the rotation waits, and it
++        # waits on the same reply gate the proactive gates use.
++        result["session_reset_deferred"] = True
++        logger.info(
++            "语言切换遇到进行中的回复，等这条回复说完再重置会话: name=%s",
++            name,
++        )
++
++        async def reset_after_current_reply() -> None:
++            waited = 0.0
++            while (
++                session_reply_in_progress(expected_session)
++                and waited < REPLY_SETTLE_WAIT_SECONDS
++            ):
++                await asyncio.sleep(REPLY_SETTLE_POLL_SECONDS)
++                waited += REPLY_SETTLE_POLL_SECONDS
++            await reset_captured_session()
++            # ``end_session`` owns the clear through its settlement callback; reach
++            # for it directly only when that callback never got a chance to run.
++            if not result["recent_history_cleared"]:
++                try:
++                    await clear_recent_after_settlement()
++                except Exception as exc:
++                    logger.warning(
++                        "延后清理语言切换前的近期上下文失败: name=%s err=%s",
++                        name,
++                        exc,
++                        exc_info=True,
++                    )
++
++        asyncio.create_task(reset_after_current_reply())
++    elif manager is not None:
++        await reset_captured_session()
++
+     # No manager, a stale-session guard, or an early lifecycle failure can return
+     # before the queued callback runs.  Clear immediately in that case; if a
+     # barrier was queued, it remains armed and will clear once more after any
+-    # delayed old-session settlement.
+-    if not result["recent_history_cleared"]:
++    # delayed old-session settlement.  A deferred rotation owns its own clear.
++    if not result["recent_history_cleared"] and not result.get("session_reset_deferred"):
+         try:
+             await clear_recent_after_settlement()
+         except Exception as exc:

@@ -1,0 +1,109 @@
+diff --git a/utils/llm_tool_leak_filter.py b/utils/llm_tool_leak_filter.py
+index b9cd075..f5f4367 100644
+--- a/utils/llm_tool_leak_filter.py
++++ b/utils/llm_tool_leak_filter.py
+@@ -7,13 +7,20 @@ import re
+ from typing import Optional
+ 
+ 
++# daily-dsml-output-v1
++_DSML_START_RE = re.compile(r"</?[｜]{1,2}DSML[｜]{1,2}", re.IGNORECASE)
++_DSML_CLOSE_RE = re.compile(r"</[｜]{1,2}DSML[｜]{1,2}\s*(?:function_calls|calls)\s*>", re.IGNORECASE)
++_DSML_PREFIXES = tuple("<" + slash + "｜" * left + "DSML" + "｜" * right
++                       for slash in ("", "/") for left in (1, 2) for right in (1, 2))
++
++
+ _DEFAULT_TOOL_NAMES = frozenset({"recall_memory"})
+ _SEED_OPEN_RE = re.compile(r"<\s*seed\s*:\s*tool_call\b[^>]*>|(?<!/)\bseed\s*:\s*tool_call\b", re.IGNORECASE)
+ _SEED_CLOSE_RE = re.compile(r"<\s*/\s*seed\s*:\s*tool_call\s*>", re.IGNORECASE)
+ _PARAMETER_RE = re.compile(r"<\s*parameter\b[^>]*\bname\s*=", re.IGNORECASE)
+ _PARAMETER_CLOSE_RE = re.compile(r"<\s*/\s*parameter\s*>", re.IGNORECASE)
+ _PARAMETER_BOUNDARY_RE = re.compile(
+-    r"<\s*parameter\b[^>]*\bname\s*=[^>]*>|<\s*/\s*parameter\s*>",
++    r"<\s*(?:[｜]{1,2}DSML[｜]{1,2}\s*)?parameter\b[^>]*\bname\s*=[^>]*>|<\s*/\s*(?:[｜]{1,2}DSML[｜]{1,2}\s*)?parameter\s*>",
+     re.IGNORECASE,
+ )
+ _FUNCTION_CLOSE_RE = re.compile(r"<\s*/\s*function\s*>", re.IGNORECASE)
+@@ -36,6 +43,7 @@ class ToolLeakFilter:
+         self._tool_names = {name for name in (tool_names or _DEFAULT_TOOL_NAMES) if name}
+         self._max_tail = max(128, int(max_tail))
+         self._pending = ""
++        self.dsml_filtered = False
+         self._suppressing = False
+         self._suppressed_chars = 0
+         self._suppression_pattern = ""
+@@ -93,6 +101,7 @@ class ToolLeakFilter:
+             self._suppressing = True
+             self._suppressed_chars = 0
+             self._suppression_pattern = pattern
++            self.dsml_filtered = self.dsml_filtered or pattern == "dsml_tool_call"
+             self._cross_chunk = had_pending
+             self._structured_tail = ""
+             self._structured_tail_depth = 0
+@@ -105,12 +114,21 @@ class ToolLeakFilter:
+             self._pending = ""
+             return "", self._finish_event(finalized=True)
+ 
++        if self._pending.startswith(("<｜", "</｜")) and any(
++            prefix.lower().startswith(self._pending.lower()) for prefix in _DSML_PREFIXES
++        ):
++            self.dsml_filtered = True
++            self._suppression_pattern = "dsml_tool_call"
++            self._suppressed_chars = len(self._pending)
++            self._pending = ""
++            return "", self._finish_event(finalized=True)
+         visible = self._pending
+         self._pending = ""
+         return visible, None
+ 
+     def reset(self) -> None:
+         self._pending = ""
++        self.dsml_filtered = False
+         self._suppressing = False
+         self._suppressed_chars = 0
+         self._suppression_pattern = ""
+@@ -137,6 +155,11 @@ class ToolLeakFilter:
+         return event
+ 
+     def _suppression_close_match(self, text: str) -> re.Match[str] | None:
++        if self._suppression_pattern == "dsml_tool_call":
++            for match in _DSML_CLOSE_RE.finditer(text):
++                if self._suppressed_parameter_depth_after(text[:match.start()]) == 0:
++                    return match
++            return None
+         if self._suppression_pattern != "structured_tool_call":
+             return self._seed_close_match(text)
+ 
+@@ -202,6 +225,9 @@ class ToolLeakFilter:
+         return depth
+ 
+     def _suppression_close_tail_len(self, text: str) -> int:
++        if self._suppression_pattern == "dsml_tool_call":
++            start = text.rfind("<", max(0, len(text) - self._max_tail))
++            return len(text) - start if start >= 0 and ">" not in text[start:] else 0
+         if self._suppression_pattern == "structured_tool_call":
+             function_tail = self._pending_function_close_tail_len(text)
+             if function_tail > 0:
+@@ -233,6 +259,10 @@ class ToolLeakFilter:
+         if seed:
+             best = (seed.start(), seed.end(), "seed_tool_call")
+ 
++        dsml = _DSML_START_RE.search(text)
++        if dsml and (best is None or dsml.start() < best[0]):
++            best = (dsml.start(), dsml.end(), "dsml_tool_call")
++
+         if self._tool_names:
+             lower_text = text.lower()
+             for tool_name in sorted(self._tool_names, key=len, reverse=True):
+@@ -295,6 +325,11 @@ class ToolLeakFilter:
+ 
+     def _possible_marker_tail_len(self, text: str) -> int:
+         best = self._seed_marker_tail_len(text)
++        for start in range(max(0, len(text) - self._max_tail), len(text)):
++            tail = text[start:].lower()
++            if any(prefix.lower().startswith(tail) for prefix in _DSML_PREFIXES):
++                best = max(best, len(tail))
++                break
+         return max(best, self._structured_marker_tail_len(text))
+ 
+     def _seed_marker_tail_len(self, text: str) -> int:

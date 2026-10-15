@@ -1,0 +1,45 @@
+diff --git a/main_logic/activity/focus_scorer.py b/main_logic/activity/focus_scorer.py
+index 03852d4..f894ad0 100644
+--- a/main_logic/activity/focus_scorer.py
++++ b/main_logic/activity/focus_scorer.py
+@@ -44,6 +44,7 @@ instance per session, owned alongside ``UserActivityTracker``.
+ from __future__ import annotations
+ 
+ from collections import deque
++import re
+ from dataclasses import dataclass, field
+ from statistics import median
+ from typing import Optional
+@@ -68,6 +69,23 @@ class FocusScore:
+     signals: dict[str, float | None] = field(default_factory=dict)
+ 
+ 
++# daily-source-focus-v1
++_SOURCE_CUE = re.compile(
++    r"源码|源代码|\bsource\s+code\b|\bcode\b|"
++    r"\b[\w.-]+\.(?:dart|js|ts|tsx|jsx|py|kt|java|cpp|cs|go|rs)\b", re.I)
++_REASONING_CUE = re.compile(
++    r"解释|推理|条件|校验|改名|改动|调换|交换|影响|纠正|追踪|调用|流程|为什么|"
++    r"\b(?:explain|why|trace|swap|rename|change|impact|validate|validation|condition|calls?|flow|correct)\b", re.I)
++_READ_ONLY_CUE = re.compile(
++    r"只(?:读|显示|展示)|不要(?:解释|推理|思考)|不(?:用|必)(?:解释|推理|思考)|"
++    r"\b(?:just\s+(?:read|show)|no\s+reasoning|do\s+not\s+(?:explain|reason))\b", re.I)
++
++
++def _source_reasoning_request(user_text: str) -> bool:
++    return bool(_SOURCE_CUE.search(user_text) and _REASONING_CUE.search(user_text)
++                and not _READ_ONLY_CUE.search(user_text))
++
++
+ class FocusScorer:
+     """Per-session Focus signal scorer. Cheap, synchronous, no I/O."""
+ 
+@@ -101,6 +119,8 @@ class FocusScorer:
+         kw = self._signal_keyword(user_text)
+         emotion = self._signal_emotion(emotion_reading)
+         question = self._signal_question(emotion_reading)
++        if _source_reasoning_request(user_text):
++            question = 1.0  # Current explicit request; no stale reading needed.
+         cadence = self._signal_cadence(user_text)
+         # cadence amplifies distress evidence; it is NOT a trigger on its own, and
+         # must NOT fire on a happy turn (emotion < 0) — a short cheerful reply

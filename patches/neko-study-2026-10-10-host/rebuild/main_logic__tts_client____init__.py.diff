@@ -1,0 +1,21 @@
+diff --git a/main_logic/tts_client/__init__.py b/main_logic/tts_client/__init__.py
+index 60dc849..029e38d 100644
+--- a/main_logic/tts_client/__init__.py
++++ b/main_logic/tts_client/__init__.py
+@@ -30,6 +30,7 @@ import re
+ import websockets
+ 
+ from utils.config_manager import get_config_manager
++from utils import dev_text_only
+ from utils.tts.native_voice_registry import get_native_tts_worker
+ from utils.tts.providers.mimo import MIMO_PRESET_CATALOG
+ from utils.tts import provider_registry as _tts_providers
+@@ -302,6 +303,8 @@ def get_tts_worker(
+           meta=None → the caller falls through and enables the normalizer);
+           None when native TTS is unsupported
+     """
++    if dev_text_only.block("tts_provider_selection_blocked"):
++        return dummy_tts_worker, None, None
+     cm = get_config_manager()
+     from utils.config_manager.imported_voices import is_imported_voice_ref
+     from .remote_voice import bind_imported_voice_worker, unavailable_imported_voice_worker

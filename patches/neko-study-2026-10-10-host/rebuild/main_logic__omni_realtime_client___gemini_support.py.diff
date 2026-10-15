@@ -1,0 +1,20 @@
+diff --git a/main_logic/omni_realtime_client/_gemini_support.py b/main_logic/omni_realtime_client/_gemini_support.py
+index 08e6139..ca1a7f5 100644
+--- a/main_logic/omni_realtime_client/_gemini_support.py
++++ b/main_logic/omni_realtime_client/_gemini_support.py
+@@ -1112,8 +1112,15 @@ class _GeminiMixin:
+                         # 处理音频
+                         if hasattr(part, 'inline_data') and part.inline_data:
+                             if isinstance(part.inline_data.data, bytes):
++                                if self._interrupted and self.on_audio_delta:
++                                    self._count_gemini_local_onset_suppression()
+                                 if not self._skip_until_next_response and not self._interrupted and self.on_audio_delta:
+                                     self._ai_recent_activity_time = time.time()
++                                    # Dispatch intent, not a frontend playback receipt.
++                                    self._local_audio_dispatch_owner = (
++                                        self._connection_generation, self._read_host_turn_id(),
++                                        getattr(self, "_current_turn_epoch", None),
++                                    )
+                                     await self.on_audio_delta(part.inline_data.data)
+                                     if not event_owner_is_current():
+                                         return

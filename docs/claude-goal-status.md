@@ -16,7 +16,7 @@ Goal：[claude-goal-2026-10-15](claude-goal-2026-10-15.md)（用户 2026-10-15 �
 - **M3 完成**，详见 [拆轮分析与方案](evidence/claude-m3-split-asr-analysis-2026-10-15.md)。
   - 停顿暂扣使历史上必拆的输入只产生 1 条识别；打断相关测试全部通过。
   - 日常语音入口默认开启；真人验证留到集中验收。
-- **M4 进行中**：`scripts/neko_host_rebuild_check.py` 从 upstream 干净重建时，补丁链在 `_tools.py` 失败。说明有早期手动步骤不在链里，正在定位。
+- **M4 完成**，详见 [宿主重建](evidence/claude-m4-host-rebuild-2026-10-15.md)：字符串补丁链无法从 upstream 重放（`_tools.py` 的 hunk 依赖历史中间状态）。改为每个文件一份 diff，`git archive` + `git apply` 重建，31/31 与钉住的 SHA 逐字节一致。
 - 账本：DeepSeek 935/2000、Lanlan.app 86、Lanlan.tech 0。
 
 ## 决定记录
@@ -25,6 +25,8 @@ Goal：[claude-goal-2026-10-15](claude-goal-2026-10-15.md)（用户 2026-10-15 �
 - 路由不再依赖源码证据，已改为与源码读取并发：只在同一路由文本时复用结果，其余情况取消，预留随请求转移。离线通过，真实计时待补。
 
 ## 历史（追加）
+
+- 2026-10-15：M2/M3 发布 40264ab；M4 完成（宿主 31 文件可从 upstream + diff 重建）。
 
 - 2026-10-15：M1 发布 f252506；M2/M3 实施并实测（见上），撤回了两项无效尝试（提示词确认句、silence_duration_ms）。
 

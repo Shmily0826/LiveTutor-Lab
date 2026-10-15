@@ -1,0 +1,85 @@
+diff --git a/main_logic/core/turn.py b/main_logic/core/turn.py
+index 6451927..88755ec 100644
+--- a/main_logic/core/turn.py
++++ b/main_logic/core/turn.py
+@@ -1516,6 +1516,10 @@ class TurnMixin:
+ 
+     async def handle_audio_data(self, audio_data: bytes):
+         """Qwen audio callback: push audio to the WebSocket frontend"""
++        if self._study_grade_output_held(): return
++        from utils import dev_text_only
++        if dev_text_only.block("native_audio_callback_blocked"):
++            return
+         if self._takeover_active:
+             logger.info("[%s] session takeover active: dropping ordinary realtime audio bytes=%d", self.lanlan_name, len(audio_data or b""))
+             return
+@@ -2086,6 +2090,7 @@ class TurnMixin:
+         source: str | None = None,
+         metadata: dict | None = None,
+         source_game_route_identity: Any = Ellipsis,
++        source_study_client=None, source_study_input=None, source_study_activation=None,
+     ):
+         """Sync transcript text into queues/cache and push it to the frontend.
+ 
+@@ -2206,6 +2211,9 @@ class TurnMixin:
+             )
+             return False
+ 
++        if is_voice_source and record_transcript_text:
++            self._start_study_grade_claim(transcript, source_study_client, source_study_input, source_study_activation)
++
+         if is_voice_source and not voice_rms_recorded:
+             # transcript 到达 → VAD 在窗口内捕捉到声音，标记 voice RMS 活跃；
+             # 即使转录为空（VAD 误触发或转录失败）也算一次"用户在发声"，
+@@ -2339,10 +2347,20 @@ class TurnMixin:
+         that contextvar is unset — the ordinary voice path has no expected sid,
+         but it still has a turn, and that is the path #2612 was filed against.
+         """
++        study_text_source = getattr(self, "session", None)
++        study_text_trace = getattr(getattr(study_text_source, "_wire_trace", None), "record_study_text", None)
++        study_text_identity = dict(generation=getattr(study_text_source, "_connection_generation", None),
++            response_id=getattr(study_text_source, "_current_response_id", None), cumulative=True,
++            scope=getattr(study_text_source, "_tool_scope_generation", None),
++            token=getattr(study_text_source, "_native_output_connection_token", None))
++        if callable(study_text_trace):
++            study_text_trace("core_entry", text, **study_text_identity)
+         if self._takeover_active:
+             logger.info("[%s] session takeover active: dropping ordinary realtime output transcript len=%d", self.lanlan_name, len(text or ""))
+             return
+ 
++        if self._study_grade_output_held(): return
++
+         # 同 handle_text_data：proactive 路径设置的 sid 期望值若与 current 不符，
+         # 丢弃本 chunk，避免 proactive 文本被错插进用户新轮次。
+         expected_sid = _proactive_expected_sid.get()
+@@ -2460,6 +2478,12 @@ class TurnMixin:
+         if not guarded_delivery_is_current():
+             return None
+ 
++        study_text_source = getattr(self, "session", None)
++        study_text_trace = getattr(getattr(study_text_source, "_wire_trace", None), "record_study_text", None)
++        study_text_identity = dict(generation=getattr(study_text_source, "_connection_generation", None),
++            response_id=getattr(study_text_source, "_current_response_id", None), cumulative=True,
++            scope=getattr(study_text_source, "_tool_scope_generation", None),
++            token=getattr(study_text_source, "_native_output_connection_token", None))
+         text_clean = self.emotion_pattern.sub('', text)
+         effective_turn_id = turn_id or self.current_speech_id
+         effective_request_id = (
+@@ -2521,6 +2545,8 @@ class TurnMixin:
+                 self._remember_recent_ai_voice_echo(text_clean)
+         published_at = time.time()
+         self.sync_message_queue.put({"type": "json", "data": message})
++        if callable(study_text_trace):
++            study_text_trace("core_queue", text_clean, **study_text_identity)
+         logger.debug(
+             "[voice-chain] stage=model_text_publish turn_id=%s request_id=%s first=%s text_len=%d",
+             effective_turn_id,
+@@ -2572,6 +2598,8 @@ class TurnMixin:
+             async def _do_send():
+                 if self.websocket and hasattr(self.websocket, 'client_state') and self.websocket.client_state == self.websocket.client_state.CONNECTED:
+                     await self.websocket.send_json(message)
++                    if callable(study_text_trace):
++                        study_text_trace("core_ws", text_clean, **study_text_identity)
+                     return True
+                 return False
+ 

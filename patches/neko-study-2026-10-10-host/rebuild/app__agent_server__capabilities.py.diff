@@ -1,0 +1,17 @@
+diff --git a/app/agent_server/capabilities.py b/app/agent_server/capabilities.py
+index 6d89d44..0d296e6 100644
+--- a/app/agent_server/capabilities.py
++++ b/app/agent_server/capabilities.py
+@@ -199,6 +199,12 @@ async def _fire_agent_llm_connectivity_check(*, queue: bool = False) -> None:
+       BrowserUse just became available), where early-return would silently
+       drop the refresh.
+     """
++    from utils import dev_text_only
++    if dev_text_only.ENABLED:
++        dev_text_only.block("agent_connectivity_probe_blocked")
++        _set_capability("computer_use", False, "development_text_only")
++        _set_capability("browser_use", False, "development_text_only")
++        return
+     if not queue and _llm_check_lock.locked():
+         return
+ 

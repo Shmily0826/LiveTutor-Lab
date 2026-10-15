@@ -1,0 +1,129 @@
+diff --git a/static/app/app-audio-playback.js b/static/app/app-audio-playback.js
+index c077b0c..8b57ec8 100644
+--- a/static/app/app-audio-playback.js
++++ b/static/app/app-audio-playback.js
+@@ -513,6 +513,19 @@
+         state.mouthFrame = captureSpeechMouthFrame(state);
+ 
+         window.NekoSpeechPlaybackState = state;
++        try {
++            if (String(state.correlationId).indexOf('native_connection_') === 0 &&
++                S.socket && typeof S.socket.send === 'function' &&
++                (S.socket.readyState === 1 || typeof S.socket.readyState === 'undefined')) {
++                S.socket.send(JSON.stringify({action: 'native_speech_playback_state',
++                    sdk_speech_correlation_id: state.correlationId, active: !!state.active,
++                    audible: state.audioContextState === 'running' && S.scheduledSources.some(function (source) {
++                        return source._nekoSpeechCorrelationId === state.correlationId &&
++                            source._nekoScheduledStartAudioTime <= state.audioContextTime &&
++                            source._nekoScheduledEndAudioTime > state.audioContextTime;
++                    })}));
++            }
++        } catch (_) { /* disconnected local frontend */ }
+         try {
+             localStorage.setItem(SPEECH_PLAYBACK_STATE_KEY, JSON.stringify(state));
+         } catch (_) { /* noop */ }
+@@ -1732,6 +1745,8 @@
+                     // Precise time scheduling
+                     source.start(scheduledStartTime);
+                     source._nekoSpeechId = normalizeAssistantTurnId(item.speechId);
++                    source._nekoSpeechCorrelationId = item.correlationId;
++                    source._nekoScheduledStartAudioTime = scheduledStartTime;
+                     source._nekoScheduledEndAudioTime = scheduledEndTime;
+ 
+                     // On-ended callback: handle lip sync stop & cleanup
+@@ -1786,13 +1801,43 @@
+         }
+     }
+ 
++    // The physical provider connection is the ownership boundary for native handoff.
++    var retiredNativeConnections = new Set();
++
++    function cancelNativeConnectionPlayback(token) {
++        if (typeof token !== 'string' || token.indexOf('native_connection_') !== 0) return;
++        retiredNativeConnections.add(token);
++        S.scheduledSources = S.scheduledSources.filter(function (source) {
++            if (source._nekoSpeechCorrelationId !== token) return true;
++            try { source.stop(); } catch (_) { /* already ended */ }
++            releaseAssistantPlaybackGraph(source);
++            return false;
++        });
++        S.audioBufferQueue = S.audioBufferQueue.filter(function (item) {
++            return item.correlationId !== token;
++        });
++        S.incomingAudioBlobQueue = S.incomingAudioBlobQueue.filter(function (item) {
++            return item.correlationId !== token;
++        });
++        // Keep header/blob pairing and all next-connection decoder/lifecycle state intact.
++        if (!S.scheduledSources.length && S.audioPlayerContext) {
++            S.nextChunkTime = S.audioPlayerContext.currentTime;
++        }
++        if (S.currentPlayingSpeechCorrelationId === token && !S.scheduledSources.length &&
++            !S.audioBufferQueue.length && !S.incomingAudioBlobQueue.length) {
++            S.isPlaying = false;
++            stopActiveLipSync();
++            publishSpeechPlaybackState('native_connection_cancel', {active: false});
++        }
++    }
++
+     // ======================== Audio blob handling ========================
+ 
+-    async function handleAudioBlob(blob, expectedEpoch, speechId, turnId, playbackGain) {
++    async function handleAudioBlob(blob, expectedEpoch, speechId, turnId, playbackGain, correlationId) {
+         if (expectedEpoch === undefined) expectedEpoch = S.incomingAudioEpoch;
+ 
+         var arrayBuffer = await blob.arrayBuffer();
+-        if (expectedEpoch !== S.incomingAudioEpoch) {
++        if (expectedEpoch !== S.incomingAudioEpoch || retiredNativeConnections.has(correlationId)) {
+             return;
+         }
+         if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+@@ -1852,6 +1897,7 @@
+             return;
+         }
+ 
++        if (retiredNativeConnections.has(correlationId)) return;
+         var audioBuffer = S.audioPlayerContext.createBuffer(1, float32Data.length, sampleRate);
+         audioBuffer.copyToChannel(float32Data, 0);
+ 
+@@ -1860,6 +1906,7 @@
+             buffer: audioBuffer,
+             turnId: resolveAssistantAudioTurnId(turnId, speechId),
+             speechId: normalizeAssistantTurnId(speechId),
++            correlationId: correlationId,
+             playbackGain: normalizeAssistantPlaybackGain(playbackGain)
+         };
+         S.audioBufferQueue.push(bufferObj);
+@@ -1915,6 +1962,7 @@
+             }
+             return;
+         }
++        if (retiredNativeConnections.has(meta.correlationId)) return;
+         if (!meta.speechId) {
+             logAudioLifecycle('enqueueIncomingAudioBlob:missing_speech_id', {
+                 turnId: meta.turnId || null
+@@ -1933,6 +1981,7 @@
+             blob: blob,
+             shouldSkip: !!meta.shouldSkip,
+             speechId: meta.speechId,
++            correlationId: meta.correlationId,
+             turnId: resolveAssistantAudioTurnId(meta.turnId, meta.speechId),
+             playbackGain: normalizeAssistantPlaybackGain(meta.playbackGain),
+             epoch: meta.epoch
+@@ -1992,7 +2041,8 @@
+                     item.epoch,
+                     item.speechId,
+                     item.turnId,
+-                    item.playbackGain
++                    item.playbackGain,
++                    item.correlationId
+                 );
+                 logAudioLifecycle('processIncomingAudioBlobQueue:handled', {
+                     turnId: item.turnId || null,
+@@ -2082,6 +2132,7 @@
+ 
+     // ======================== Module exports ========================
+ 
++    mod.cancelNativeConnectionPlayback = cancelNativeConnectionPlayback;
+     mod.clearAudioQueue = clearAudioQueue;
+     mod.clearAudioQueueWithoutDecoderReset = clearAudioQueueWithoutDecoderReset;
+     mod.initializeGlobalAnalyser = initializeGlobalAnalyser;

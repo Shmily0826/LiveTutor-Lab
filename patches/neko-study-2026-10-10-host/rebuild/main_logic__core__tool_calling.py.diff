@@ -1,0 +1,707 @@
+diff --git a/main_logic/core/tool_calling.py b/main_logic/core/tool_calling.py
+index f304423..1756227 100644
+--- a/main_logic/core/tool_calling.py
++++ b/main_logic/core/tool_calling.py
+@@ -108,9 +108,273 @@ class ToolCallingMixin:
+             await self._sync_tools_to_active_session(raise_on_failure=True)
+         return n
+ 
++    @staticmethod
++    def _valid_study_material_record(value, *, binding=False):
++        if not isinstance(value, dict) or type(value.get("v")) is not int or value.get("v") != 1:
++            return False
++        boot = value.get("boot_id")
++        seq = value.get("change_seq")
++        if (not isinstance(boot, str) or len(boot) != 32
++                or any(char not in "0123456789abcdef" for char in boot)
++                or type(seq) is not int or seq < 0):
++            return False
++        fields = ("context",) if binding else ("before", "after")
++        for field in fields:
++            context = value.get(field)
++            if (not isinstance(context, dict) or not context
++                    or set(context) - {"course_id", "session_id", "material_identity"}
++                    or not {"course_id", "session_id"} <= set(context)
++                    or any(not isinstance(item, str) or len(item) > 256 for item in context.values())):
++                return False
++            identity = context.get("material_identity")
++            if identity is not None and (len(identity) != 64 or any(char not in "0123456789abcdef" for char in identity)):
++                return False
++        return True
++
++    def _study_material_native_output_held(self):
++        if self._study_grade_output_held(): return True
++        source = getattr(self, "session", None)
++        hold = getattr(source, "_study_material_output_hold", None)
++        return bool(hold and not getattr(self, "use_tts", False)
++                    and getattr(source, "_is_free_proxy", False)
++                    and source._connection_generation == hold["connection"]
++                    and getattr(source, "_study_material_user_epoch", 0) == hold["user_epoch"])
++
++    def _capture_study_material_tool_owner(self, call, invoking_session):
++        definition = self.tool_registry.get(call.name)
++        source = invoking_session
++        if call.name in ("study_explain", "study_quiz", "study_answer", "study_summary"):
++            logger.info("[study-material-audio] binding admission trusted=%s current=%s class=%s free=%s tts=%s route=%s lease=%s native_class=%s takeover=%s token_present=%s",
++                getattr(definition, "metadata", {}).get("source") == "plugin:study_companion", source is self.session,
++                type(source).__name__, getattr(source, "_is_free_proxy", False),
++                getattr(self, "use_tts", False), self._asr_route_mode, self._voice_lease_owner,
++                isinstance(source, OmniRealtimeClient), self._takeover_active,
++                str(getattr(source, "_native_output_connection_token", "")).startswith("native_connection_"))
++        if (call.name not in ("study_explain", "study_quiz", "study_answer", "study_summary") or definition is None
++                or definition.metadata.get("source") != "plugin:study_companion"
++                or source is not self.session or not isinstance(source, OmniRealtimeClient)
++                or not getattr(source, "_is_free_proxy", False)
++                or getattr(self, "use_tts", False) or self._takeover_active
++                or not str(getattr(source, "_native_output_connection_token", "")).startswith("native_connection_")):
++            return None
++        provider = source._gemini_session if source._is_gemini else source.ws
++        entry = getattr(source, "_tool_batch_entry_by_task", {}).get(asyncio.current_task())
++        if entry is not None:
++            if entry.abandoned or entry.call.call_id != call.call_id:
++                logger.info("[study-material-audio] binding rejected abandoned=%s call_matches=%s",
++                    entry.abandoned, entry.call.call_id == call.call_id)
++                return None
++            owner = entry.owner # preserve the actual unannounced-response fence
++        else:
++            owner = source._capture_tool_task_owner(provider)
++        return {"source": source, "tool_owner": owner, "tool_name": call.name,
++                "socket": self.websocket, "activation": self._capture_voice_session_activation_generation(),
++                "input_route": self._asr_route_mode, "input_lease": self._voice_lease_owner}
++
++    async def _bind_study_material_tool_result(self, captured, result):
++        logger.info("[study-material-audio] result admission captured=%s error=%s output_kind=%s",
++            captured is not None, result.is_error, type(result.output).__name__)
++        if captured is None or result.is_error:
++            return
++        payload = result.output
++        if isinstance(payload, str):
++            try:
++                payload = __import__("json").loads(payload)
++            except (ValueError, TypeError):
++                return
++        if not isinstance(payload, dict):
++            return
++        record = payload.get("_study_material_binding")
++        spoken_field = "question" if captured["tool_name"] == "study_quiz" else "reply"
++        logger.info("[study-material-audio] result binding present=%s valid=%s reply=%s",
++            record is not None, self._valid_study_material_record(record, binding=True),
++            isinstance(payload.get(spoken_field), str) and bool(payload.get(spoken_field)))
++        if not self._valid_study_material_record(record, binding=True):
++            return
++        # Host-only provenance does not need to enter the provider's prompt.
++        result.output = {key: value for key, value in payload.items() if key != "_study_material_binding"}
++        source = captured["source"]
++        owner = captured["tool_owner"]
++        if (payload.get("degraded") or payload.get("ok") is False or not payload.get(spoken_field)
++                or not isinstance(payload.get(spoken_field), str)
++                or source is not self.session or self.websocket is not captured["socket"]
++                or not source._tool_task_owner_is_current(owner)
++                or self._capture_voice_session_activation_generation() != captured["activation"]):
++            return
++        binding = {**captured, "record": __import__("copy").deepcopy(record),
++                   "connection": source._connection_generation,
++                   "token": getattr(source, "_native_output_connection_token", None)}
++        self._study_material_output_owner = binding
++        logger.info("[study-material-audio] output bound connection=%s", binding["connection"])
++        # A UI change may arrive while the tool response is in transit. Do not
++        # lose that control just because no output was bound at its arrival.
++        latest = getattr(self, "_study_material_controls", {}).get(record["boot_id"])
++        if latest and latest["change_seq"] > record["change_seq"]:
++            await self._apply_study_material_control(latest)
++
++    async def _apply_study_material_control(self, control):
++        if not self._valid_study_material_record(control):
++            return False
++        controls = getattr(self, "_study_material_controls", None)
++        if controls is None:
++            controls = self._study_material_controls = {}
++        boot = control["boot_id"]
++        previous = controls.get(boot)
++        if previous and previous["change_seq"] > control["change_seq"]:
++            return False
++        if previous is None and len(controls) >= 4:
++            controls.pop(next(iter(controls)))
++        controls[boot] = __import__("copy").deepcopy(control)
++        binding = getattr(self, "_study_material_output_owner", None)
++        if not binding:
++            return False
++        record = binding["record"]
++        if record["boot_id"] != boot or control["change_seq"] <= record["change_seq"]:
++            return False
++        expected = record["context"]
++        # Also handles a missed intermediate A->B notification followed by B->C:
++        # sequence establishes that C is newer than the bound A. A late event
++        # cannot cancel C's newer binding. Immutable explicit text is unaffected
++        # by a picture-only change of the same course/session.
++        if all(control["after"].get(key) == value for key, value in expected.items()):
++            return False
++        source = binding["source"]
++        owner = binding["tool_owner"]
++        if (source is not self.session or self.websocket is not binding["socket"]
++                or self._takeover_active or not self.is_active or getattr(self, "use_tts", False)
++                or self._asr_route_mode != binding["input_route"] or self._voice_lease_owner != binding["input_lease"]
++                or not source._tool_task_owner_is_current(owner)
++                or source._connection_generation != binding["connection"]
++                or self._capture_voice_session_activation_generation() != binding["activation"]
++                or getattr(source, "_native_barge_in_pending", False)
++                or getattr(source, "_study_material_replacing", False)
++                or not binding["token"]):
++            return False
++        source._study_material_replacing = True
++        # Scope retirement can cancel the tool that is currently binding a late
++        # result. The independently owned swap must survive that cancellation.
++        task = asyncio.create_task(self._replace_study_material_native_connection(binding))
++        source._study_material_replace_task = task
++        def completed(done):
++            if getattr(source, "_study_material_replace_task", None) is done:
++                source._study_material_replace_task = None
++            if not done.cancelled() and done.exception() is not None:
++                logger.warning("[study-material-audio] task failed kind=%s", type(done.exception()).__name__)
++        task.add_done_callback(completed)
++        source.note_user_turn_started() # retire tools; no speech onset or input replay
++        binding["replacement_user_epoch"] = getattr(source, "_study_material_user_epoch", 0)
++        hold = {"connection": binding["connection"], "user_epoch": binding["replacement_user_epoch"]}
++        binding["output_hold"] = source._study_material_output_hold = hold
++        self._study_material_output_owner = None
++        return await asyncio.shield(task)
++
++    async def _replace_study_material_native_connection(self, binding):
++        source = binding["source"]
++        socket = binding["socket"]
++        connection = binding["connection"]
++        owned_connection = connection
++        lock = self._core_voice_session_swap_lock
++        locked = False
++        attempted = False
++        cancel_attempted = False
++        success = False
++        def physical_current():
++            return bool(source is self.session and self.is_active
++                and self.websocket is socket and self._asr_route_mode == binding["input_route"]
++                and self._voice_lease_owner == binding["input_lease"] and not self._takeover_active
++                and not getattr(self, "use_tts", False)
++                and self._capture_voice_session_activation_generation() == binding["activation"])
++        def current():
++            return physical_current() and getattr(source, "_study_material_user_epoch", 0) == binding["replacement_user_epoch"]
++        def failed_owner_current():
++            # A cancel already sent retires this physical token irreversibly.
++            # A new input on that SAME old connection needs explicit restart,
++            # not a silent fatal connection or a fake successful takeover.
++            return current() or (cancel_attempted and physical_current()
++                                 and source._connection_generation == connection)
++        try:
++            barrier = self._core_voice_session_swap_barrier_timeout_s
++            close_timeout = self._core_voice_listener_cancel_timeout_s
++            async with asyncio.timeout(self._native_activation_reconnect_timeout_s + barrier + close_timeout):
++                await asyncio.wait_for(lock.acquire(), timeout=barrier)
++                locked = True
++                if not current() or source._connection_generation != connection:
++                    return False
++                attempted = True
++                async with self._ensure_audio_frame_send_lock():
++                    if not current() or source._connection_generation != connection:
++                        return False
++                    source._interrupted = source._fatal_error_occurred = True
++                    cancel_attempted = True
++                    await socket.send_json({"type": "game_route_speech_cancel",
++                        "sdk_speech_correlation_id": binding["token"]})
++                if not current() or source._connection_generation != connection:
++                    return False
++                await asyncio.wait_for(source.close(), timeout=close_timeout)
++                if not current() or source._connection_generation != connection:
++                    return False
++                if not await self._restart_message_handler_after_session_reconnect(source, start_listener=False):
++                    raise RuntimeError("study_material_listener_not_drained")
++                if not current() or source._connection_generation != connection:
++                    return False
++                # One normal connect resets input buffers and gets a fresh physical
++                # output token. Never call the barge-in replay path for a UI change.
++                try:
++                    await source.connect(str(getattr(source, "instructions", "") or ""), native_audio=True)
++                finally:
++                    owned_connection = min(source._connection_generation, connection + 1)
++                if not current() or source._connection_generation != connection + 1:
++                    raise RuntimeError("study_material_connection_not_replaced")
++                if not await self._restart_message_handler_after_session_reconnect(source):
++                    raise RuntimeError("study_material_listener_restart_failed")
++                if not current() or source._connection_generation != owned_connection:
++                    return False
++                self.session_closed_by_server = False
++                success = True
++                logger.info("[study-material-audio] connection retired and restored %d->%d", connection, owned_connection)
++                return True
++        except asyncio.CancelledError:
++            raise
++        except Exception as error:
++            # No automatic retry loop and no old-material PCM or reply replay.
++            logger.warning("[study-material-audio] restore failed kind=%s", type(error).__name__)
++            return False
++        finally:
++            failed_ours = not success and failed_owner_current() and source._connection_generation == owned_connection
++            if failed_ours:
++                try:
++                    if not cancel_attempted:
++                        # Even a swap-lock timeout must suppress the exact old
++                        # renderer queue. At most one cancel delivery attempt.
++                        async with asyncio.timeout(self._core_voice_listener_cancel_timeout_s):
++                            async with self._ensure_audio_frame_send_lock():
++                                if current() and source._connection_generation == connection:
++                                    cancel_attempted = True
++                                    await socket.send_json({"type": "game_route_speech_cancel",
++                                        "sdk_speech_correlation_id": binding["token"]})
++                    if failed_owner_current() and source._connection_generation == owned_connection:
++                        source._interrupted = source._fatal_error_occurred = True
++                        await asyncio.wait_for(source.close(), timeout=self._core_voice_listener_cancel_timeout_s)
++                except (Exception, asyncio.CancelledError):
++                    pass
++            source._study_material_replacing = False
++            if getattr(source, "_study_material_output_hold", None) is binding.get("output_hold"):
++                source._study_material_output_hold = None
++            if locked:
++                lock.release()
++            if failed_ours and failed_owner_current() and source._connection_generation == owned_connection:
++                await self.send_status("材料已更新，语音未能恢复，请重新开始语音。")
++                if failed_owner_current() and source._connection_generation == owned_connection:
++                    await self.disconnected_by_server(expected_session=source, announce_disconnect=False)
++
+     def _make_tool_call_handler(self, session):
+         async def _handle(call: ToolCall) -> ToolResult:
+-            return await self._on_tool_call(call, invoking_session=session)
++            wait_notice = self._start_study_wait_notice(call, session)
++            try:
++                return await self._on_tool_call(call, invoking_session=session)
++            finally:
++                if wait_notice is not None:
++                    wait_notice.cancel()
+ 
+         return _handle
+ 
+@@ -119,18 +383,118 @@ class ToolCallingMixin:
+         call: ToolCall,
+         *,
+         invoking_session=None,
++        study_input_owner=None,
+     ) -> ToolResult:
+         """Bridge invoked by both clients when the model emits a tool
+         call. Forwards to the registry (process-global, outliving any
+         single session), then routes any images the tool returned.
+         """
+-        result = await self.tool_registry.execute(call)
++        claim = getattr(self, "_study_grade_claim", None)
++        relay_current = bool(claim and claim.get("relay_provider") is not None
++            and self._study_grade_claim_current(claim, controlled=True)
++            and invoking_session is claim["client"]
++            and invoking_session.ws is claim["relay_provider"]
++            and getattr(invoking_session, "_native_output_connection_token", None) == claim.get("relay_token")
++            and getattr(invoking_session, "_tool_scope_generation", 0) == claim.get("relay_scope"))
++        if (study_input_owner is None and claim and invoking_session is claim["client"]
++                and call.name in ("study_answer", "study_explain", "study_quiz", "study_summary")
++                and (self._study_grade_claim_current(claim) or relay_current)):
++            if call.name != "study_answer":
++                return ToolResult(call_id=call.call_id, name=call.name,
++                    output={"ok":False,"error":"explicit_answer_is_being_graded"}, is_error=True)
++            await asyncio.shield(claim["task"])
++            if (not claim.get("result") or not (
++                    self._study_grade_claim_current(claim) or (relay_current
++                        and self._study_grade_claim_current(claim, controlled=True)
++                        and invoking_session.ws is claim["relay_provider"]
++                        and getattr(invoking_session, "_tool_scope_generation", 0) == claim.get("relay_scope")
++                        and getattr(invoking_session, "_native_output_connection_token", None) == claim.get("relay_token")))):
++                return ToolResult(call_id=call.call_id, name=call.name,
++                    output={"ok":False,"error":"study_grade_unavailable"}, is_error=True)
++            return ToolResult(call_id=call.call_id, name=call.name, output=claim["result"])
++        if (os.environ.get("NEKO_STUDY_AUTO_GRADE") == "1" and call.name == "study_answer"
++                and invoking_session is self.session and getattr(invoking_session, "_is_free_proxy", False)
++                and (study_input_owner is None or not claim or claim["client"] is not invoking_session
++                     or claim["owner"] != study_input_owner or not self._study_grade_claim_current(claim))):
++            return ToolResult(call_id=call.call_id, name=call.name,
++                output={"ok":False,"error":"explicit_study_answer_required"}, is_error=True)
++        material_owner = self._capture_study_material_tool_owner(call, invoking_session)
++        if material_owner is not None and study_input_owner is not None:
++            if not invoking_session._tool_task_owner_is_current(study_input_owner):
++                return ToolResult(call_id=call.call_id, name=call.name, output={"ok":False,"error":"stale_study_input"}, is_error=True)
++            material_owner["tool_owner"] = study_input_owner
++        dispatched_call = call
++        definition = self.tool_registry.get(call.name)
++        if (call.name in ("study_explain", "study_quiz", "study_answer", "study_summary")
++                and definition is not None and definition.metadata.get("source") == "plugin:study_companion"
++                and invoking_session is not None and invoking_session is not self.session):
++            return ToolResult(call_id=call.call_id, name=call.name,
++                output={"ok": False, "error": "stale_study_role_scope"}, is_error=True,
++                error_message="the invoking Study role session was replaced")
++        if (call.name in ("study_explain", "study_quiz", "study_answer", "study_summary") and definition is not None
++                and definition.metadata.get("source") == "plugin:study_companion"):
++            # The process-global remote dispatcher has no manager identity.
++            # Supply only this trusted role; ignore model-supplied _ctx and do
++            # not mutate original arguments used by exact-inflight sharing.
++            role = (str(getattr(self, "lanlan_name", "") or "").strip()
++                    if invoking_session is not None and invoking_session is self.session else "")
++            logger.info("[study-material-audio] dispatch role_length=%d captured=%s", len(role), material_owner is not None)
++            arguments = {**(getattr(call, "arguments", None) or {}), "_ctx": {"lanlan_name": role}}
++            dataclasses = __import__("dataclasses")
++            if dataclasses.is_dataclass(call):
++                dispatched_call = dataclasses.replace(call, arguments=arguments)
++            else:
++                dispatched_call = __import__("copy").copy(call)
++                dispatched_call.arguments = arguments
++        result = await self.tool_registry.execute(dispatched_call)
++        await self._bind_study_material_tool_result(material_owner, result)
++        if (call.name in ("study_explain", "study_quiz", "study_answer", "study_summary") and definition is not None
++                and definition.metadata.get("source") == "plugin:study_companion"):
++            # Provenance stays host-only even when Native capture was refused
++            # (TTS, stale owner, unavailable token, or failed tool result).
++            payload = result.output
++            if isinstance(payload, str):
++                try:
++                    payload = __import__("json").loads(payload)
++                except (ValueError, TypeError):
++                    payload = None
++            if isinstance(payload, dict) and "_study_material_binding" in payload:
++                result.output = {key: value for key, value in payload.items() if key != "_study_material_binding"}
+         if result.images:
+             await self._route_tool_images(
+                 result, invoking_session=invoking_session,
+             )
+         return result
+ 
++    def _start_study_wait_notice(self, call, invoking_session):
++        """LiveTutor: keep a short status toast up while a slow Study tool works."""
++        definition = self.tool_registry.get(call.name)
++        if (os.environ.get("NEKO_STUDY_WAIT_NOTICE", "1") != "1"
++                or call.name not in ("study_explain", "study_quiz", "study_summary")
++                or definition is None or definition.metadata.get("source") != "plugin:study_companion"
++                or invoking_session is None or invoking_session is not self.session):
++            return None
++        arguments = getattr(call, "arguments", None) or {}
++        english = str(arguments.get("language") or "").lower().startswith("en")
++        if call.name == "study_quiz":
++            text = "Preparing a question..." if english else "正在出题……"
++        elif call.name == "study_summary":
++            text = "Reading your study record..." if english else "正在查看学习记录……"
++        elif arguments.get("material_source") == "project_code":
++            text = "Reading the source code..." if english else "正在查看源码……"
++        else:
++            text = "Looking at the material..." if english else "正在查看学习材料……"
++
++        async def notice():
++            await asyncio.sleep(1.5)  # Fast answers need no toast.
++            for _ in range(8):
++                await self.send_status(text)
++                await asyncio.sleep(4.0)
++
++        task = asyncio.create_task(notice())
++        task.add_done_callback(lambda done: done.cancelled() or done.exception())
++        return task
++
+     async def _route_tool_images(
+         self,
+         result: ToolResult,
+@@ -186,6 +550,307 @@ class ToolCallingMixin:
+     # handler 当前固定返回"没有找到相关记忆"，等真实记忆检索接好后只
+     # 替换 ``_handle_recall_memory_call`` 即可，不动注册 / 同步链路。
+ 
++    def _record_study_grade_event(self, claim, stage):
++        # Identity/timing only: never copy the learner's answer into diagnostics.
++        pin = claim.get("pin") or {}
++        result = claim.get("result") or {}
++        source = claim["client"]
++        value = {key: pin.get(key) for key in ("course_id", "session_id", "question_id", "attempt_id")}
++        value.update(stage=stage, wall=__import__("time").time(),
++            connection=source._connection_generation,
++            scope=getattr(source, "_tool_scope_generation", 0),
++            token=getattr(source, "_native_output_connection_token", None),
++            old_token=claim.get("token"),
++            profile=getattr(getattr(source, "_realtime_protocol_capabilities", None), "route_key", None),
++            result_attempt_id=result.get("attempt_id"))
++        logger.info("[study-grade-event] %s", __import__("json").dumps(value, ensure_ascii=True))
++        trace = getattr(getattr(source, "_wire_trace", None), "record_study_text", None)
++        if stage == "grade_complete" and callable(trace):
++            trace("grade_reply", result.get("reply"), generation=source._connection_generation,
++                  scope=getattr(source, "_tool_scope_generation", None),
++                  token=getattr(source, "_native_output_connection_token", None))
++
++    def _accept_study_grade_tail(self, source, transcript, provider, generation):
++        if os.environ.get("NEKO_STUDY_AUTO_GRADE") != "1": return False
++        claim = getattr(self, "_study_grade_claim", None)
++        if (not claim or source is not claim["client"] or provider is not source.ws
++                or type(generation) is not int or generation <= 0
++                or generation != source._connection_generation or claim.get("tail_consumed")
++                or not self._study_grade_claim_current(claim)
++                or __import__("time").monotonic() > claim["tail_deadline"]
++                or getattr(source, "_study_grade_pin", None) is not None):
++            return False
++        task = claim.get("task")
++        if (task is None or task.cancelled() or task.cancelling()
++                or (task.done() and (task.exception() is not None or not claim.get("result")))):
++            return False
++        sealed, current = claim.get("sealed_phrase"), source._current_study_grade_phrase()
++        if (sealed is None or current is None or sealed[0] is not current[0]
++                or sealed[1] is not current[1] or sealed[2] != current[2]):
++            return False
++        actual = self._read_study_question_pin(source)
++        if not actual or any(actual.get(k) != claim["pin"].get(k)
++                             for k in ("course_id", "session_id", "question_id", "attempt_id")):
++            return False
++        from neko_study_answer_intent import grade_request_tail
++        if not grade_request_tail(transcript): return False
++        claim["tail_consumed"] = True
++        try:
++            logger.info("[study-grade-tail] redundant request consumed connection=%d scope=%d",
++                        generation, source._tool_scope_generation)
++        except Exception:
++            pass # Diagnostics cannot turn a scoped duplicate into a new user turn.
++        return True
++
++    def _read_study_question_pin(self, source):
++        if (os.environ.get("NEKO_STUDY_AUTO_GRADE") != "1" or source is not self.session
++                or not self.is_active or self._takeover_active or getattr(self, "use_tts", False)
++                or not getattr(source, "_is_free_proxy", False)):
++            return None
++        from neko_study_answer_intent import read_question_pin
++        runtime = os.environ.get("NEKO_STORAGE_SELECTED_ROOT", "")
++        return read_question_pin(runtime, include_empty=True) if runtime else None
++
++    def _study_input_authority(self, source):
++        if source is not self.session or not self.is_active or self._takeover_active:
++            return None
++        return (self._capture_voice_session_activation_generation(), self.websocket)
++
++    def _make_study_input_handler(self, source):
++        async def accepted(transcript, *, source_game_route_identity=None, study_input_owner=None):
++            if source is not self.session:
++                return False
++            activation = self._capture_voice_session_activation_generation()
++            return await self.handle_input_transcript(transcript,
++                source_game_route_identity=source_game_route_identity,
++                source_study_client=source, source_study_input=study_input_owner,
++                source_study_activation=activation)
++        return accepted
++
++    def _study_grade_claim_current(self, claim, *, controlled=False):
++        source = claim["client"]
++        basic = (source is self.session and self.is_active and not self._takeover_active
++            and not getattr(self, "use_tts", False) and self.websocket is claim["socket"]
++            and self._capture_voice_session_activation_generation() == claim["activation"]
++            and getattr(source, "_voice_handoff_input_sequence", 0) == claim["frames"]
++            and getattr(self, "_study_grade_claim", None) is claim)
++        if not basic:
++            return False
++        if controlled:
++            return source._connection_generation == claim["controlled_connection"]
++        return (source._tool_task_owner_is_current(claim["owner"])
++            and getattr(source, "_native_output_connection_token", None) == claim["token"])
++
++    def _study_grade_output_held(self):
++        claim = getattr(self, "_study_grade_claim", None)
++        source = getattr(self, "session", None)
++        if not claim or claim.get("released") or source is not claim["client"]:
++            return False
++        # Keep free output muted on its physical connection until it is retired.
++        return (source._connection_generation == claim.get("controlled_connection", claim["owner"].connection_generation)
++            and getattr(source, "_tool_scope_generation", 0) == claim.get("controlled_scope", claim["owner"].scope_generation))
++
++    def _start_study_grade_claim(self, transcript, source, receipt, activation):
++        if (os.environ.get("NEKO_STUDY_AUTO_GRADE") != "1" or source is not self.session
++                or not isinstance(receipt, dict) or receipt.get("client") is not source
++                or self._capture_voice_session_activation_generation() != activation
++                or self._takeover_active or not self.is_active or getattr(self, "use_tts", False)
++                or not getattr(source, "_is_free_proxy", False)
++                or receipt.get("frames") != getattr(source, "_voice_handoff_input_sequence", 0)
++                or not str(receipt.get("token") or "").startswith("native_connection_")
++                or receipt.get("token") != getattr(source, "_native_output_connection_token", None)):
++            return False
++        if receipt.get("input_authority") != self._study_input_authority(source):
++            return False
++        from neko_study_answer_intent import answer_intent
++        intent = answer_intent(transcript, allow_declared_answer=bool(
++            receipt.get("pin") and receipt["pin"].get("attempt_evaluated") is False))
++        owner = receipt.get("owner")
++        if not intent or owner is None or not source._tool_task_owner_is_current(owner):
++            return False
++        previous = getattr(self, "_study_grade_claim", None)
++        if previous and previous["owner"] == owner:
++            return True
++        for name in ("study_session", "study_answer"):
++            definition = self.tool_registry.get(name)
++            if definition is None or definition.metadata.get("source") != "plugin:study_companion":
++                return False
++        claim = {**receipt, "activation": activation, "socket": self.websocket,
++                 "intent": intent, "text": transcript, "released": False,
++                 "tail_deadline": __import__("time").monotonic() + 3.0}
++        self._study_grade_claim = claim
++        self._record_study_grade_event(claim, "accepted")
++        # Return immediately; the provider receive loop must keep draining.
++        task = source._create_tool_task(self._run_study_grade_claim(claim))
++        claim["task"] = task
++        task.add_done_callback(lambda done: None if done.cancelled() else done.exception())
++        return True
++
++    @staticmethod
++    def _study_grade_payload(result):
++        payload = result.output
++        if isinstance(payload, str):
++            try: payload = __import__("json").loads(payload)
++            except (ValueError, TypeError): return None
++        return payload if isinstance(payload, dict) and not result.is_error else None
++
++    async def _run_study_grade_claim(self, claim):
++        source = claim["client"]
++        try:
++            pin = claim.get("pin")
++            if not pin or not self._study_grade_claim_current(claim):
++                return await self._study_grade_notice(claim, "原题的输入身份无法确认，这次没有评分。")
++            expected = {key: pin[key] for key in ("course_id", "session_id", "question_id", "attempt_id")}
++            status = self._study_grade_payload(await self._on_tool_call(
++                ToolCall(name="study_session", arguments={"action": "status"}), invoking_session=source))
++            if not self._study_grade_claim_current(claim): return
++            question = (status or {}).get("current_question") or {}
++            actual = {**{key: question.get(key) for key in ("question_id", "attempt_id")},
++                      **{key: (status or {}).get(key) for key in ("course_id", "session_id")}}
++            state = "evaluated" if claim["intent"] == "correction" else "pending"
++            if (actual != expected or (status or {}).get("question_state") != state
++                    or pin["attempt_evaluated"] != (state == "evaluated")):
++                return await self._study_grade_notice(claim, "题目或课程已变化，这次没有评分。")
++            arguments = {"answer": claim["text"], "_expected_question": expected}
++            if claim["intent"] == "correction":
++                arguments["correction_of"] = {key: pin[key] for key in ("question_id", "attempt_id")}
++            local_id = "local_study_grade_" + __import__("uuid").uuid4().hex
++            claim["local_id"] = local_id
++            result = await self._on_tool_call(ToolCall(name="study_answer", arguments=arguments,
++                call_id=local_id), invoking_session=source, study_input_owner=claim["owner"])
++            if not self._study_grade_claim_current(claim): return
++            payload = self._study_grade_payload(result)
++            if (not payload or payload.get("ok") is False or payload.get("degraded")
++                    or payload.get("verdict") not in ("wrong", "partial", "correct")
++                    or not payload.get("reply")):
++                return await self._study_grade_notice(claim, "评分工具没有完成，这次没有确认成绩。")
++            attempt = payload.get("attempt_id")
++            if (payload.get("question_id") != pin["question_id"] or not attempt
++                    or (claim["intent"] == "answer" and attempt != pin["attempt_id"])
++                    or (claim["intent"] == "correction" and attempt == pin["attempt_id"])):
++                return await self._study_grade_notice(claim, "成绩已返回，但题目身份无法确认，语音未发送。")
++            claim["result"] = payload
++            self._record_study_grade_event(claim, "grade_complete")
++            # A new controlled transition, not resurrection of the retired tool
++            # owner. It uses no PCM replay and may perform only one connect.
++            task = self._fire_task(self._relay_study_grade_once(claim))
++            claim["relay_task"] = task
++        except asyncio.CancelledError:
++            raise
++        except Exception as error:
++            logger.warning("[study-grade] failed kind=%s", type(error).__name__)
++            await self._study_grade_notice(claim, "正式评分没有完成，请查看当前题目状态。")
++
++    async def _study_grade_notice(self, claim, text, *, controlled=False):
++        if self._study_grade_claim_current(claim, controlled=controlled):
++            async with self._ensure_audio_frame_send_lock():
++                if self._study_grade_claim_current(claim, controlled=controlled):
++                    await claim["socket"].send_json({"type": "status", "message": text})
++
++    async def _relay_study_grade_once(self, claim):
++        source = claim["client"]
++        old = claim["owner"].connection_generation
++        locked = False
++        cancelled = False
++        written = False
++        ticket = None
++        try:
++            async with asyncio.timeout(self._native_activation_reconnect_timeout_s + 10):
++                await self._core_voice_session_swap_lock.acquire(); locked = True
++                if not self._study_grade_claim_current(claim): return
++                async with self._ensure_audio_frame_send_lock():
++                    if not self._study_grade_claim_current(claim): return
++                    source._interrupted = source._fatal_error_occurred = True
++                    cancelled = True
++                    claim["controlled_connection"] = old
++                    claim["controlled_scope"] = claim["owner"].scope_generation
++                    await claim["socket"].send_json({"type": "game_route_speech_cancel",
++                        "sdk_speech_correlation_id": claim["token"]})
++                if not self._study_grade_claim_current(claim): return
++                claim["controlled_connection"] = old
++                await source.close()
++                if not self._study_grade_claim_current(claim, controlled=True): return
++                claim["controlled_scope"] = getattr(source, "_tool_scope_generation", 0)
++                if not await self._restart_message_handler_after_session_reconnect(source, start_listener=False):
++                    raise RuntimeError("grade_listener_not_drained")
++                if not self._study_grade_claim_current(claim, controlled=True): return
++                try:
++                    await source.connect(str(getattr(source, "instructions", "") or ""), native_audio=True)
++                finally:
++                    claim["controlled_connection"] = min(source._connection_generation, old + 1)
++                if not self._study_grade_claim_current(claim, controlled=True): return
++                claim["controlled_scope"] = getattr(source, "_tool_scope_generation", 0)
++                if not await self._restart_message_handler_after_session_reconnect(source):
++                    raise RuntimeError("grade_listener_not_restarted")
++                if not self._study_grade_claim_current(claim, controlled=True): return
++                deadline = asyncio.get_running_loop().time() + 1
++                while getattr(source, "_native_output_connection_token", None) == claim["token"]:
++                    if (not self._study_grade_claim_current(claim, controlled=True)
++                            or asyncio.get_running_loop().time() >= deadline):
++                        raise RuntimeError("grade_output_token_not_replaced")
++                    await asyncio.sleep(.01)
++                claim["relay_provider"] = source.ws
++                claim["relay_token"] = source._native_output_connection_token
++                claim["relay_scope"] = getattr(source, "_tool_scope_generation", 0)
++                def current():
++                    return (self._study_grade_claim_current(claim, controlled=True)
++                        and source.ws is claim["relay_provider"]
++                        and source._native_output_connection_token == claim["relay_token"]
++                        and getattr(source, "_tool_scope_generation", 0) == claim["relay_scope"])
++                status = self._study_grade_payload(await self._on_tool_call(
++                    ToolCall(name="study_session", arguments={"action": "status"}), invoking_session=source))
++                question = (status or {}).get("current_question") or {}
++                if (not current() or question.get("question_id") != claim["result"]["question_id"]
++                        or question.get("attempt_id") != claim["result"]["attempt_id"]
++                        or (status or {}).get("course_id") != claim["pin"]["course_id"]
++                        or (status or {}).get("session_id") != claim["pin"]["session_id"]
++                        or (status or {}).get("question_state") != "evaluated"):
++                    return
++                async def send_owned(event):
++                    if await source.send_event(event, send_guard=current) is not True:
++                        raise ConnectionError("grade relay not written")
++                def release(event):
++                    if not current(): raise RuntimeError("grade relay owner replaced")
++                    claim["released"] = True
++                text = ("[Authoritative Study result; do not regrade or ask a question.]\n"
++                    + __import__("json").dumps({key: claim["result"].get(key) for key in
++                        ("verdict", "score", "reply", "relay")}, ensure_ascii=False))
++                arbiter = source._ensure_response_arbiter()
++                ticket = await arbiter.enqueue(source="study_grade",
++                    events_before_response=({"type": "conversation.item.create", "item": {
++                        "type": "message", "role": "user", "content": [{"type": "input_text", "text": text}]}},),
++                    response_event={"type": "response.create"}, event_sender=send_owned,
++                    admission_check=current, pre_commit=release, priority=5)
++                claim["ticket"] = ticket
++                await asyncio.shield(ticket.sent)
++                written = True
++                claim["relay_written"] = True
++                self._record_study_grade_event(claim, "relay_written")
++                if not current(): await arbiter.cancel_ticket(ticket, wait=False)
++        except asyncio.CancelledError:
++            if ticket is not None:
++                await asyncio.shield(source._ensure_response_arbiter().cancel_ticket(ticket, wait=False))
++            raise
++        except Exception as error:
++            logger.warning("[study-grade] relay failed kind=%s", type(error).__name__)
++            claim["released"] = False
++            if ticket is not None:
++                await source._ensure_response_arbiter().cancel_ticket(ticket, wait=False)
++            await self._study_grade_notice(claim,
++                "正式成绩已保存，但语音未完成：" + claim["result"]["reply"], controlled=cancelled)
++        finally:
++            if cancelled and not written and source is self.session:
++                generation = source._connection_generation
++                # The old physical queue was irrevocably retired. Close only
++                # that dead connection, or our failed new one with no new input.
++                if (generation == old or (generation == old + 1
++                        and self._study_grade_claim_current(claim, controlled=True))):
++                    try:
++                        await asyncio.wait_for(source.close(), timeout=self._core_voice_listener_cancel_timeout_s)
++                    except (Exception, asyncio.CancelledError):
++                        pass
++            if locked: self._core_voice_session_swap_lock.release()
++
+     def _register_builtin_tools(self) -> None:
+         """Re-register the built-in tools, with description / parameter docs in the current
+         ``user_language``. Calls ``tool_registry.register(replace=True)`` directly

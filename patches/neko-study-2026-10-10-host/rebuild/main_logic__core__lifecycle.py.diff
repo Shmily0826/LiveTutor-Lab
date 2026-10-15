@@ -1,0 +1,22 @@
+diff --git a/main_logic/core/lifecycle.py b/main_logic/core/lifecycle.py
+index 531bcfc..37f5e7f 100644
+--- a/main_logic/core/lifecycle.py
++++ b/main_logic/core/lifecycle.py
+@@ -442,6 +442,7 @@ class LifecycleMixin:
+     async def _restart_message_handler_after_session_reconnect(
+         self,
+         session_ref,
++        *, start_listener: bool = True,
+     ) -> bool:
+         """Replace the receive task after an in-place Provider reconnect.
+ 
+@@ -540,6 +541,9 @@ class LifecycleMixin:
+             if not previous_task.cancelled():
+                 previous_task.exception()
+ 
++        if not start_listener:
++            return session_ref is self.session and self.is_active
++
+         async with self.lock:
+             if session_ref is not self.session or not self.is_active:
+                 return False

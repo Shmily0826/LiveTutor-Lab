@@ -1,0 +1,36 @@
+diff --git a/main_routers/websocket_router.py b/main_routers/websocket_router.py
+index c7b9655..0929870 100644
+--- a/main_routers/websocket_router.py
++++ b/main_routers/websocket_router.py
+@@ -967,6 +967,9 @@ async def websocket_endpoint(websocket: WebSocket, lanlan_name: str):
+                 # messages keep dispatching through the narrow helper above;
+                 # any non-voice message from it, or any message once a newer
+                 # socket re-claims voice, closes it exactly as before.
++                if message.get("action") == "native_speech_playback_state":
++                    session_manager[lanlan_name].note_native_speech_playback_state(message, websocket)
++                    continue
+                 # Music playback ownership is also window-local: the socket
+                 # reporting a real player event may be older than the newest
+                 # chat window, so route only that narrow state message without
+@@ -977,6 +980,11 @@ async def websocket_endpoint(websocket: WebSocket, lanlan_name: str):
+                         message,
+                     )
+                     continue
++                if message.get("action") == "ping" and _owns_voice_connection():
++                    # A newer chat window does not revoke this voice lease.
++                    # Reply on the sender socket without granting text authority.
++                    await websocket.send_text(json.dumps({"type": "pong"}))
++                    continue
+                 if _is_voice_path_message(message) and _owns_voice_connection():
+                     await _dispatch_voice_message_while_superseded(message)
+                     continue
+@@ -1013,6 +1021,9 @@ async def websocket_endpoint(websocket: WebSocket, lanlan_name: str):
+                     break
+                 continue
+             action = message.get("action")
++            if action == "native_speech_playback_state":
++                session_manager[lanlan_name].note_native_speech_playback_state(message, websocket)
++                continue
+ 
+             if action == "voice_identity_control":
+                 task = _fire_task(_dispatch_voice_identity_control(session_manager[lanlan_name],

@@ -1,0 +1,620 @@
+diff --git a/main_logic/omni_realtime_client/_tools.py b/main_logic/omni_realtime_client/_tools.py
+index 497ac24..920c55e 100644
+--- a/main_logic/omni_realtime_client/_tools.py
++++ b/main_logic/omni_realtime_client/_tools.py
+@@ -13,7 +13,7 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
+-from dataclasses import dataclass, field
++from dataclasses import dataclass, field, replace
+ import hashlib
+ 
+ from ._shared import (
+@@ -40,6 +40,12 @@ class _ToolTaskOwner:
+     host_turn_id: str | None
+     provider_turn_host_id: str | None
+     provider_session: Any
++    # Whether the (host_turn_id, provider_turn_host_id) pair below describes the
++    # response that actually emitted this call. False when that response was never
++    # announced to us: the snapshot then belongs to some other response, and an
++    # unverifiable pair is not the same thing as a retired turn.
++    turn_pair_fence_applies: bool = True
++    native_audio_origin: object = field(default=None, compare=False)
+ 
+ 
+ @dataclass
+@@ -164,6 +170,10 @@ class _ToolingMixin:
+         # bug, because sequential batches inside ONE user turn legitimately run
+         # under later, rotated snapshots. Only the owner's own pair is stable
+         # across both shapes.
++        if not owner.turn_pair_fence_applies:
++            # The other three fences are enforced above and still apply in full:
++            # same connection, same tool scope, same provider session.
++            return True
+         return (
+             owner.provider_turn_host_id is None
+             or owner.provider_turn_host_id == owner.host_turn_id
+@@ -178,6 +188,55 @@ class _ToolingMixin:
+             and owner.provider_session is live_session
+         )
+ 
++
++    def _stale_fence(self, owner: _ToolTaskOwner) -> str:
++        """Which ownership fence the tool tripped on - the reason its result is not sent."""
++
++        if owner.connection_generation != self._connection_generation:
++            return "connection_replaced"
++        if owner.scope_generation != getattr(self, "_tool_scope_generation", 0):
++            return "user_turn_replaced"
++        live_session = self._gemini_session if self._is_gemini else self.ws
++        if owner.provider_session is not live_session:
++            return "provider_session_replaced"
++        return "provider_turn_snapshot_mismatch"
++
++    def _log_stale_tool_drop(self, stage: str, owner: _ToolTaskOwner, results, *,
++                             batch: "_ToolBatch | None" = None) -> None:
++        """Record a tool result that will never reach the provider.
++
++        Dropping a result from a retired turn is correct - it would answer a function call the
++        provider already abandoned and land inside somebody else's turn. The defect is the
++        silence: without a line saying what was thrown away and why, "the tool was slow", "the
++        tool failed" and "the answer was discarded" are indistinguishable from the outside, which
++        is how a turn that never replies gets debugged by guessing. Fingerprints, never payloads.
++        """
++
++        items = [item for item in (results or []) if item is not None]
++        call_ids = [str(getattr(item, "call_id", "") or "") for item in items]
++        if not any(call_ids) and batch is not None:
++            call_ids = [str(entry.call.call_id or "") for entry in getattr(batch, "entries", ())]
++        self._drop_line(stage, self._stale_fence(owner), len(items) or 1, call_ids,
++                        owner.scope_generation)
++
++    def _drop_line(self, stage: str, reason: str, count: int, call_ids,
++                   previous_scope: int) -> None:
++        """One line, same shape, wherever tool work goes away before the learner sees it."""
++
++        logger.warning(
++            "realtime tool work dropped stage=%s reason=%s count=%d call_fingerprints=%s "
++            "owner_scope=%s current_scope=%s",
++            stage,
++            reason,
++            count,
++            ",".join(
++                hashlib.sha256(str(call_id).encode("utf-8")).hexdigest()[:12]
++                for call_id in call_ids if call_id
++            ) or "none",
++            previous_scope,
++            getattr(self, "_tool_scope_generation", 0),
++        )
++
+     def _track_tool_task(
+         self,
+         task: asyncio.Task,
+@@ -356,6 +415,8 @@ class _ToolingMixin:
+     def _advance_tool_scope(self) -> tuple[asyncio.Task, ...]:
+         """Retire every tool owned by the preceding user/connection scope."""
+ 
++        if not getattr(self, "_late_raw_expected_asr_advance", False):
++            self._late_raw_foreign_scope = getattr(self, "_late_raw_foreign_scope", 0) + 1
+         self._tool_scope_generation = getattr(self, "_tool_scope_generation", 0) + 1
+         getattr(self, "_cancelled_tool_call_ids", set()).clear()
+         # Batches are keyed by the scope they were opened in, so the entries
+@@ -366,18 +427,29 @@ class _ToolingMixin:
+         current_task = asyncio.current_task()
+         tasks = tuple(getattr(self, "_tool_tasks", ()))
+         retired = self._retired_tool_task_registry()
+-        for task in tasks:
+-            if not task.done():
+-                task.cancel()
+-                # Marked HERE. The cancelled-id set is cleared one line up, so
+-                # a handler that ignores cancellation would otherwise carry no
+-                # retirement marker at all and read as live forever.
+-                retired.add(task)
++        cancelled = [task for task in tasks if not task.done()]
++        for task in cancelled:
++            task.cancel()
++            # Marked HERE. The cancelled-id set is cleared one line up, so
++            # a handler that ignores cancellation would otherwise carry no
++            # retirement marker at all and read as live forever.
++            retired.add(task)
++        if cancelled:
++            # This is where an in-flight tool actually dies - the result sites below only see
++            # what survived long enough to be judged stale. Without this line a question that
++            # was interrupted mid-tool looks identical to one whose tool failed.
++            live = set(cancelled)
++            call_ids = sorted(str(call_id) for call_id, task_set
++                              in getattr(self, "_tool_tasks_by_call_id", {}).items()
++                              if any(task in live for task in task_set))
++            self._drop_line("scope_retired", "user_turn_replaced", len(cancelled), call_ids,
++                            self._tool_scope_generation - 1)
+         return tuple(task for task in tasks if task is not current_task)
+ 
+     def note_user_turn_started(self) -> None:
+         """Invalidate tool work from the turn that the new user turn replaces."""
+ 
++        self._study_material_user_epoch = getattr(self, "_study_material_user_epoch", 0) + 1
+         self._advance_tool_scope()
+ 
+     def _cancel_tool_call_ids(self, call_ids: List[str]) -> None:
+@@ -591,6 +663,7 @@ class _ToolingMixin:
+             )
+         self._seal_tool_batch(batch)
+         if not self._tool_task_owner_is_current(owner):
++            self._log_stale_tool_drop("collector", owner, list(collected.values()), batch=batch)
+             return []
+         return [
+             collected[index]
+@@ -645,7 +718,232 @@ class _ToolingMixin:
+             registry[key] = batch
+         return batch
+ 
+-    def _start_raw_tool_call(
++    # late-asr-tool-ordering-v1
++    _LATE_ASR_TOOL_WAIT_SECONDS = 0.4
++    _LATE_ASR_CALLBACK_WAIT_SECONDS = 2.0
++
++    _STUDY_SPEECH_QUIET_SECONDS = 1.2
++    _STUDY_SPEECH_GATE_SECONDS = 20.0
++    _STUDY_ASR_NEIGHBOR_SECONDS = 0.2
++    _STUDY_LATE_ORDERING_QUIET_SECONDS = 8.0
++    _STUDY_LATE_ORDERING_ASR_SECONDS = 0.4
++
++    def _start_raw_tool_call(self, call, owner, *, response_id=None):
++        arbiter = getattr(self, "_response_arbiter", None)
++        if (arbiter is not None and self._tool_task_connection_is_current(owner)
++                and not getattr(self, "_native_barge_in_pending", False)
++                and not getattr(self, "_fatal_error_occurred", False)
++                and owner.scope_generation == getattr(self, "_tool_scope_generation", 0)):
++            origin = arbiter.capture_native_tool_origin(call.call_id,
++                wire_call_id=call.provider_meta.get("native_wire_call_id"),
++                connection_check=lambda: self._tool_task_connection_is_current(owner))
++            if origin is None and getattr(self, "_native_phrase_uplink", None) is not None:
++                raise RuntimeError("native tool has no qualified outstanding input slot")
++            owner = replace(owner, native_audio_origin=origin)
++        route = getattr(getattr(self, "_realtime_protocol_capabilities", None), "route_key", None)
++        now = time.time()
++        loud_at = getattr(self, "_last_local_loud_time", 0.0)
++        transcript_at = getattr(self, "_late_raw_transcript_at", 0.0)
++        if (route == "lanlan_app_gemini" and getattr(self, "_is_free_proxy", False)
++                and not getattr(self, "_has_server_vad", False)
++                and str(call.name).startswith("study_")
++                and (getattr(self, "_native_barge_in_pending", False) or getattr(self, "_fatal_error_occurred", False))):
++            async def release_retiring_call():
++                logger.info("study voice admission abandoned name=%s reason=arrived_during_handoff scope=%s", call.name, owner.scope_generation)
++                batch = _ToolBatch(closed=True)
++                batch.entries.append(_ToolBatchEntry(call, owner, asyncio.current_task(), abandoned=True))
++                await self._close_unanswered_tool_calls(batch, owner)
++            return asyncio.create_task(release_retiring_call())
++        voice_route = (route == "lanlan_app_gemini" and getattr(self, "_is_free_proxy", False)
++                       and not getattr(self, "_has_server_vad", False)
++                       and not getattr(self, "_native_barge_in_pending", False))
++        ordered = voice_route and loud_at > transcript_at and 0 <= now - loud_at <= 2.0
++        # Observed first quiz: call 2.117s after speech, ASR 225ms later.
++        # There is no stable proxy utterance ID, so this compatibility wait is
++        # only for the first transcript of this connection, not later prefixes.
++        # Fence both sides of the legacy two-second ordering boundary.
++        # A known foreign input since connection attachment excludes this wait.
++        # Delay NOT-YET-EXECUTED Study calls in that quiet interval;
++        # never resurrect an executing task that scope retirement cancelled.
++        late_ordering = (voice_route and str(call.name).startswith("study_")
++                         and getattr(self, "_late_raw_transcript_connection", None) != owner.connection_generation
++                         and getattr(self, "_late_raw_connection_foreign_scope", None) is not None
++                         and self._late_raw_connection_foreign_scope == getattr(self, "_late_raw_foreign_scope", 0)
++                         and loud_at > transcript_at and 0 <= now-loud_at <= self._STUDY_LATE_ORDERING_QUIET_SECONDS
++                         and not getattr(self, "_fatal_error_occurred", False))
++        # Read-only lookups and preference/session changes can also trigger an
++        # early provider reply or consume a prefix's incomplete instructions.
++        gated = (voice_route and str(call.name).startswith("study_")
++                 and loud_at > 0 and (loud_at > transcript_at or 0 <= now - loud_at <= 2.0)
++                 and __import__("os").environ.get("NEKO_STUDY_SPEECH_GATE") == "1")
++        pending = getattr(self, "_late_raw_tool_pending", None)
++        if response_id and pending:
++            # A fast read-only sibling must not bypass the barrier of an
++            # already-known gated call and seal that response's batch early.
++            gated = gated or any(r["gated"] and not r["admitted"]
++                                 and r["response_id"] == response_id
++                                 and r["owner"].connection_generation == owner.connection_generation
++                                 and r["owner"].provider_session is owner.provider_session
++                                 and r["foreign_scope"] == getattr(self, "_late_raw_foreign_scope", 0)
++                                 and (r.get("current", r["owner"]).scope_generation == owner.scope_generation
++                                      or (r["released"] and r["owner"].scope_generation + 1 == owner.scope_generation))
++                                 for r in pending)
++        if not ordered and not gated and not late_ordering:
++            return self._start_raw_tool_call_now(call, owner, response_id=response_id)
++        if pending is None:
++            pending = self._late_raw_tool_pending = []
++        ready_here = (getattr(self, "_late_raw_transcript_scope", None) == owner.scope_generation
++                      and getattr(self, "_late_raw_transcript_ready_scope", None) == owner.scope_generation)
++        # Observed: this same fragment's call follows its ASR by ~55 ms,
++        # while continuing PCM has already advanced last_loud. Keep that
++        # call in the ready fragment's scope; do not await/promote its suffix.
++        adjacent_ready = ready_here and 0 <= now - transcript_at <= 0.2
++        needs_asr = (ordered or late_ordering) if not gated else (not ready_here or (loud_at > transcript_at and not adjacent_ready))
++        record = {"event": asyncio.Event(), "owner": owner, "needs_asr": needs_asr,
++                  "call": call, "response_id": response_id, "gated": gated, "admitted": False,
++                  "queued_mono": time.monotonic(),
++                  "late_ordering": late_ordering, "loud_snapshot": loud_at,
++                  "input_sequence": getattr(self, "_voice_handoff_input_sequence", 0),
++                  "foreign_scope": getattr(self, "_late_raw_foreign_scope", 0),
++                  "released": False, "asr_observed": False}
++
++        def same_connection():
++            live = self._gemini_session if self._is_gemini else self.ws
++            return (owner.connection_generation == self._connection_generation
++                    and owner.provider_session is live
++                    and record["foreign_scope"] == getattr(self, "_late_raw_foreign_scope", 0)
++                    and (not record["late_ordering"] or (
++                        record["input_sequence"] == getattr(self, "_voice_handoff_input_sequence", 0)
++                        and record["loud_snapshot"] == getattr(self, "_last_local_loud_time", 0.0)
++                        and not getattr(self, "_fatal_error_occurred", False)))
++                    and not getattr(self, "_native_barge_in_pending", False)
++                    and not (gated and getattr(self, "_fatal_error_occurred", False)))
++
++        async def abandoned(reason):
++            logger.info("study voice admission abandoned name=%s reason=%s scope=%s", call.name, reason, owner.scope_generation)
++            batch = _ToolBatch(closed=True)
++            batch.entries.append(_ToolBatchEntry(call, owner, asyncio.current_task(), abandoned=True))
++            await self._close_unanswered_tool_calls(batch, owner)
++
++        async def dispatch():
++            try:
++                deadline = time.monotonic() + self._STUDY_SPEECH_GATE_SECONDS
++                if record["needs_asr"]:
++                    try:
++                        await asyncio.wait_for(record["event"].wait(), self._STUDY_SPEECH_GATE_SECONDS if gated else self._LATE_ASR_TOOL_WAIT_SECONDS)
++                    except asyncio.TimeoutError:
++                        if record["asr_observed"] and same_connection():
++                            try:
++                                callback_wait = min(self._LATE_ASR_CALLBACK_WAIT_SECONDS, max(0.0, deadline-time.monotonic())) if gated else self._LATE_ASR_CALLBACK_WAIT_SECONDS
++                                await asyncio.wait_for(record["event"].wait(), callback_wait)
++                            except asyncio.TimeoutError:
++                                logger.warning("late ASR host callback readiness timed out")
++                scope = getattr(self, "_tool_scope_generation", 0)
++                if not same_connection():
++                    await abandoned("connection_or_input_replaced"); return
++                if record["released"]:
++                    if scope != owner.scope_generation + 1:
++                        await abandoned("scope_replaced"); return
++                    current = self._capture_tool_task_owner(owner.provider_session,
++                                                           connection_generation=owner.connection_generation)
++                    current = replace(current, native_audio_origin=owner.native_audio_origin)
++                else:
++                    if scope != owner.scope_generation or ((gated or late_ordering) and record["needs_asr"]):
++                        await abandoned("transcript_not_ready"); return
++                    current = owner
++                # Fixed once. Never adopt a second fragment's scope while waiting.
++                record["current"] = current
++                if gated:
++                    while True:
++                        if record["admitted"]:
++                            return
++                        if not same_connection() or getattr(self, "_tool_scope_generation", 0) != current.scope_generation:
++                            await abandoned("scope_or_connection_replaced"); return
++                        latest_loud = getattr(self, "_last_local_loud_time", 0.0)
++                        received = getattr(self, "_late_raw_transcript_at", 0.0)
++                        ready = (getattr(self, "_late_raw_transcript_scope", None) == current.scope_generation
++                                 and getattr(self, "_late_raw_transcript_ready_scope", None) == current.scope_generation)
++                        if ready and received >= latest_loud and time.time() - latest_loud >= self._STUDY_SPEECH_QUIET_SECONDS:
++                            break
++                        if time.monotonic() >= deadline:
++                            await abandoned("speech_or_transcript_deadline"); return
++                        await asyncio.sleep(0.05)
++                    logger.info("study voice admission ready name=%s scope=%s quiet=%.3f asr_after_loud=%.3f", call.name, current.scope_generation, time.time()-latest_loud, received-latest_loud)
++                    if __import__("os").environ.get("NEKO_STUDY_SPEECH_GATE_TRACE") == "1":
++                        arguments = call.arguments if isinstance(call.arguments, dict) else {}
++                        fields = {key: str(arguments[key])[:600] for key in ("kind", "source_line", "source_file", "symbol", "question", "topic", "answer", "text") if key in arguments}
++                        logger.info("study voice admission arguments name=%s scope=%s fields=%s", call.name, current.scope_generation, __import__("json").dumps(fields, ensure_ascii=False))
++                    # Already queued siblings with this exact response/scope are
++                    # admitted synchronously before a fast tool can seal the
++                    # original unannounced batch. No future response is aliased.
++                    cohort = [record]
++                    if response_id:
++                        cohort += [r for r in tuple(pending) if r is not record
++                                   and r["gated"] and not r["admitted"] and r["response_id"] == response_id
++                                   and r.get("current") is not None
++                                   and r["current"].scope_generation == current.scope_generation
++                                   and r["owner"].connection_generation == owner.connection_generation
++                                   and r["owner"].provider_session is owner.provider_session
++                                   and r["foreign_scope"] == record["foreign_scope"]]
++                    for admitted in cohort:
++                        admitted["admitted"] = True
++                        self._start_raw_tool_call_now(admitted["call"], admitted["current"], response_id=admitted["response_id"])
++                    return
++                self._start_raw_tool_call_now(call, current, response_id=response_id)
++            finally:
++                if record in pending:
++                    pending.remove(record)
++
++        if len(pending) >= 16:
++            if not gated and not late_ordering:
++                return self._start_raw_tool_call_now(call, owner, response_id=response_id)
++            return asyncio.create_task(abandoned("queue_full"))
++        pending.append(record)
++        task = asyncio.create_task(dispatch())
++        # Independent pending, bounded on teardown. Old executing tasks retire normally.
++        def done(completed):
++            if not completed.cancelled() and completed.exception() is not None:
++                logger.warning("late ASR tool dispatch failed: %s", type(completed.exception()).__name__)
++        task.add_done_callback(done)
++        return task
++
++    def _begin_raw_input_transcript(self):
++        # Called synchronously after scoped completion, before the host callback awaits.
++        # Callback completion time cannot stand in for ASR receipt time.
++        self._late_raw_transcript_at = time.time()
++        self._late_raw_transcript_connection = self._connection_generation
++        received_mono = time.monotonic()
++        self._late_raw_transcript_scope = getattr(self, "_tool_scope_generation", 0)
++        self._late_raw_transcript_ready_scope = None
++        for record in tuple(getattr(self, "_late_raw_tool_pending", ())):
++            owner = record["owner"]
++            if (record["needs_asr"] and record["foreign_scope"] == getattr(self, "_late_raw_foreign_scope", 0)
++                    and self._late_raw_transcript_scope == owner.scope_generation + 1):
++                # The observed final call can precede its ASR by milliseconds.
++                # A prefix from seconds earlier must never acquire that final
++                # scope with its old question/preferences still in arguments.
++                if record.get("late_ordering"):
++                    if (received_mono - record["queued_mono"] > self._STUDY_LATE_ORDERING_ASR_SECONDS
++                            or record["input_sequence"] != getattr(self, "_voice_handoff_input_sequence", 0)
++                            or record["loud_snapshot"] != getattr(self, "_last_local_loud_time", 0.0)):
++                        record["event"].set()
++                        continue
++                elif record["gated"] and received_mono - record["queued_mono"] > self._STUDY_ASR_NEIGHBOR_SECONDS:
++                    record["event"].set()
++                    continue
++                record["asr_observed"] = True
++
++    def _finish_raw_input_transcript(self):
++        scope = getattr(self, "_tool_scope_generation", 0)
++        if getattr(self, "_late_raw_transcript_scope", None) != scope:
++            return
++        self._late_raw_transcript_ready_scope = scope
++        for record in tuple(getattr(self, "_late_raw_tool_pending", ())):
++            if record["asr_observed"] and scope == record["owner"].scope_generation + 1:
++                record["released"] = True
++                record["event"].set()
++
++    def _start_raw_tool_call_now(
+         self,
+         call: ToolCall,
+         owner: _ToolTaskOwner,
+@@ -668,10 +966,33 @@ class _ToolingMixin:
+         missing, and answered without it.
+         """
+ 
++        if response_id is not None and response_id != self._current_response_id:
++            owner = _ToolTaskOwner(
++                owner.connection_generation,
++                owner.scope_generation,
++                owner.host_turn_id,
++                owner.provider_turn_host_id,
++                owner.provider_session,
++                turn_pair_fence_applies=False,
++                native_audio_origin=owner.native_audio_origin,
++            )
++            logger.info(
++                "realtime tool call arrived on an unannounced response; turn-pair fence off "
++                "reason=%s call_fingerprints=%s response_id=%s last_observed_response=%s",
++                self._stale_fence(owner),
++                hashlib.sha256(str(call.call_id).encode("utf-8")).hexdigest()[:12],
++                response_id,
++                self._current_response_id,
++            )
++
+         async def _run() -> ToolResult | None:
+-            if not self._tool_task_owner_is_current(owner):
++            if owner.native_audio_origin is not None:
++                await self._ensure_response_arbiter().wait_native_tool_input(owner.native_audio_origin)
++            if (not self._tool_task_owner_is_current(owner)
++                    or (owner.native_audio_origin is not None and not self._ensure_response_arbiter().native_tool_origin_is_current(owner.native_audio_origin))):
++                self._log_stale_tool_drop("not_started", owner, [call])
+                 return None
+-            return await self._execute_tool_call(call)
++            return await self._execute_raw_study_call(call, owner)
+ 
+         task = self._create_tool_task(_run(), call_ids=(call.call_id,))
+         batch = self._open_raw_tool_batch(owner, response_id)
+@@ -689,8 +1010,79 @@ class _ToolingMixin:
+         owner: _ToolTaskOwner,
+     ) -> None:
+         results = await self._collect_tool_batch(batch, owner)
++        origin = getattr(owner, "native_audio_origin", None)
++        origins = [getattr(entry.owner, "native_audio_origin", None) for entry in batch.entries]
++        if any(value is not None for value in origins):
++            if (origin is None or any(value is not origin for value in origins)
++                    or any(not self._tool_task_owner_is_current(entry.owner) for entry in batch.entries)
++                    or {result.call_id for result in results} != {entry.call.call_id for entry in batch.entries}):
++                for value in origins:
++                    if value is not None:
++                        self._ensure_response_arbiter().reject_native_tool_origin(value)
++                await self._close_unanswered_tool_calls(batch, owner)
++                return
+         if results:
+             await self._send_tool_results_openai_realtime(results, owner=owner)
++            return
++        await self._close_unanswered_tool_calls(batch, owner)
++
++    async def _close_unanswered_tool_calls(
++        self,
++        batch: _ToolBatch,
++        owner: _ToolTaskOwner,
++    ) -> None:
++        """Release the calls this client will not answer, without answering them.
++
++        Withholding a retired turn's payload is right. Leaving its function call
++        OPEN is not: the provider holds the response lane waiting for a
++        ``function_call_output`` for every id it emitted, and on a proxy that
++        auto-opens a response per fragment nothing ever releases it - that is how
++        one discarded result became a character that would not answer for the rest
++        of the session. This sends the protocol's own "do not wait for this"
++        payload (the same one the retirement path already uses) and deliberately
++        requests NO continuation, so it cannot speak into a turn that is not its
++        own. Connection and session fences still gate it; a dead connection has
++        nobody to release.
++        """
++
++        origin = getattr(owner, "native_audio_origin", None)
++        if origin is not None:
++            self._ensure_response_arbiter().reject_native_tool_origin(origin)
++        if not self._tool_task_connection_is_current(owner):
++            return
++        live_session = self._gemini_session if self._is_gemini else self.ws
++        if owner.provider_session is not live_session:
++            return
++        api = canonical_realtime_dialect(self._api_type)
++        closed = []
++        for entry in batch.entries:
++            call_id = str(entry.call.call_id or "")
++            if not call_id or self._tool_call_was_cancelled(owner, call_id):
++                continue
++            item = {
++                "type": "function_call_output",
++                "output": ToolResult(
++                    call_id=call_id,
++                    name=entry.call.name,
++                    output={"abandoned": True, "error": _ABANDONED_TOOL_CALL_REASON},
++                    is_error=True,
++                    error_message=_ABANDONED_TOOL_CALL_REASON,
++                ).output_as_json_string(),
++            }
++            if api != "glm" and call_id:
++                item["call_id"] = call_id
++            await self.send_event(
++                {"type": "conversation.item.create", "item": item},
++                send_guard=lambda: self._tool_task_connection_is_current(owner),
++            )
++            closed.append(call_id)
++        if closed:
++            logger.warning(
++                "realtime tool calls released without a result count=%d call_fingerprints=%s",
++                len(closed),
++                ",".join(hashlib.sha256(call_id.encode("utf-8")).hexdigest()[:12]
++                         for call_id in closed),
++            )
+ 
+     def _start_gemini_tool_batch(
+         self,
+@@ -699,6 +1091,7 @@ class _ToolingMixin:
+     ) -> asyncio.Task:
+         async def _execute(call: ToolCall) -> ToolResult | None:
+             if not self._tool_task_owner_is_current(owner):
++                self._log_stale_tool_drop("not_started", owner, [call])
+                 return None
+             return await self._execute_tool_call(call)
+ 
+@@ -790,6 +1183,61 @@ class _ToolingMixin:
+         else:
+             logger.info("apply_tools_to_session: api_type=%s does not support custom tools — ignoring", api)
+ 
++    async def _execute_raw_study_call(self, call, owner):
++        route = getattr(getattr(self, "_realtime_protocol_capabilities", None), "route_key", None)
++        received = getattr(self, "_late_raw_transcript_at", 0.0)
++        eligible = (call.name == "study_explain" and route == "lanlan_app_gemini"
++                    and getattr(self, "_is_free_proxy", False)
++                    and not getattr(self, "_has_server_vad", False)
++                    and __import__("os").environ.get("NEKO_STUDY_SPEECH_GATE") == "1"
++                    and received > 0 and received >= getattr(self, "_last_local_loud_time", 0.0)
++                    and getattr(self, "_late_raw_transcript_ready_scope", None) == owner.scope_generation
++                    and self._tool_task_owner_is_current(owner)
++                    and not getattr(self, "_native_barge_in_pending", False)
++                    and not getattr(self, "_fatal_error_occurred", False))
++        if not eligible or not isinstance(call.arguments, dict):
++            return await self._execute_tool_call(call)
++        try:
++            arguments = __import__("json").dumps(call.arguments, sort_keys=True, ensure_ascii=False, allow_nan=False)
++        except (TypeError, ValueError):
++            return await self._execute_tool_call(call)
++        key = (owner.connection_generation, owner.scope_generation, received, call.name, arguments)
++        registry = getattr(self, "_study_explanation_inflight", None)
++        if registry is None:
++            registry = self._study_explanation_inflight = {}
++        existing = registry.get(key)
++        if existing is not None and existing["provider_session"] is owner.provider_session:
++            logger.info("study voice identical inflight explanation joined scope=%s", owner.scope_generation)
++            # Cancelling a duplicate must not cancel the original explanation.
++            result = await asyncio.shield(existing["future"])
++            if not self._tool_task_owner_is_current(owner):
++                return None
++            return ToolResult(call_id=call.call_id, name=call.name,
++                              output=__import__("copy").deepcopy(result.output),
++                              is_error=result.is_error, error_message=result.error_message)
++        if len(registry) >= 16:
++            return await self._execute_tool_call(call)
++        future = asyncio.get_running_loop().create_future()
++        record = {"future": future, "provider_session": owner.provider_session}
++        registry[key] = record
++        try:
++            result = await self._execute_tool_call(call)
++            if not future.done():
++                future.set_result(result)
++            return result
++        except asyncio.CancelledError:
++            future.cancel()
++            raise
++        except Exception as error:
++            if not future.done():
++                future.set_exception(error)
++                future.exception() # no unhandled future when there were no duplicates
++            raise
++        finally:
++            # No finished-result cache: a later call must recheck current material.
++            if registry.get(key) is record:
++                registry.pop(key, None)
++
+     async def _execute_tool_call(self, call: ToolCall) -> ToolResult:
+         """Run the user-supplied ``on_tool_call`` callback and trap any
+         exception so we still return a structured ``ToolResult`` the
+@@ -883,6 +1331,7 @@ class _ToolingMixin:
+           server, or the request is likely to be rejected.
+         """
+         if owner is not None and not self._tool_task_owner_is_current(owner):
++            self._log_stale_tool_drop("send", owner, results)
+             return
+ 
+         api = canonical_realtime_dialect(self._api_type)
+@@ -905,17 +1354,27 @@ class _ToolingMixin:
+             return
+         arbiter = self._ensure_response_arbiter()
+ 
++        native_origin = getattr(owner, "native_audio_origin", None)
+         async def _send_owned_event(event: Dict[str, Any]) -> None:
+             is_cancel = event.get("type") == "response.cancel"
+-            await self.send_event(
++            sent = await self.send_event(
+                 event,
+                 send_guard=(
+                     (lambda: self._tool_task_connection_is_current(owner))
+                     if is_cancel
+-                    else (lambda: self._tool_task_owner_is_current(owner))
++                    else (lambda: self._tool_task_owner_is_current(owner)
++                        and (native_origin is None or arbiter.native_tool_origin_is_current(native_origin)))
+                 ),
+             )
+ 
++            if native_origin is not None and sent is not True:
++                raise ConnectionError("native tool result write refused")
++
++        if native_origin is not None:
++            await arbiter.join_native_tool_results(native_origin, tuple(item_events),
++                event_sender=_send_owned_event,
++                admission_check=lambda: self._tool_task_owner_is_current(owner))
++            return
+         ticket = await arbiter.enqueue(
+             source="tool_result",
+             events_before_response=tuple(item_events),
+@@ -925,10 +1384,14 @@ class _ToolingMixin:
+         )
+         try:
+             if owner is not None and not self._tool_task_owner_is_current(owner):
++                self._log_stale_tool_drop("queued", owner, results)
+                 await arbiter.cancel_ticket(ticket, wait=False)
+                 return
+             await asyncio.shield(ticket.sent)
+             if owner is not None and not self._tool_task_owner_is_current(owner):
++                # The batch went out, then the turn was replaced while it was in flight: the
++                # continuation is cancelled, so say that rather than let it look unsent.
++                self._log_stale_tool_drop("sent_then_retired", owner, results)
+                 await arbiter.cancel_ticket(ticket, wait=False)
+         except asyncio.CancelledError:
+             await asyncio.shield(arbiter.cancel_ticket(ticket, wait=False))

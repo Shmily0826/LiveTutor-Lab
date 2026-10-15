@@ -1,0 +1,21 @@
+diff --git a/main_logic/tts_client/workers/dummy.py b/main_logic/tts_client/workers/dummy.py
+index 3ad5a81..0cfb5bb 100644
+--- a/main_logic/tts_client/workers/dummy.py
++++ b/main_logic/tts_client/workers/dummy.py
+@@ -16,6 +16,7 @@
+ 
+ from .._infra import TTS_SHUTDOWN_SENTINEL
+ from .._telemetry import _record_tts_telemetry
++from utils import dev_text_only
+ from utils.logger_config import get_module_logger
+ 
+ logger = get_module_logger(__name__, "Main")
+@@ -48,6 +49,8 @@ def dummy_tts_worker(request_queue, response_queue, audio_api_key, voice_id):
+             # 即便不合成音频也上报字符数 + 调用次数，方便分析"配置成无 TTS"
+             # 的用户产生了多少假装合成的请求；只传 len()，不传原文。
+             if tts_text:
++                if dev_text_only.block("ordinary_tts_request_blocked"):
++                    continue
+                 _record_tts_telemetry("dummy", len(tts_text))
+         except Exception as e:
+             logger.error(f"Dummy TTS Worker 错误: {e}")

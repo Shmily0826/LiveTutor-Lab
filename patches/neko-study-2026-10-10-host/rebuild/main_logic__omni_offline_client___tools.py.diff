@@ -1,0 +1,44 @@
+diff --git a/main_logic/omni_offline_client/_tools.py b/main_logic/omni_offline_client/_tools.py
+index a8903ca..de2df6a 100644
+--- a/main_logic/omni_offline_client/_tools.py
++++ b/main_logic/omni_offline_client/_tools.py
+@@ -1022,7 +1022,10 @@ class _ToolingMixin:
+             tool.name for tool in getattr(self, "_tool_definitions", [])
+             if getattr(tool, "name", None)
+         }
++        # daily-dsml-output-v1
+         leak_filter = ToolLeakFilter(tool_names=tool_names)
++        final_visible = False
++        generation_is_active = _generation_check(self, overrides.get("_response_generation"))
+         provider = getattr(self, "base_url", None) or getattr(self, "model", None)
+ 
+         def _finalize_filter_chunk():
+@@ -1045,13 +1048,17 @@ class _ToolingMixin:
+                 _tool_frames_turn_id=tool_frames_turn_id,
+                 **overrides,
+             ):
++                if getattr(chunk, "tool_round_persisted", False):
++                    final_visible = False
+                 if getattr(chunk, "_tool_leak_filtered", False):
++                    final_visible = final_visible or bool(str(getattr(chunk, "content", "") or "").strip())
+                     yield chunk
+                     continue
+                 content = getattr(chunk, "content", None)
+                 if content:
+                     chunk.content = self._filter_tool_leak_content(content, leak_filter, provider=provider)
+                     setattr(chunk, "_tool_leak_filtered", True)
++                    final_visible = final_visible or bool(chunk.content.strip())
+                 yield chunk
+         except Exception:
+             chunk = _finalize_filter_chunk()
+@@ -1074,7 +1081,10 @@ class _ToolingMixin:
+ 
+         chunk = _finalize_filter_chunk()
+         if chunk is not None:
++            final_visible = final_visible or bool(chunk.content.strip())
+             yield chunk
++        if leak_filter.dsml_filtered and not final_visible and generation_is_active():
++            yield LLMStreamChunk(content="这次没有生成有效回答，暂时无法确认结论。")
+ 
+     def _filter_tool_leak_content(
+         self,

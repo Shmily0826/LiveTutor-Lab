@@ -1,0 +1,43 @@
+diff --git b/utils/dev_text_only.py b/utils/dev_text_only.py
+new file mode 100644
+index 0000000..d200495
+--- /dev/null
++++ b/utils/dev_text_only.py
+@@ -0,0 +1,37 @@
++"""Explicit development-only mute for the isolated LiveTutor source host."""
++import json
++import os
++import threading
++from collections import Counter
++from pathlib import Path
++
++# Pin on import so a plugin reload cannot silently remove the process gate.
++ENABLED = os.environ.get("NEKO_DEV_TEXT_ONLY") == "1"
++# Named per-event exceptions to the mute, so one development launch can prove the
++# product's own native realtime audio without switching the gate off. Anything not
++# listed here stays blocked, which is what keeps every external-TTS path refused.
++# An empty value - the default - reproduces the original all-or-nothing behaviour.
++ALLOW = frozenset(
++    event.strip()
++    for event in os.environ.get("NEKO_DEV_AUDIO_ALLOW", "").split(",")
++    if event.strip()
++)
++COUNTS = Counter()
++_LOCK = threading.Lock()
++_AUDIT = os.environ.get("NEKO_DEV_AUDIO_AUDIT", "")
++
++
++def block(event):
++    """Count attempts without retaining any speech, image, or user text."""
++    if not ENABLED:
++        return False
++    key = f"{event}:allowed" if event in ALLOW else event
++    with _LOCK:
++        COUNTS[key] += 1
++        if _AUDIT:
++            path = Path(_AUDIT)
++            path.parent.mkdir(parents=True, exist_ok=True)
++            with path.open("a", encoding="utf-8") as stream:
++                stream.write(json.dumps({"pid": os.getpid(), "event": key,
++                                         "count": COUNTS[key]}) + "\n")
++    return key == event

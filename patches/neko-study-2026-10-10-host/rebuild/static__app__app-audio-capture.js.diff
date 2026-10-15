@@ -1,0 +1,183 @@
+diff --git a/static/app/app-audio-capture.js b/static/app/app-audio-capture.js
+index eb416c2..46e9eae 100644
+--- a/static/app/app-audio-capture.js
++++ b/static/app/app-audio-capture.js
+@@ -200,7 +200,9 @@
+         CORE: 'core'
+     });
+     let voiceLeaseGeneration = 0;
++    let voiceLeaseSentNonPassive = false;
+     let lastVoiceLeaseFingerprint = '';
++    let voiceLeaseSocket = null;
+     // Cancellation token for an IN-FLIGHT microphone start (Codex P2).
+     // S.isRecording only flips at the very END of startAudioWorklet, after
+     // getUserMedia() and audioWorklet.addModule() have both awaited — so every
+@@ -230,6 +232,88 @@
+     // so async ownership checks cannot lose intermediate changes.
+     let microphoneSelectionGeneration = 0;
+ 
++    // Memory PCM participates in the existing controller; it never opens capture.
++    let fixedInputSource = null;
++    let fixedInputSequence = 0;
++
++    function fixedInputBlocked(socket) {
++        return globalThis.__NEKO_OUTPUT_ONLY_CAPTURE_BLOCKED__ !== true
++            || window.location?.pathname !== '/'
++            || !socket || socket !== S.socket || socket.readyState !== WebSocket.OPEN
++            || S.isRecording === true || S.voiceStartPending === true || window.isMicStarting === true
++            || S.isMicMuted === true || S.gameVoiceSttGateActive === true
++            || (S.focusModeEnabled === true && S.isPlaying === true)
++            || S.voiceInputRouteBlocked === true || isVoiceInputRecoveryPending()
++            || (window.nekoVoiceCaptureReadiness && window.nekoVoiceCaptureReadiness.blocked())
++            || S.voiceInputRecoveryState === 'failed';
++    }
++
++    function fixedInputIsCurrent() {
++        if (fixedInputSource) {
++            let blocked = true;
++            try { blocked = fixedInputBlocked(fixedInputSource.socket); } catch (_) {}
++            if (blocked) fixedInputSource = null;
++        }
++        return fixedInputSource !== null;
++    }
++
++    function beginFixedInput() {
++        if (fixedInputIsCurrent() || fixedInputBlocked(S.socket)) {
++            throw new Error('Fixed input refused by current controller state');
++        }
++        fixedInputSource = {id: ++fixedInputSequence, socket: S.socket};
++        try {
++            refreshMicLease();
++            return fixedInputState(fixedInputSource.id);
++        } catch (error) {
++            fixedInputSource = null;
++            throw error;
++        }
++    }
++
++    function fixedInputState(id) {
++        refreshMicLease();
++        const current = fixedInputIsCurrent();
++        return {
++            active: current && fixedInputSource.id === id,
++            id: current ? fixedInputSource.id : null,
++            lease_generation: S.voiceInputCurrentLeaseGeneration,
++            owner: resolveMicLeaseOwner(),
++            capture_started: S.isRecording === true
++        };
++    }
++
++    function sendFixedInputFrame(id, samples) {
++        if (!Array.isArray(samples) || samples.length < 1 || samples.length > 480
++                || samples.some(x => !Number.isInteger(x) || x < -32768 || x > 32767)) return false;
++        const state = fixedInputState(id);
++        if (!state.active || state.owner !== MIC_LEASE.CORE || !canUploadOrdinaryMicFrame()) return false;
++        if (!fixedInputIsCurrent() || fixedInputSource.id !== id) return false;
++        // No await between identity validation and submission to this exact socket.
++        fixedInputSource.socket.send(JSON.stringify({action: 'stream_data', input_type: 'audio', data: samples}));
++        return true;
++    }
++
++    function endFixedInput(id) {
++        if (!fixedInputSource || fixedInputSource.id !== id) return false;
++        const socket = fixedInputSource.socket;
++        fixedInputSource = null;
++        if (socket === S.socket && socket.readyState === WebSocket.OPEN) refreshMicLease();
++        return true;
++    }
++
++    function sendFixedInputControl(id, command) {
++        if (!command || !['start_session', 'end_session', 'end_audio_turn', 'ping'].includes(command.action)) return false;
++        if (command.action === 'start_session' && command.input_type !== 'audio') return false;
++        const state = fixedInputState(id);
++        if (!state.active || !fixedInputIsCurrent() || fixedInputSource.id !== id) return false;
++        const socket = fixedInputSource.socket;
++        socket.send(JSON.stringify(command));
++        // End and release share one synchronous validated-source operation.
++        if (command.action === 'end_session') endFixedInput(id);
++        return true;
++    }
++
+     function invalidatePendingMicStart() {
+         micStartGeneration += 1;
+     }
+@@ -265,6 +349,7 @@
+             // starting a voice session — and must not steal the voice
+             // connection identity from a window that is actively recording.
+             engaged: (
++                fixedInputIsCurrent() ||
+                 S.isRecording === true
+                 || S.voiceStartPending === true
+                 || window.isMicStarting === true
+@@ -276,6 +361,15 @@
+         if (!S.socket || S.socket.readyState !== WebSocket.OPEN) return false;
+         const state = currentVoiceInputControlState();
+         const fingerprint = JSON.stringify(state);
++        const passive = state.engaged === false && state.owner === MIC_LEASE.NONE
++            && state.hard_muted === false && state.focus_suppressed === false;
++        // Native chat proxies share the pet wire, but have a separate counter.
++        // A never-engaged guarded chat must not publish an idle generation there.
++        if (globalThis.__NEKO_OUTPUT_ONLY_CAPTURE_BLOCKED__ === true
++                && ['/chat', '/chat_full'].includes(window.location?.pathname)
++                && passive && !voiceLeaseSentNonPassive && S.gameVoiceSttGateActive !== true
++                && !isVoiceInputRecoveryPending() && S.voiceInputRecoveryState !== 'failed') return false;
++        if (!passive) voiceLeaseSentNonPassive = true;
+         if (force === true || fingerprint !== lastVoiceLeaseFingerprint) {
+             voiceLeaseGeneration += 1;
+             S.socket.send(JSON.stringify({
+@@ -299,6 +393,11 @@
+     function syncVoiceInputControlState(socket) {
+         if (socket && socket !== S.socket) return false;
+         if (!S.socket || S.socket.readyState !== WebSocket.OPEN) return false;
++        // A duplicate open notification must not rewind a guarded input lease.
++        if (globalThis.__NEKO_OUTPUT_ONLY_CAPTURE_BLOCKED__ === true && voiceLeaseSocket === S.socket) {
++            return sendVoiceInputControlState(false);
++        }
++        voiceLeaseSocket = S.socket;
+ 
+         // 每条 WebSocket 都有独立的 generation scope；第一条消息就是完整状态。
+         voiceLeaseGeneration = 0;
+@@ -348,6 +447,7 @@
+     }
+ 
+     function resolveMicLeaseOwner() {
++        if (fixedInputIsCurrent()) return MIC_LEASE.CORE;
+         if (!S.isRecording) return MIC_LEASE.NONE;
+         if (S.gameVoiceSttGateActive) return MIC_LEASE.GAME;
+         return MIC_LEASE.CORE;
+@@ -2241,6 +2341,7 @@
+     }
+ 
+     async function startMicCapture() {
++        if (globalThis.__NEKO_OUTPUT_ONLY_CAPTURE_BLOCKED__ === true) return false;
+         // 小剧场使用独立文本输入与 TTS 队列，任一窗口演绎期间都不能重新打开普通聊天麦克风。
+         if (window.nekoTheaterRuntime
+                 && typeof window.nekoTheaterRuntime.blocksOrdinaryVoice === 'function'
+@@ -3300,6 +3401,11 @@
+     mod.startGameVoiceSttGate = startGameVoiceSttGate;
+     mod.stopGameVoiceSttGate = stopGameVoiceSttGate;
+     mod.refreshMicLease = refreshMicLease;
++    mod.beginFixedInput = beginFixedInput;
++    mod.fixedInputState = fixedInputState;
++    mod.sendFixedInputFrame = sendFixedInputFrame;
++    mod.endFixedInput = endFixedInput;
++    mod.sendFixedInputControl = sendFixedInputControl;
+     mod.sendVoiceInputControlState = sendVoiceInputControlState;
+     mod.canUploadOrdinaryMicFrame = canUploadOrdinaryMicFrame;
+     mod.setVoiceInputLifecycleState = setVoiceInputLifecycleState;
+@@ -3385,6 +3491,7 @@
+     }
+ 
+     async function enumerateAndCacheMediaDevices() {
++        if (globalThis.__NEKO_OUTPUT_ONLY_CAPTURE_BLOCKED__ === true) return {devices: [], generation: ++mediaDeviceEnumerationGeneration};
+         var enumerationGeneration = ++mediaDeviceEnumerationGeneration;
+         var ownEnumerationPromise = navigator.mediaDevices.enumerateDevices().then(async function (devices) {
+             if (enumerationGeneration !== mediaDeviceEnumerationGeneration) {
+@@ -3420,6 +3527,7 @@
+ 
+     /** 请求麦克风权限并缓存设备列表 */
+     async function ensureMicrophonePermission() {
++        if (globalThis.__NEKO_OUTPUT_ONLY_CAPTURE_BLOCKED__ === true) return [];
+         if (micPermissionGranted && cachedMicDevices && cachedMicDevices.length > 0) {
+             return cachedMicDevices;
+         }

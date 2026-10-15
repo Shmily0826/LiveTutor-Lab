@@ -1,0 +1,23 @@
+diff --git a/app/main_server/character_runtime.py b/app/main_server/character_runtime.py
+index f6aa9f7..4f3615e 100644
+--- a/app/main_server/character_runtime.py
++++ b/app/main_server/character_runtime.py
+@@ -900,6 +900,18 @@ async def _handle_agent_event(event: dict):
+         event_type = event.get("event_type")
+         lanlan = event.get("lanlan_name")
+ 
++        if (event_type == "proactive_message" and isinstance(event.get("metadata"), dict)
++                and "study_material_control" in event["metadata"]):
++            # Routing provenance is derived by the plugin bridge, never by model text.
++            if (event.get("source_kind") == "plugin" and event.get("source_name") == "study_companion"
++                    and event.get("channel") == "plugin:study_companion"
++                    and event.get("ai_behavior") == "blind" and event.get("visibility") == []
++                    and isinstance(lanlan, str) and lanlan.strip()):
++                manager = _get_session_manager(lanlan)
++                if manager is not None:
++                    await manager._apply_study_material_control(event["metadata"]["study_material_control"])
++            return # A rejected control is never injected as conversation or broadcast.
++
+         if event_type == "plugin_card":
+             from main_logic.plugin_cards import deliver_plugin_card
+             default_name, _ = _select_fallback_session_manager()
