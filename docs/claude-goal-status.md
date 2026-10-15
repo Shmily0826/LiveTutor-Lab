@@ -1,5 +1,20 @@
 # Claude Goal 状态
 
+## 当前状态（第二轮，2026-10-16）
+- 用户批准P1～P8；合同见codex-round2-contract-2026-10-16.md，详细状态见codex-overnight-status.md。
+- DeepSeek起点1270/+400/停止1670；Lanlan起点110不限；Goal tokens不限；audio_allowed=false。
+- P1角色指导修复已发布8a28e98；P2六场扫描完成，默认KEEP100/HOLD1500。
+- P2末账本1361/116；连续两场单条ASR+教师+音频，普通句对照未增加超过1s。
+- P3进行中；P4～P8待推进；第一轮评分证据保留。
+- 可听性和真人待用户；没有开麦、采集、回环或改音量。
+
+## 待 Opus 复核
+- 旧空回合缺完整响应输出/开始事件，根因未完全分离；新库首场还有范围参数格式问题。
+- 本轮不修改宿主、arbiter、打断或传输。
+
+## 历史（以下只追加保留）
+# Claude Goal 状态
+
 > 2026-10-16 第二轮：用户已批准 P1～P8，DeepSeek 起点1270、本轮+400停止线1670，Lanlan.app起点110不限，Goal tokens不限；正在执行。[合同](codex-round2-contract-2026-10-16.md) / [实时状态](codex-overnight-status.md)。下方第一轮结论均为历史，不代表第二轮已完成。
 
 > 2026-10-16：第二次验收修复由 Codex 承接，最新状态见 [codex-overnight-status](codex-overnight-status.md)，完整授权见 [contract](codex-overnight-contract-2026-10-16.md)。下文保留为历史。

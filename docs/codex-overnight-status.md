@@ -5,10 +5,12 @@
 - DeepSeek 起点1270，新增400，累计停止线1670；Lanlan.app起点110不限；Goal tokens不限。
 - audio_allowed=false；禁止采集/回环/改音量；固定WAV仅output-only。原日常数据/日志只读。
 - P1：角色指导冲突修复；新增2项测试通过、SourceGate PASS、补丁全patched。
-- P2：历史五场逐回合分析已保存；全新库扫描首场KEEP=100/HOLD=1000进行中。
-- P3～P8：待推进。第一轮评分修复与闭环证据保留。
+- P2：6个固定WAV场完成；KEEP=100/HOLD=1500连续2场1条ASR+教师+音频，普通句最大增加0.426s识别/0.299s首包；已设默认。
+- P3：核对旧教师仅读15–24行及一句原答；实际文字SDK确认中。P4～P8待推进。
 - 开工基线105模块：98通过，7个历史失败原始输出已保存；最终逐测试签名比较。
-- 发布仅既有codex/daily-learning-companion工作树；不合并主分支。
+- P1已发布8a28e98；P2发布中。仅既有codex/daily-learning-companion工作树，不合并主分支。
+- P2完成账本1361/116，第二轮已用91/400；P3实际文字场另记每场前后。
+- 打断/Realtime/暂扣离线12+19+7通过；可听性/真人未验收。
 
 ## 待 Opus 复核
 - 需要宿主/仲裁/传输改动时记录证据并转下一项，本轮未新增此类改动。
@@ -74,3 +76,25 @@
 
 
 - R2 p2-k100-h1000-a 场后 {'api.deepseek.com': 1276, 'www.lanlan.app': 111}; probe exit=1。详见 raw/evidence/codex-r2-p2-k100-h1000-a.json。
+
+- R2 p2-k100-h1000-b 场前 {'api.deepseek.com': 1276, 'www.lanlan.app': 111}; KEEP=100, HOLD=1000; 新任务库、固定 WAV/output-only。
+
+- R2 p2-k100-h1000-b 场后 {'api.deepseek.com': 1293, 'www.lanlan.app': 112}; probe exit=0。详见 raw/evidence/codex-r2-p2-k100-h1000-b.json。
+
+- R2 p2-k0-h1500-a 场前 {'api.deepseek.com': 1293, 'www.lanlan.app': 112}; KEEP=0, HOLD=1500; 新任务库、固定 WAV/output-only。
+
+- R2 p2-k0-h1500-a 场后 {'api.deepseek.com': 1310, 'www.lanlan.app': 113}; probe exit=0。详见 raw/evidence/codex-r2-p2-k0-h1500-a.json。
+
+- R2 p2-k100-h1500-a 场前 {'api.deepseek.com': 1310, 'www.lanlan.app': 113}; KEEP=100, HOLD=1500; 新任务库、固定 WAV/output-only。
+
+- R2 p2-k100-h1500-a 场后 {'api.deepseek.com': 1327, 'www.lanlan.app': 114}; probe exit=0。详见 raw/evidence/codex-r2-p2-k100-h1500-a.json。
+
+- R2 p2-k100-h1500-b 场前 {'api.deepseek.com': 1327, 'www.lanlan.app': 114}; KEEP=100, HOLD=1500; 新任务库、固定 WAV/output-only。
+
+- R2 p2-k100-h1500-b 场后 {'api.deepseek.com': 1344, 'www.lanlan.app': 115}; probe exit=0。详见 raw/evidence/codex-r2-p2-k100-h1500-b.json。
+
+- R2 p2-k300-h1000-control 场前 {'api.deepseek.com': 1344, 'www.lanlan.app': 115}; KEEP=300, HOLD=1000; 新任务库、固定 WAV/output-only。
+
+- R2 p2-k300-h1000-control 场后 {'api.deepseek.com': 1361, 'www.lanlan.app': 116}; probe exit=0。详见 raw/evidence/codex-r2-p2-k300-h1000-control.json。
+
+- R2 SDK codex-r2-p3-sdk 场前 {'api.deepseek.com': 1361, 'www.lanlan.app': 116}；任务库 neko-r2-p3-sdk、文字模式。
