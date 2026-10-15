@@ -104,6 +104,15 @@ SCENES = {
 }
 
 
+def _eval_scene():
+    """R2 (round 3): the 13-question teacher eval set in scripts/teacher_eval_set.json, one turn each."""
+    data = json.loads(Path(__file__).with_name('teacher_eval_set.json').read_text(encoding='utf-8'))
+    return [start()] + [explain(q['question'], q['code_requests'], kind=q['id']) for q in data['questions']]
+
+
+SCENES['r3eval'] = _eval_scene()
+
+
 def spent():
     return json.loads(LEDGER.read_text(encoding='utf-8'))['spent']
 

@@ -540,7 +540,8 @@ class _StudyAvatarToolsMixin:
                      "or provide an evidence-based normalized image rectangle. Never invent CSS "
                      "like .code-line:nth-child or desktop coordinates. If an image has no evidenced region locator, "
                      "do not invent a rectangle; ask the learner to select the corresponding HTML with named targets. "
-                     "This only highlights."),
+                     "This only highlights. Tell the learner something is highlighted only when this call returns ok=true for a "
+                     "non-status kind; kind=status highlights nothing, and any error means nothing was highlighted - say so plainly."),
         parameters={"type": "object", "properties": {
             "kind": {"type": "string", "enum": ["source", "selector", "rect", "clear", "status"], "default": "status"},
             "material_id": {"type": "string"}, "selector": {"type": "string"},
@@ -552,70 +553,104 @@ class _StudyAvatarToolsMixin:
             "label": {"type": "string"}}}, timeout=10.0,
     )
     async def study_point_tool(self, *, kind="status", material_id="", **kwargs):
-        base = os.environ.get("NEKO_LEARNING_SURFACE_URL", "")
-        token = os.environ.get("NEKO_LEARNING_SURFACE_TOKEN", "")
-        if not base or not token:
-            return {"ok": False, "error": "learning_surface_not_open", "next": "Open Start-Daily-Tutor with its learning surface."}
-        # The launcher owns this loopback endpoint and per-process token.
-        if not re.fullmatch(r"http://127\.0\.0\.1:\d+", base):
-            return {"ok": False, "error": "invalid_learning_surface"}
-        if "source_line" in kwargs and kind in {"status", "selector"}:
-            kind = "source"
-        if kind == "source" and (type(kwargs.get("source_line")) is not int or kwargs["source_line"] < 1):
-            return {"ok": False, "error": "invalid_source_line", "next": "Use an original file line number from the shown source evidence."}
-        try:
-            async with httpx.AsyncClient(timeout=5, trust_env=False) as client:
-                headers = {"X-Learning-Surface-Token": token}
-                if kind == "status":
-                    response = await client.get(base + "/api/state", headers=headers)
-                else:
-                    if kind == "source":
-                        snapshot = await client.get(base + "/api/state", headers=headers)
-                        snapshot.raise_for_status()
-                        state = snapshot.json()
-                        active = state.get("active_material_id")
-                        material = next((m for m in state.get("materials", []) if m.get("id") == active), None)
-                        if not material or material.get("source") != "filtered_codegraph_evidence":
-                            return {"ok": False, "error": "source_evidence_not_selected", "next": "Ask the learner to select the source evidence returned by study_code."}
-                        if material_id and material_id != active:
-                            return {"ok": False, "error": "stale_material", "next": "The learner changed material; inspect current source before pointing."}
-                        file_hint = str(kwargs.get("source_file") or "").replace("\\", "/")
-                        symbol = re.sub(r"\s+", "", str(kwargs.get("symbol") or "")).casefold()
-                        candidates = [target for target in material.get("targets_for_pointing", [])
-                                      if target.get("source_line") == kwargs["source_line"]
-                                      and (not file_hint or file_hint in {target.get("source_file"), str(target.get("source_file", "")).rsplit("/", 1)[-1]})
-                                      and (not symbol or symbol in re.sub(r"\s+", "", str(target.get("label") or "")).casefold())]
-                        if len(candidates) != 1:
-                            return {"ok": False, "error": "source_line_not_unique_or_not_shown", "next": "The locator could not resolve a unique target. This does not mean the function is absent. Verify the shown file/line/symbol; do not guess CSS or claim absent source."}
-                        material_id, kind = active, "selector"
-                        kwargs["selector"] = candidates[0]["selector"]
-                        kwargs["label"] = f'{candidates[0]["source_file"]}:{kwargs["source_line"]}'
-                    elif not material_id:
-                        return {"ok": False, "error": "missing_material_identity", "next": "For source lines use kind='source' with source_line and symbol. For diagrams first inspect kind='status' and copy its exact selector and material_id; never invent CSS."}
-                    command = {"kind": kind, "material_id": material_id,
-                               **{key: kwargs[key] for key in ("selector", "x", "y", "width", "height", "label") if key in kwargs}}
-                    response = await client.post(base + "/api/guidance", json=command, headers=headers)
-                payload = response.json()
-                if response.is_success:
-                    active = payload.get("active_material_id")
-                    payload = {"active_material_id": active,
-                               **({"material": next((item for item in payload.get("materials", []) if item.get("id") == active), None)} if kind == "status" else {}),
-                               "command": payload.get("command"), "revision": payload.get("revision")}
-                result = {"ok": response.is_success, **payload,
-                        "proof": "locator metadata only; guidance is queued until the open surface renders it, and is not vision evidence"}
-                if response.is_success and kind != "status":
-                    language = kwargs.get("language") or getattr(self, "_study_effective_language", lambda: "zh-CN")()
-                    line = kwargs.get("source_line")
-                    if kind == "clear":
-                        result["say_this"] = "Highlight cleared." if str(language).startswith("en") else "已清除高亮。"
-                    elif type(line) is int:
-                        result["say_this"] = f"Requested a highlight on source line {line}." if str(language).startswith("en") else f"已请求高亮当前源码第{line}行。"
+        async def attempt():
+            nonlocal kind, material_id
+            base = os.environ.get("NEKO_LEARNING_SURFACE_URL", "")
+            token = os.environ.get("NEKO_LEARNING_SURFACE_TOKEN", "")
+            if not base or not token:
+                return {"ok": False, "error": "learning_surface_not_open", "next": "Open Start-Daily-Tutor with its learning surface."}
+            # The launcher owns this loopback endpoint and per-process token.
+            if not re.fullmatch(r"http://127\.0\.0\.1:\d+", base):
+                return {"ok": False, "error": "invalid_learning_surface"}
+            if "source_line" in kwargs and kind in {"status", "selector"}:
+                kind = "source"
+            if kind == "source" and (type(kwargs.get("source_line")) is not int or kwargs["source_line"] < 1):
+                return {"ok": False, "error": "invalid_source_line", "next": "Use an original file line number from the shown source evidence."}
+            try:
+                async with httpx.AsyncClient(timeout=5, trust_env=False) as client:
+                    headers = {"X-Learning-Surface-Token": token}
+                    if kind == "status":
+                        response = await client.get(base + "/api/state", headers=headers)
                     else:
-                        result["say_this"] = "Requested a highlight on that area." if str(language).startswith("en") else "已请求高亮这个区域。"
-                    result["relay"] = "Say only say_this in its language, then stop. You did not move an editor cursor, scroll, edit source, or verify that it rendered; the learner scrolls."
-                return result
-        except (httpx.HTTPError, ValueError):
-            return {"ok": False, "error": "learning_surface_unavailable", "next": "Reopen the learning surface and inspect its current material; do not reuse old coordinates."}
+                        if kind == "source":
+                            snapshot = await client.get(base + "/api/state", headers=headers)
+                            snapshot.raise_for_status()
+                            state = snapshot.json()
+                            active = state.get("active_material_id")
+                            material = next((m for m in state.get("materials", []) if m.get("id") == active), None)
+                            if not material or material.get("source") != "filtered_codegraph_evidence":
+                                return {"ok": False, "error": "source_evidence_not_selected", "next": "Ask the learner to select the source evidence returned by study_code."}
+                            if material_id and material_id != active:
+                                return {"ok": False, "error": "stale_material", "next": "The learner changed material; inspect current source before pointing."}
+                            file_hint = str(kwargs.get("source_file") or "").replace("\\", "/")
+                            symbol = re.sub(r"\s+", "", str(kwargs.get("symbol") or "")).casefold()
+                            candidates = [target for target in material.get("targets_for_pointing", [])
+                                          if target.get("source_line") == kwargs["source_line"]
+                                          and (not file_hint or file_hint in {target.get("source_file"), str(target.get("source_file", "")).rsplit("/", 1)[-1]})
+                                          and (not symbol or symbol in re.sub(r"\s+", "", str(target.get("label") or "")).casefold())]
+                            if len(candidates) != 1:
+                                return {"ok": False, "error": "source_line_not_unique_or_not_shown", "next": "The locator could not resolve a unique target. This does not mean the function is absent. Verify the shown file/line/symbol; do not guess CSS or claim absent source."}
+                            material_id, kind = active, "selector"
+                            kwargs["selector"] = candidates[0]["selector"]
+                            kwargs["label"] = f'{candidates[0]["source_file"]}:{kwargs["source_line"]}'
+                        elif not material_id:
+                            return {"ok": False, "error": "missing_material_identity", "next": "For source lines use kind='source' with source_line and symbol. For diagrams first inspect kind='status' and copy its exact selector and material_id; never invent CSS."}
+                        command = {"kind": kind, "material_id": material_id,
+                                   **{key: kwargs[key] for key in ("selector", "x", "y", "width", "height", "label") if key in kwargs}}
+                        response = await client.post(base + "/api/guidance", json=command, headers=headers)
+                    payload = response.json()
+                    if response.is_success:
+                        active = payload.get("active_material_id")
+                        payload = {"active_material_id": active,
+                                   **({"material": next((item for item in payload.get("materials", []) if item.get("id") == active), None)} if kind == "status" else {}),
+                                   "command": payload.get("command"), "revision": payload.get("revision")}
+                    result = {"ok": response.is_success, **payload,
+                            "proof": "locator metadata only; guidance is queued until the open surface renders it, and is not vision evidence"}
+                    if response.is_success and kind != "status":
+                        language = kwargs.get("language") or getattr(self, "_study_effective_language", lambda: "zh-CN")()
+                        line = kwargs.get("source_line")
+                        if kind == "clear":
+                            result["say_this"] = "Highlight cleared." if str(language).startswith("en") else "已清除高亮。"
+                        elif type(line) is int:
+                            result["say_this"] = f"Requested a highlight on source line {line}." if str(language).startswith("en") else f"已请求高亮当前源码第{line}行。"
+                        else:
+                            result["say_this"] = "Requested a highlight on that area." if str(language).startswith("en") else "已请求高亮这个区域。"
+                        result["relay"] = "Say only say_this in its language, then stop. You did not move an editor cursor, scroll, edit source, or verify that it rendered; the learner scrolls."
+                    return result
+            except (httpx.HTTPError, ValueError):
+                return {"ok": False, "error": "learning_surface_unavailable", "next": "Reopen the learning surface and inspect its current material; do not reuse old coordinates."}
+        result = await attempt()
+        # What the character may say follows from this result alone: only an accepted highlight
+        # request counts. Every failure, and a bare status read, highlighted nothing.
+        english = str(kwargs.get("language") or getattr(self, "_study_effective_language", lambda: "zh-CN")()).startswith("en")
+        if not result.get("ok"):
+            code = str(result.get("error") or "")
+            zh = {"learning_surface_not_open": "学习材料窗口没有打开，我现在没法高亮。",
+                  "learning_surface_unavailable": "学习材料窗口这会儿没有响应，我没有标出任何东西。",
+                  "source_evidence_not_selected": "学习材料窗口里还没有选中源码材料，所以我没有标出来。",
+                  "stale_material": "你刚切换了材料，我没有标出来，需要先重新确认当前材料。",
+                  "source_line_not_unique_or_not_shown": "我没能在当前材料里唯一定位到那一行，所以没有标出来。",
+                  "invalid_source_line": "我没有拿到有效的行号，所以没有标出来。",
+                  "missing_material_identity": "我还没确认当前是哪份材料，所以没有标出来。"}
+            en = {"learning_surface_not_open": "The learning window is not open, so I cannot highlight anything.",
+                  "learning_surface_unavailable": "The learning window did not respond, so nothing was highlighted.",
+                  "source_evidence_not_selected": "No source material is selected in the learning window, so I did not highlight anything.",
+                  "stale_material": "The material changed, so I did not highlight anything; I need to confirm the current one first.",
+                  "source_line_not_unique_or_not_shown": "I could not find that exact line in the current material, so nothing was highlighted.",
+                  "invalid_source_line": "I did not get a valid line number, so nothing was highlighted.",
+                  "missing_material_identity": "I have not confirmed which material is open, so nothing was highlighted."}
+            result["highlighted"] = False
+            result["say_this"] = (en if english else zh).get(code) or (
+                "I could not highlight that, so nothing was marked." if english else "这次没能高亮，所以什么也没标出来。")
+            result["relay"] = ("Say only say_this, then stop. Nothing was highlighted: never say you marked, pointed at or "
+                               "highlighted it, and do not retry with an invented selector.")
+        elif kind == "status":
+            result["highlighted"] = False
+            result["relay"] = ("This call only inspected the material; nothing is highlighted yet. Do not say you marked or "
+                               "pointed at anything. To highlight, call study_point again with a returned selector and material_id.")
+        else:
+            result["highlighted"] = bool(result.get("command"))
+        return result
 
     @llm_tool(
         name="study_scope",
@@ -969,6 +1004,42 @@ class _StudyAvatarToolsMixin:
             return {"ok":False,"error":"project_code_source_must_be_fetched"}
         if material_source == "literal_text" and not str(text or "").strip():
             return {"ok":False,"error":"literal_source_missing"}
+        if not str(text or "").strip() and material_source in ("auto", "project_code"):
+            # "等一下 / 先说结论": the point of what was just said, from the stored explanation.
+            # Handing that bare phrase to the teacher produced a file overview instead.
+            from .study_interrupt_summary import classify as interruption, conclusion_of, last_explanation
+            interrupt = interruption(question)
+            if interrupt:
+                reply = ""
+                if interrupt == "pause":
+                    reply = ("OK, I'll stop here. Go ahead." if (language or self._study_effective_language()).lower().startswith("en")
+                             else "好，我先停下来，你说。")
+                else:
+                    store = getattr(self, "_store", None)
+                    session = str(getattr(getattr(self, "_state", None), "study_session_id", "") or "")
+                    rows = await asyncio.to_thread(store.list_interactions, 12, session_id=session) if store and session else []
+                    reply = conclusion_of(last_explanation(rows))
+                if reply:
+                    return json.loads(_teaching(
+                        tool="study_explain", reply=reply, mode="interrupt",
+                        relay="Say reply exactly as written, once, then stop and wait for the learner. Do not call "
+                              "another tool, add detail, or resume the earlier explanation."))
+        if material_source != "literal_text":
+            # While a quiz question waits for its first grade, a plain statement is the
+            # learner's answer. Natural negations ("这张图根本没有箭头") otherwise read as a
+            # complaint about the material and never reach grading. Questions, requests and
+            # explicit "look again / the picture changed" corrections keep the explain path.
+            from .study_answer_routing import ANSWER, classify_pending_turn, has_pending_question
+            # A cheap snapshot only; study_answer re-validates the held question under the lock.
+            held_question = getattr(getattr(self, "_state", None), "current_question", None)
+            if has_pending_question(held_question) and classify_pending_turn(question) == ANSWER:
+                log = getattr(self, "logger", None)
+                if log is not None:
+                    log.info("study_explain routed a pending-question answer to study_answer")
+                graded = await self.study_answer_tool(answer=str(question).strip(), **_)
+                if isinstance(graded, dict):
+                    graded["routed_from"] = "study_explain"
+                return graded
         from .study_materials import material_context, material_output_target, material_context_current
         output_target = material_output_target(self, _)
         literal_source_request = bool(str(text or "").strip() and re.search(

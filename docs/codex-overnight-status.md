@@ -1,5 +1,7 @@
 # Codex 第二次验收修复状态
 
+> 2026-10-16 第三轮由 Claude Sonnet 5.5 离线执行（额度未填，无真实调用）；最新状态见 [claude-goal-status](claude-goal-status.md)。下文为 Codex 第二轮记录，保留为历史。
+
 ## 当前状态（第二轮，2026-10-16）
 - P1～P8均已执行、验证或有具体受阻记录并发布；本轮已收尾。产品整体 **PARTIAL**，建议定向复测，完整真人验收未就绪。
 - 完整合同：codex-round2-contract-2026-10-16.md；结果：[P8彩排](evidence/codex-r2-p8-rehearsal-2026-10-16.md) / [最终验证](evidence/codex-r2-final-validation-2026-10-16.md) / [验收v2](claude-acceptance-guide.md)。

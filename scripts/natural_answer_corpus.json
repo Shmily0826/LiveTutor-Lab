@@ -1,0 +1,32 @@
+{
+  "source": "人工拟写（2026-10-16，第三轮 R1），不是真人录音转写，也不是模型输出。用来检验'存在未评分待答题时，一句话该当作答案、材料纠错还是普通提问'。题目场景：Sky Scout 架构图 forward 图，待答题类似'WEX 指向哪个模块'；源码题类似'weather_service.dart 里非 200 怎么处理'。",
+  "usage": "answer 类别必须被转交评分；material_correction 类别（4 句）绝不能被评分；other 类别（提问、请求、控制语）也不能被评分。",
+  "samples": [
+    {"id": "A1", "kind": "explicit", "expect": "answer", "text": "我的答案是 WEX 指向 NUD。"},
+    {"id": "A2", "kind": "explicit", "expect": "answer", "text": "我选第二个，是 REZ 先调用 NUD。"},
+    {"id": "A3", "kind": "wrong_direct", "expect": "answer", "text": "WEX 指向 REZ"},
+    {"id": "A4", "kind": "wrong_direct", "expect": "answer", "text": "非 200 的时候直接返回 null"},
+    {"id": "A5", "kind": "negation", "expect": "answer", "text": "这张图根本没有箭头"},
+    {"id": "A6", "kind": "negation", "expect": "answer", "text": "我觉得不是这样"},
+    {"id": "A7", "kind": "negation", "expect": "answer", "text": "没有，WEX 和 NUD 之间不连线"},
+    {"id": "A8", "kind": "vague", "expect": "answer", "text": "好像是吧"},
+    {"id": "A9", "kind": "vague", "expect": "answer", "text": "不知道"},
+    {"id": "A10", "kind": "vague", "expect": "answer", "text": "嗯，可能是 NUD 吧"},
+    {"id": "A11", "kind": "partial", "expect": "answer", "text": "WEX 会调用 NUD，后面的我不太确定"},
+    {"id": "A12", "kind": "partial", "expect": "answer", "text": "它先检查状态码，然后好像会抛异常"},
+    {"id": "A13", "kind": "mid_revision", "expect": "answer", "text": "是 REZ……不对，我改一下，应该是 NUD"},
+    {"id": "A14", "kind": "mid_revision", "expect": "answer", "text": "我想想，先调用 WEX，哦不，是先调用 NUD"},
+    {"id": "A15", "kind": "explicit_en", "expect": "answer", "text": "My answer is that WEX calls NUD."},
+    {"id": "A16", "kind": "vague_en", "expect": "answer", "text": "I don't know, maybe REZ?"},
+    {"id": "C1", "kind": "material_correction", "expect": "material_correction", "text": "你读错图了，再看一遍"},
+    {"id": "C2", "kind": "material_correction", "expect": "material_correction", "text": "这张图换了，你重新看一下"},
+    {"id": "C3", "kind": "material_correction", "expect": "material_correction", "text": "你刚才看错了，请重新检查当前的图片"},
+    {"id": "C4", "kind": "material_correction", "expect": "material_correction", "text": "I changed the picture, please look again, you misread it."},
+    {"id": "O1", "kind": "question", "expect": "other", "text": "这一行是什么意思？"},
+    {"id": "O2", "kind": "request", "expect": "other", "text": "再讲一遍刚才那段"},
+    {"id": "O3", "kind": "request", "expect": "other", "text": "给我出下一道题"},
+    {"id": "O4", "kind": "question", "expect": "other", "text": "为什么这里要检查状态码"},
+    {"id": "O5", "kind": "control", "expect": "other", "text": "等一下，先说结论"},
+    {"id": "O6", "kind": "request_en", "expect": "other", "text": "Can you explain line 23 again?"}
+  ]
+}

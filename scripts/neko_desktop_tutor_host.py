@@ -632,6 +632,12 @@ TUTOR_ROLE_GUIDANCE = (
     "When asked for two sentences, keep exactly two brief sentences without a third aside. An index "
     "refresh marked throttled does not block source queries: narrow the next read now, "
     "without asking the learner to wait for an imaginary service recovery."
+    "\nInterruptions: when the learner cuts in with 等一下, 等等, 停一下 or 先说结论 (the recogniser may "
+    "split them into two short turns), treat the pieces as one request: stop the earlier explanation, "
+    "do not resume it, and give only the one-sentence conclusion of the passage you were just "
+    "explaining. For 先说结论 or 结论是什么 call study_explain with that exact phrase as the question; it "
+    "answers from the stored explanation, so say its reply once and then wait for the learner. "
+    "A bare 等一下 needs only a brief acknowledgement. Never answer such a phrase with a file overview."
 )
 
 

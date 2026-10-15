@@ -1,6 +1,20 @@
 # Claude Goal 状态
 
-## 当前状态（第二轮，2026-10-16）
+## 当前状态（第三轮，2026-10-16，Claude Sonnet 5.5，**仅离线**）
+- **额度栏位启动时留空 → 整轮没有任何真实模型调用或 Native 连接**；账本仍 DeepSeek 1541、Lanlan.app 130，`audio_allowed=false`，无麦克风/采集/回环/改音量。R1–R4 的修复只有离线证据，Native 与真人层都没验。
+- 修了什么：R1 出题后的自然作答（否定/含糊/错答）转交 `study_answer`，材料纠错与提问不评分；R2 教师回复事实检查（行号窗口、throw/catch 位置、未见标识符）+ 重试一次 + 剥离，并建 13 题评测集与计分器；R3 “先说结论”走已存讲解首句、角色指导加 Interruptions 规则；R4 `study_point` 失败/仅查看一律 `highlighted=false` 并给如实措辞，HTML 边高亮工具链离线可行；R5 解出首声各段耗时、观测器补记 status 文字；R6 验收说明 v3。
+- 证据：全量 116 模块，109 通过，仅原 7 个历史失败（名称与原因一致）；新增 6 模块（pending_answer_routing 13、citation_check 20、teacher_citation_gate 11、interrupt_summary 11、teacher_eval_set 6、point_honesty 8）。已记录的真实错误“第二十二行的 throw”被新检查在真实证据上抓到。产品 manifest 32 个 payload 三方 SHA 一致，SourceGate PASS，宿主补丁全 patched（未改宿主）。
+- 报告：[R1](evidence/claude-r3-r1-natural-answer-routing-2026-10-16.md) / [R2](evidence/claude-r3-r2-teacher-citation-check-2026-10-16.md) / [R3](evidence/claude-r3-r3-interruption-2026-10-16.md) / [R4](evidence/claude-r3-r4-pointing-honesty-2026-10-16.md) / [R5](evidence/claude-r3-r5-wait-hint-and-first-voice-2026-10-16.md) / [R6](evidence/claude-r3-r6-rehearsal-v3-2026-10-16.md) / [验收v3](claude-acceptance-guide.md)。
+- **没法验证的**：R1 Native 每类场、≥80% 落库；R2 评测集真实复跑与违规率/人工错误前后对比；R3 Native 插话 3 场；R4 HTML 自主高亮 3 场；R5 A/B 与 status 文字；R6 完整 1–7 步彩排。
+- **是否可请用户做完整验收：不建议。** 可做定向复测（先第 5 步自然作答、第 3 步插话、第 2 步行号），建议先由有额度的一轮把上面“没法验证的”补成 Native 证据。需要你判断：是否给下一轮填额度（建议 DeepSeek 320、停止线 1861、Lanlan.app 45）；教师检查违规时多一次调用换准确性可否接受。
+- 验收前用户要做：新建课程 ID；在 Study 提交 Sky Scout 架构图并点 Explain；调大麦克风输入音量/离近一点；关掉占用 48911/48916 的其它实例；电脑不睡眠；告诉协助者“准备好了”后才改 audio_allowed。
+
+## 待 Opus 复核（第三轮新增）
+- 宿主层、本轮按高风险停止规则未动手：“正在查看源码……”在 Native 的文字证据（观测器已补记，需下一场）；真人场约 9 s 的工具返回→首包区间与固定 WAV 场 2.3–4 s 不一致；识别把插话拆成两条（供应商/识别层）。
+- 教师检查只覆盖三类；“map 文件”这类对象说错抓不到。违规重试时首次错误回复仍写入学习记录。
+- R1 规则与语料同一作者，需要独立语料或真人转写再估泛化。
+
+## 第二轮顶部状态快照（第三轮启动时保存）
 - Codex P1～P8已验证/记录受阻并发布df99eed，第二轮收尾；总体PARTIAL，完整真人验收未就绪。
 - [合同](codex-round2-contract-2026-10-16.md) / [详细状态](codex-overnight-status.md) / [彩排](evidence/codex-r2-p8-rehearsal-2026-10-16.md) / [验收v2](claude-acceptance-guide.md)。
 - DeepSeek1270→1541，本轮271/400；Lanlan.app110→130，本轮20；原轮次/全局2000不变、tech0、Goal tokens不限。

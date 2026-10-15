@@ -138,7 +138,7 @@
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
-      "sha256": "1407471262ba52ce9313b277da47b12dfb7e4f9a9991e6b7410a476eb350d010",
+      "sha256": "e793cf3e9ad8d43edecbdc2eed676b8985096839acc01bbbe716d83227c643c7",
       "deployed_matches": true,
       "phase29_delta_prior_sha256": "afb52dbbc047fd3cf20eab2c536fcdde9d1cba36fe4056a489bda27fe6123af9",
       "phase29_verification": "Specific errors41 / correct100 and restart42 / Chinese then English43 observed; final reminder-negative narrowing source+6 offline only; all historical failures retained.",
@@ -169,7 +169,11 @@
       "codex_r2_p5-resume-wording_prior_sha256": "a13f4545bc799e9be8c190961be052cc7efd12b6a8151298efb337620d115744",
       "codex_r2_p5-resume-wording_verification": "See docs/evidence/codex-r2-p5-resume-wording-2026-10-16.md; offline/SDK/Native/human evidence are separate.",
       "codex_r2_p8-resume-number_prior_sha256": "5ade76ea869cc01ee326acf37019615489b0f74c34dbae9ba8ad05f7ba2a9119",
-      "codex_r2_p8-resume-number_verification": "See docs/evidence/codex-r2-p8-rehearsal-2026-10-16.md; offline large-line resume guard7/audit2/language6, Native/physical/human evidence separate."
+      "codex_r2_p8-resume-number_verification": "See docs/evidence/codex-r2-p8-rehearsal-2026-10-16.md; offline large-line resume guard7/audit2/language6, Native/physical/human evidence separate.",
+      "round3_r1_prior_sha256": "1407471262ba52ce9313b277da47b12dfb7e4f9a9991e6b7410a476eb350d010",
+      "round3_r3_prior_sha256": "cea57614148283445596b2b31210b7b2a306ef91c63054255306440d75f5b262",
+      "round3_r4_prior_sha256": "ad089a6f84aba1a23a0238a021face4025bf3f26658e95519315a495a4408413",
+      "round3_r5lf_prior_sha256": "86d07c16dc463c66daa0f08baeb772e79794b50b55971133646cd1a8b69b4175"
     },
     {
       "path": "payload/study_companion/study_ocr_pipeline.py",
@@ -260,7 +264,7 @@
     },
     {
       "path": "payload/study_companion/study_code_teaching.py",
-      "sha256": "1bbdc326caa2d9fa9784d8f8dad43b1f265e4592d969af7846d922c10a7254b1",
+      "sha256": "b93138dcf6d6e13034fb71972517242a8af6b4fb24f5788266dfac463f75e236",
       "deployed_matches": true,
       "phase56_verification": "Source/offline adapter8 + related material26/language6/native teaching binding5; cold card initialization existing3+new text1. Real role text68 teacher correct but filler/redundant reads PARTIAL;69 automatic study_explain project_code delegated actual CodeGraph file21-28@7aae20f, exact two-sentence teacher reply relayed and saved in existing SQLite. Cold text guidance actually present. Native free voice/device/human pending; extra preliminary source read and19.44s remain.",
       "phase59_prior_sha256": "05e1de9d45cee9e5a9301c226c4257e02e4d5c37d47f7c8650490674dea0c815",
@@ -280,7 +284,10 @@
       "codex_r2_p3-source-depth-retry_prior_sha256": "3c5459a0f5f53293fc9284d0e0464b88bd4b935fe873c9e029e8973c3d448de2",
       "codex_r2_p3-source-depth-retry_verification": "See docs/evidence/codex-r2-p3-source-depth-retry-2026-10-16.md; offline/SDK/Native/human evidence are separate.",
       "codex_r2_p3-source-depth-lf_prior_sha256": "9e049b236afbefe66a65657a0e144e7fcc11c41264aafddff291ab269951e864",
-      "codex_r2_p3-source-depth-lf_verification": "See docs/evidence/codex-r2-p3-source-depth-lf-2026-10-16.md; offline/SDK/Native/human evidence are separate."
+      "codex_r2_p3-source-depth-lf_verification": "See docs/evidence/codex-r2-p3-source-depth-lf-2026-10-16.md; offline/SDK/Native/human evidence are separate.",
+      "round3_r2_prior_sha256": "1bbdc326caa2d9fa9784d8f8dad43b1f265e4592d969af7846d922c10a7254b1",
+      "round3_r2b_prior_sha256": "cf492c4664c0cde93ce29ad1e006d882b0804d560da2480964140270cb119f2e",
+      "round3_r5lf_prior_sha256": "8e679fdd834d994ffee4cbc57e46dd5e9677852c951fa0fbd404e4e7448391c5"
     },
     {
       "path": "payload/study_companion/study_call_trace.py",
@@ -289,6 +296,30 @@
       "phase59_verification": "Per-call content-free timings; offline isolation/cancellation and existing boundaries checked. No provider performance or audible/human acceptance claimed.",
       "claude_w2w4_prior_sha256": "b84a6ec5fd470d51184a6eee84269c106601beb14866db7bfa262cdb2bc07c44",
       "claude_w2w4_note": "W2: structure fold keeps top-level folders; follow-up re-reads every window of the last explanation (call id in code_question rows). W4: line references respelled for speech."
+    },
+    {
+      "path": "payload/study_companion/study_answer_routing.py",
+      "sha256": "a3f4ab5a262579ec19e9ac5fc6981ac66d1d008481e05df1bdc90ff704075339",
+      "deployed_matches": true,
+      "note": "added in round3 r1",
+      "round3_r5lf_prior_sha256": "9be430ce2e88c687801063a8ae7be05054f25633e77457e041b29d187322640f",
+      "round3_r6_prior_sha256": "300a2510252fd7635b7a9d1e6393286ebc93c1eff89e0f3182b07f323fe2ffa3"
+    },
+    {
+      "path": "payload/study_companion/study_citation_check.py",
+      "sha256": "78b391d1eceb2d191c22d9000a521ff47938e92f2954569ff9830637dceac876",
+      "deployed_matches": true,
+      "note": "added in round3 r2",
+      "round3_r3_prior_sha256": "6174350d83f29bb7ba6ddeef8dbc0c8d3ea90cd0b70ac7fc7e8f13132da4a90e",
+      "round3_r5lf_prior_sha256": "d2abf0fea5db29f31da7139b5dfbc505fd5c5e25868b62667d677fa02beb8ab0"
+    },
+    {
+      "path": "payload/study_companion/study_interrupt_summary.py",
+      "sha256": "f4ee742b608f9891c5b8a35d0cb3325a2c3a463d1f4363a6259d7c3a777c990c",
+      "deployed_matches": true,
+      "note": "added in round3 r3",
+      "round3_r5lf_prior_sha256": "f92e143d2ce7e68314daf072beab3bce4d894c0b9e66cdb25f6fac3275fb587a",
+      "round3_r6_prior_sha256": "f425e0c4e25a8840a954d1bec4ac4c0686173c3ccb5658a17d9aea2e01e20357"
     }
   ],
   "prior_deployment": "benchmarks/raw/neko-product-data/plugin-code/study_companion",

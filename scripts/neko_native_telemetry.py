@@ -40,7 +40,9 @@ const install = () => {
    if(p.type==='session_failed'||p.type==='session_ended_by_server')event.reason=String(p.reason||p.message||'').slice(0,300);
    if(p.type==='session_started')event.microphone_route=p.microphone_route;
    if(p.type==='status'){
-    let status=p.message||p.data;try{if(typeof status==='string')status=JSON.parse(status);}catch{status=null;}
+    let status=p.message||p.data;const plain=typeof status==='string'&&!/^\s*[\{\[]/.test(status)?status.slice(0,120):'';
+    if(plain)event.message=plain;
+    try{if(typeof status==='string')status=JSON.parse(status);}catch{status=null;}
     if(status && ['VOICE_INPUT_CONTROL_REJECTED','VOICE_INPUT_LEASE_RESYNC_REQUIRED','ASR_INPUT_DELIVERY_FAILED'].includes(status.code)){
      event.code=status.code;event.reason=String(status.details?.reason||'').slice(0,120);
     }

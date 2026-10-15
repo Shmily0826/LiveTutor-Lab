@@ -24,6 +24,17 @@ class SourceGuidance(unittest.TestCase):
         self.assertIn('call study_explain material_source=project_code', guidance)
         self.assertIn('study_code is only for lookup', guidance)
 
+    def test_interruption_rule_is_present_and_does_not_reroute_teaching(self):
+        guidance = namespace['TUTOR_ROLE_GUIDANCE']
+        rule = guidance[guidance.index('Interruptions:'):]
+        for needed in ('等一下', '先说结论', 'one-sentence conclusion', 'stored explanation', 'wait for the learner',
+                       'Never answer such a phrase with a file overview'):
+            self.assertIn(needed, rule)
+        # The rule is the last paragraph, so it cannot weaken the explain routing stated before it.
+        self.assertEqual(guidance.count('Interruptions:'), 1)
+        self.assertIn('call study_explain material_source=project_code', guidance[:guidance.index('Interruptions:')])
+        self.assertNotIn('study_code', rule)
+
     def test_old_owned_guidance_upgrades_but_learner_guidance_survives(self):
         for existing, expected in [('Study Companion mode: old conflicting rule', 'upgraded'),
                                    ('My own teaching style', "kept the learner's own guidance")]:
