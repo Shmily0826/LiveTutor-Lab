@@ -1,3 +1,7 @@
+> **2026-10-15 起：用户确认由 Claude 按 [claude-goal-2026-10-15](claude-goal-2026-10-15.md) 无人值守执行；当前状态只在 [claude-goal-status](claude-goal-status.md) 维护，本文件不再逐阶段同步。**
+
+> **最新状态：2026-10-15 17:25 NZDT，按用户明确要求安全暂停。** 阶段62/75已终态PASS，无live会话；26条owned进程均不存在，相关5端口无listener。此状态覆盖下方历史active/进行中记录。详见[安全暂停交接](evidence/daily-companion-phase62-safe-pause-2026-10-15.md)及[阶段62证据](evidence/daily-companion-phase62-material-flow-2026-10-15.md)。本轮完整Study→受控材料指点/换图/缩放滚动/关闭重开双viewport通过；21相关离线case通过；不冒真人、任意桌面或非空历史验收。双树helper启动检查已补齐。阶段62成果仅本地，最近push为487508a（17:04 +13）。原账本890/2000、app79/null、tech0不变，无声音/麦克风/capture/loopback。Goal暂停而非完成，完整A–F及contract不变；恢复前先读contract/plan/status/blockers及本交接。后续明确指令优先，局部阻塞转其他项、完成依据实际证据。
+
 > **当前：用户明确继续，Goal已核active（2026-10-15，阶段61）。** Claude限额不阻塞本地推进。本轮完成离线静音/裁剪分析与诊断补齐，下一转受控材料UI，保留完整保护；本轮不mic/capture/loopback或播放声音，原账本现890/2000、app79/null、tech0。旧暂停记录保留为历史。完整A–F不缩范围，完成依据实际证据。
 
 # 日常学习伙伴状态（阶段61离线诊断通过，整体未完成）
@@ -113,3 +117,10 @@ Claude官方文档说明GitHub集成支持私有仓库，未出现不等同免�
 下一61已有定位：51第三WAV原件SHA9685bbb3db11102e45e85e6475523cf2a28ee9d9f259b069f8f8e38c811b84ff，raw字段input只描述fixed WAV，不保存路径；可在任务evidence目录按SHA找现有文件，禁止重新制作材料。phrase_deliveries最后一项含source/output/compressed_zero/written及wall，不含实际送出PCM。现buffer._flush_zero_pause实现只压缩被后续保留帧包围的exact-zero内部静音，前导/尾部保留；不能把原WAV直接冒RNNoise之后的已送PCM，也不能从ASR到达时刻猜provider端点。保留51原严格FAIL，先做离线可证明部分，再决定需补的诊断。
 
 61开始：原WAV已按SHA找到、离线speech-end重建匹配；补非音频内容的压缩位置/写入诊断，不改处理或分轮。原890/79/0、无live，不等待Claude/不重试模型，完整A–F继续。
+
+61发布确认：14文件487508adfb3d3c01885ffd80f923ee67e9c009b5已push并核remote exact；master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb，publisher clean/Root index空，原890/79/0、无live。只发布诊断源码/相关测试/文档，未发布WAV、raw、DB、备份或密钥。
+下一62先四记录、61报告，再按47/55已有入口推进受控材料窗的实际UI操作与位置/材料恢复边界；复用neko_learning_surface与material_windows，localhost经共享web-inspector，不安装浏览器库。65/67已通过Ready/裁切不无故重跑，重点补实际点击/材料切换/指示失效或恢复，优先离线/拒外呼，不用真人麦克风。完整A–F/Goal active，B留待有界必要观察、不再猜provider端点。
+
+62准备：复用现真实只读Study宿主与材料页，验证完整入口/材料控件/关闭重开，详见phase62。语法检查通过，尚无UI通过；原890/79/0，不mic/外呼。
+
+62：74调用前保护拒绝已保留；双树helper旧SHA核对备份/补齐，SourceGate扩展双树后通过。75已启动exec96328，仅poll同handle，不冒UI通过/不重启。原890/79/0。

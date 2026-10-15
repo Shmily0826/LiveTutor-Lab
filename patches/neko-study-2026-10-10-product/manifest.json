@@ -18,7 +18,7 @@
     },
     {
       "path": "payload/study_companion/entry_tutor_context_support.py",
-      "sha256": "c1c3126f63b533622b464371f9626a1c93c4dbe20d6875f66e1364ff02eae3e9",
+      "sha256": "b1c8e4759a3bdd0f71697a04774369659454d3d711da3097117428825def0cb5",
       "deployed_matches": true,
       "phase30_prior_sha256": "d201a761890707d9ea22a544e18a37820d9fa07a492b0dfaabd9c73209f4f49f",
       "phase30_verification": "Independent source/offline cross-subject 820-seed routing fixture passed; actual silent SDK44 no unrelated guidance, one grade/old4QA and formal hashes preserved. Whole teaching semantics PARTIAL; not Native/human acceptance.",
@@ -27,7 +27,8 @@
       "phase44_prior_sha256": "0848b0574cda5c21f4098bc1355e2456bc50bea4765a4e492820db1c089ff7b7",
       "phase44_verification": "Independent source/offline relevant history12 and related course8/binding12/material14; exact default SHA and deployed imports12. Silent real SDK52 with114 labelled synthetic QA: semantic route and actual explain prompt selected old mistake plus same-binding correction, model acknowledged both, QA unchanged. Reply also made unsupported exhaustive-history negative: semantic scope PARTIAL. No Native/device/human proof; free-label identity and5000 metadata bound remain.",
       "phase59_prior_sha256": "23e9ca838d18f74aaf76ce59e87089f12f5d09d75810b839f862e47dd4d4de4f",
-      "phase59_verification": "Per-call content-free timings; offline isolation/cancellation and existing boundaries checked. No provider performance or audible/human acceptance claimed."
+      "phase59_verification": "Per-call content-free timings; offline isolation/cancellation and existing boundaries checked. No provider performance or audible/human acceptance claimed.",
+      "claude_m1_prior_sha256": "c1c3126f63b533622b464371f9626a1c93c4dbe20d6875f66e1364ff02eae3e9"
     },
     {
       "path": "payload/study_companion/entry_tutor_question_entries.py",
@@ -53,12 +54,13 @@
     },
     {
       "path": "payload/study_companion/llm_prompts.py",
-      "sha256": "a661183faadc54838c408e54917c6c555d6299de4f29e6cfee0ef77ca687ad34",
+      "sha256": "e3c7366ceb5c1813d56a4b9f8c1a3bc7d3f0467cb4b98f254de79bc767c2fbf0",
       "deployed_matches": true,
       "phase44_prior_sha256": "2f0d9a2113032f1c77f3d1d665031d11c6ebf6db116dd149f5297e6efcda2e24",
       "phase44_verification": "Independent source/offline relevant history12 and related course8/binding12/material14; exact default SHA and deployed imports12. Silent real SDK52 with114 labelled synthetic QA: semantic route and actual explain prompt selected old mistake plus same-binding correction, model acknowledged both, QA unchanged. Reply also made unsupported exhaustive-history negative: semantic scope PARTIAL. No Native/device/human proof; free-label identity and5000 metadata bound remain.",
       "phase45_prior_sha256": "36267f1fca0d7a8168890a2d6994f8da4f91c37db199e022bbe2d1343b1bd36d",
-      "phase45_verification": "Independent source/offline concept label10, binding12/history13 and Main material14; default exact deployment/import23. Existing bindings/history precede unique eligible exact catalog aliases; unknown question scope not promoted, no old-ID merge. Silent real SDK53 actual prompt coverage plus two-sentence old-mistake/correction reply without exhaustive negative,114 synthetic QA unchanged. Cross-question grading alias identity is SOURCE/OFFLINE only; no Native/device/human proof or universal semantic guarantee."
+      "phase45_verification": "Independent source/offline concept label10, binding12/history13 and Main material14; default exact deployment/import23. Existing bindings/history precede unique eligible exact catalog aliases; unknown question scope not promoted, no old-ID merge. Silent real SDK53 actual prompt coverage plus two-sentence old-mistake/correction reply without exhaustive negative,114 synthetic QA unchanged. Cross-question grading alias identity is SOURCE/OFFLINE only; no Native/device/human proof or universal semantic guarantee.",
+      "claude_m1_prior_sha256": "a661183faadc54838c408e54917c6c555d6299de4f29e6cfee0ef77ca687ad34"
     },
     {
       "path": "payload/study_companion/models.py",
@@ -133,7 +135,7 @@
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
-      "sha256": "edf4c252359879912b6cba5977879df7d594624f56e7639682b09ce1ca5c5c80",
+      "sha256": "98626a8994ca4a468247c4b98c1375872742d60ba6147b100709ba3b206e3f4b",
       "deployed_matches": true,
       "phase29_delta_prior_sha256": "afb52dbbc047fd3cf20eab2c536fcdde9d1cba36fe4056a489bda27fe6123af9",
       "phase29_verification": "Specific errors41 / correct100 and restart42 / Chinese then English43 observed; final reminder-negative narrowing source+6 offline only; all historical failures retained.",
@@ -142,7 +144,8 @@
       "phase32_prior_sha256": "01a145791e184ccfa9fcf172d37f463b9fcc29853263dabb143ba5b4d0cfe432",
       "phase32_verification": "Reviewed source/offline course language9 plus course8/temporary6/preferences6 with actual persistence; actual silent direct SDK46 after startup, no avatar/language/course priming, English feedback and old7QA preserved. No broad concurrency/voice/device/human acceptance.",
       "phase56_prior_sha256": "45e6bed56a136d067f832ceb9952aa941331be7507b81eb093df6e8280743f50",
-      "phase56_verification": "Source/offline adapter8 + related material26/language6/native teaching binding5; cold card initialization existing3+new text1. Real role text68 teacher correct but filler/redundant reads PARTIAL;69 automatic study_explain project_code delegated actual CodeGraph file21-28@7aae20f, exact two-sentence teacher reply relayed and saved in existing SQLite. Cold text guidance actually present. Native free voice/device/human pending; extra preliminary source read and19.44s remain."
+      "phase56_verification": "Source/offline adapter8 + related material26/language6/native teaching binding5; cold card initialization existing3+new text1. Real role text68 teacher correct but filler/redundant reads PARTIAL;69 automatic study_explain project_code delegated actual CodeGraph file21-28@7aae20f, exact two-sentence teacher reply relayed and saved in existing SQLite. Cold text guidance actually present. Native free voice/device/human pending; extra preliminary source read and19.44s remain.",
+      "claude_m1_prior_sha256": "edf4c252359879912b6cba5977879df7d594624f56e7639682b09ce1ca5c5c80"
     },
     {
       "path": "payload/study_companion/study_ocr_pipeline.py",
@@ -151,20 +154,22 @@
     },
     {
       "path": "payload/study_companion/study_code_tools.py",
-      "sha256": "6e29c608df5d7040bd91941ee512a1e6b46d50ec6c3aa1490cdbcd1df39b8b41",
+      "sha256": "6fac1e770cb14f67d032027aac746019f15c436715e9b871ce5fdd6bb2c72b72",
       "deployed_matches": true,
       "reason": "Required existing avatar code-tool mixin; included during publication dependency closure",
       "phase50_prior_sha256": "8ff871153a7eadf5ab7e4b9203cd5eea760be62e8ab1528f26e0091226412897",
       "phase50_verification": "Main source/offline file-window10 (6 new), structure1 and revision1; actual CLI unique basename/suffix exact windows and ambiguous2 no source, current7aae20f. No model/Native/device/human guarantee; DSML containment pending.",
       "phase59_prior_sha256": "a080b174bc918e234f891403b0455d72164bc053a9441bdd6395d56ba2d75ba0",
-      "phase59_verification": "Per-call content-free timings; offline isolation/cancellation and existing boundaries checked. No provider performance or audible/human acceptance claimed."
+      "phase59_verification": "Per-call content-free timings; offline isolation/cancellation and existing boundaries checked. No provider performance or audible/human acceptance claimed.",
+      "claude_m1_prior_sha256": "6e29c608df5d7040bd91941ee512a1e6b46d50ec6c3aa1490cdbcd1df39b8b41"
     },
     {
       "path": "payload/study_companion/entry_tutor_explain_entries.py",
-      "sha256": "599e6c6cb7c511c7efcf170705c842f4e4fd4261b6e81a907e600d5e58b43ebe",
+      "sha256": "7ae92365e36438a2cfcb62f1b32e198c301aee9228a5f6dc2d42d0e2e0cce1ec",
       "deployed_matches": true,
       "phase59_prior_sha256": "9b3601565e8c554c5be159aa2c6d031bbf3e87b96906a4c5283900c1ff7e29e9",
-      "phase59_verification": "Per-call content-free timings; offline isolation/cancellation and existing boundaries checked. No provider performance or audible/human acceptance claimed."
+      "phase59_verification": "Per-call content-free timings; offline isolation/cancellation and existing boundaries checked. No provider performance or audible/human acceptance claimed.",
+      "claude_m1_prior_sha256": "599e6c6cb7c511c7efcf170705c842f4e4fd4261b6e81a907e600d5e58b43ebe"
     },
     {
       "path": "payload/study_companion/learning_preferences.py",
@@ -219,11 +224,12 @@
     },
     {
       "path": "payload/study_companion/study_code_teaching.py",
-      "sha256": "14f774586746b9c714f39a3713de11e1e2b86a4ae8a70469eb211eefe5246d87",
+      "sha256": "4facd327d0222679ebe37f319ca70ec45cb0d85bf59ab2c80daa90ced5705c93",
       "deployed_matches": true,
       "phase56_verification": "Source/offline adapter8 + related material26/language6/native teaching binding5; cold card initialization existing3+new text1. Real role text68 teacher correct but filler/redundant reads PARTIAL;69 automatic study_explain project_code delegated actual CodeGraph file21-28@7aae20f, exact two-sentence teacher reply relayed and saved in existing SQLite. Cold text guidance actually present. Native free voice/device/human pending; extra preliminary source read and19.44s remain.",
       "phase59_prior_sha256": "05e1de9d45cee9e5a9301c226c4257e02e4d5c37d47f7c8650490674dea0c815",
-      "phase59_verification": "Per-call content-free timings; offline isolation/cancellation and existing boundaries checked. No provider performance or audible/human acceptance claimed."
+      "phase59_verification": "Per-call content-free timings; offline isolation/cancellation and existing boundaries checked. No provider performance or audible/human acceptance claimed.",
+      "claude_m1_prior_sha256": "14f774586746b9c714f39a3713de11e1e2b86a4ae8a70469eb211eefe5246d87"
     },
     {
       "path": "payload/study_companion/study_call_trace.py",
@@ -437,5 +443,12 @@
     "scope": "startup and idle keep newest persisted current-course question and grade, including evaluated correction; explicit fresh remains fresh",
     "proof": "source/offline graded_restart3 Main/independent, course8, answer14; actual corrected host course-return/status/restart preserved original real-model two QA after documented task-only checkpoint recovery; Native auto grade/audio pending",
     "report": "docs/evidence/daily-companion-phase23-graded-restart-2026-10-15.md"
+  },
+  "claude_m1_source_teaching": {
+    "scope": "Semantic routing classifies the learner question plus requested file/symbol names instead of the source body; omitted code_requests re-read this session's latest code_question window at the current revision (moved revision named); concept_explain history/event rows store the question plus source provenance, not code; teacher context lists recent source-read provenance only. Index sync is skipped (index_sync=unchanged) when the authorized tree fingerprint (relative path, size, mtime; build/.git/.dart_tool/node_modules skipped) equals the last successful sync, persisted in plugin data code_sync_state.json; any change, failed sync, force or empty-result retry still syncs.",
+    "offline": "scripts/test_neko_project_code_teaching.py (+3), scripts/test_neko_source_route_memory.py (3); existing product suites unchanged; scripts/test_neko_code_sync_fingerprint.py (3)",
+    "backup": "benchmarks/raw/evidence/claude-m1-before",
+    "model_or_device_verified": false,
+    "real_scene": "benchmarks/raw/evidence/claude-m1-followup3-1.json: 3 text SDK turns correct (explain, impact follow-up without code_requests, wrong-claim correction); route input 389-403 tokens; callbacks 6.98/2.89/2.56 s; DeepSeek 890->896; prior history unchanged. Fingerprint sync not yet in a real scene."
   }
 }

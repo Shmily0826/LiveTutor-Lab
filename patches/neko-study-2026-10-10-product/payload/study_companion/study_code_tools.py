@@ -54,6 +54,10 @@ _TIMEOUT_SECONDS = 120
 # second. So one throttled sync per question is the cheap correct answer - no file watcher of
 # our own, no resident daemon to babysit.
 _SYNC_THROTTLE_SECONDS = 45.0
+# A sync of the indexed parent cost 2-3 s per question once turns were more than the throttle
+# apart; a stat walk of the authorized tree costs ~20 ms. Directories the index never serves
+# are skipped so build output cannot force a sync.
+_FINGERPRINT_SKIP_DIRS = frozenset({".git", "build", ".dart_tool", "node_modules"})
 _SUBCOMMANDS = {"explore": "explore", "symbol": "node", "impact": "impact", "find": "query",
                 # "这个项目结构什么样 / 模块怎么划分" was unanswerable: three questions on 2026-10-12
                 # all came back `kept=6 shown_files=0`, because every mode here wants a symbol or a
@@ -436,6 +440,7 @@ class _StudyCodeToolsMixin:
         Failing to sync never blocks a question - the previous index still answers it, and the
         learner is told the freshness state rather than the tool refusing to read.
         """
+        import asyncio
         import time
 
         root = authorized["root"]
@@ -444,12 +449,54 @@ class _StudyCodeToolsMixin:
         if not force and now - float(seen.get(root, 0.0) or 0.0) < _SYNC_THROTTLE_SECONDS:
             return "throttled"
         self._code_sync_at = {**seen, root: now}
+        # Skip the sync only when the tree is byte-for-byte the one the last successful sync
+        # saw (paths, sizes, mtimes); an unreadable tree or saved state means sync as before.
+        try:
+            fingerprint = await asyncio.to_thread(_code_tree_fingerprint, root)
+        except Exception:
+            fingerprint = ""
+        if not force and fingerprint and self._code_synced_fingerprint(root) == fingerprint:
+            return "unchanged"
         try:
             done = await _run([*cli, "sync", str(Path(root).parent)], timeout=90)
         except Exception as exc:
             return f"failed:{type(exc).__name__}"
         code = getattr(done, "returncode", 1)
-        return "synced" if code == 0 else f"failed:exit_{code}"
+        if code != 0:
+            return f"failed:exit_{code}"
+        if fingerprint:
+            self._remember_synced_fingerprint(root, fingerprint)
+        return "synced"
+
+    def _code_sync_state_path(self) -> Path | None:
+        try:
+            return Path(self.data_path("code_sync_state.json"))
+        except Exception:
+            return None
+
+    def _code_synced_fingerprint(self, root: str) -> str:
+        cached = (getattr(self, "_code_synced_fingerprints", None) or {}).get(root)
+        if cached:
+            return cached
+        path = self._code_sync_state_path()
+        try:
+            data = json.loads(path.read_text(encoding="utf-8")) if path else {}
+        except (OSError, ValueError):
+            return ""
+        return str(data.get(root) or "") if isinstance(data, dict) else ""
+
+    def _remember_synced_fingerprint(self, root: str, fingerprint: str) -> None:
+        self._code_synced_fingerprints = {**(getattr(self, "_code_synced_fingerprints", None) or {}),
+                                          root: fingerprint}
+        path = self._code_sync_state_path()
+        if path is None:
+            return
+        try:
+            temporary = path.with_name(path.name + ".tmp")
+            temporary.write_text(json.dumps(self._code_synced_fingerprints), encoding="utf-8")
+            os.replace(temporary, path)
+        except OSError:
+            pass  # Only the next launch pays one extra sync.
 
     async def _code_head(self, root: str) -> str:
         """The repository's current commit, for the one thing `sync` cannot say.
@@ -604,7 +651,7 @@ class _StudyCodeToolsMixin:
             numbers = sorted({int(hit.group(1)) for line in kept if (hit := _FENCED_LINE.match(line))
                               and offset <= int(hit.group(1)) < offset + limit})
             shown = [{"file": index_file, "lines": numbers}] if numbers else []
-        if sub != "files" and not index_file and not shown and synced == "throttled":
+        if sub != "files" and not index_file and not shown and synced in ("throttled", "unchanged"):
             # Measured: a file added seconds before a question stayed invisible behind the
             # throttle, and "not found" then reads like "does not exist". When the throttle is
             # the only thing standing between the question and an empty answer, spend one
@@ -669,7 +716,8 @@ class _StudyCodeToolsMixin:
             barren += (" These are search matches, not function bodies. A returned file path is an indexed "
                        "entry, so do not claim the file is absent. Use an exact returned symbol with symbol/explore "
                        "to read the relevant body before explaining its lines.")
-        barren += (" index_sync=throttled only means a recent index refresh was reused; source queries still run. "
+        barren += (" index_sync=throttled or unchanged only means a recent index refresh was reused or no "
+                   "authorized file changed since the last one; source queries still run. "
                    "It is not a service limit or a reason to wait for recovery. For missing specific file lines, "
                    "use mode=file with the actual indexed file path and a small offset/limit.")
         with phase('source_surface'):
@@ -698,6 +746,23 @@ async def _publish_code_surface(project, commit, evidence):
         return {"available": response.is_success, **response.json()}
     except (httpx.HTTPError, ValueError):
         return {"available": False, "reason": "learning_surface_unavailable"}
+
+
+def _code_tree_fingerprint(root: str) -> str:
+    import hashlib
+
+    digest = hashlib.sha256()
+    for directory, children, files in os.walk(root):
+        children[:] = sorted(child for child in children if child not in _FINGERPRINT_SKIP_DIRS)
+        for name in sorted(files):
+            path = os.path.join(directory, name)
+            try:
+                stat = os.stat(path)
+            except OSError:
+                continue
+            digest.update(f"{os.path.relpath(path, root)}\0{stat.st_size}\0{stat.st_mtime_ns}\n"
+                          .encode("utf-8", "surrogatepass"))
+    return digest.hexdigest()
 
 
 async def _run(command: list[str], timeout: float = _TIMEOUT_SECONDS) -> subprocess.CompletedProcess:

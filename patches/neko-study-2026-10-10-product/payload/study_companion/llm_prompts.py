@@ -305,6 +305,25 @@ def _recent_history_items(history: Any) -> list[dict[str, str]]:
     ]
 
 
+def _recent_source_reads(history: Any, *, limit: int = 3) -> list[dict[str, str]]:
+    """Where this session's source facts came from: file/line/revision only, never code.
+
+    A source turn writes one code_question row per read plus its explanation, so the
+    four-row interaction window loses the previous turn's citations exactly when a
+    follow-up ('that line') needs them.
+    """
+    if not isinstance(history, list):
+        return []
+    rows = [item for item in history if isinstance(item, dict) and item.get("kind") == "code_question"]
+    if rows and all(isinstance(item.get("id"), int) for item in rows):
+        rows.sort(key=lambda item: item["id"])
+    return [
+        {"request": _bounded_text(item.get("input_text"), 160),
+         "provenance": _bounded_text(item.get("output_text"), 240)}
+        for item in rows[-limit:]
+    ]
+
+
 def _recent_learning_events(events: Any) -> list[dict[str, str]]:
     if not isinstance(events, list):
         return []
@@ -360,6 +379,11 @@ def build_concept_recent_context(context: dict[str, Any] | None) -> str:
     history = _recent_history_items(context.get("history"))
     if history:
         memory["recent_interactions"] = history
+    source_reads = _recent_source_reads(context.get("history"))
+    if source_reads:
+        # Provenance only: resolves "that line" to a file/revision; the facts still have to
+        # come from the evidence supplied with this request.
+        memory["recent_source_reads_provenance_only"] = source_reads
     previous = _recent_history_items(context.get("previous_course_history"))
     if previous:
         memory["previous_sessions_same_course"] = previous

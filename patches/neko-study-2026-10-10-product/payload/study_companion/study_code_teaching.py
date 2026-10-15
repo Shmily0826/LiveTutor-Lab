@@ -28,6 +28,57 @@ def validate_code_requests(requests):
     return normalized
 
 
+def _route_text(question, requests):
+    """What the semantic router classifies: the learner's question and the named targets.
+
+    The router decides subject/topic/response mode; the source body is the teacher's evidence,
+    not a classification input, and sending it made the classification prompt grow with every line.
+    """
+    targets = [str(request.get(key) or '').strip() for request in requests for key in ('file', 'query')]
+    hint = ', '.join(dict.fromkeys(target for target in targets if target))
+    return (question.strip() + (f'\n[Source targets] {hint}' if hint else ''))[:600]
+
+
+def _history_text(question, sources):
+    """The interaction row keeps the question and where its facts came from, not the code."""
+    refs = []
+    for source in sources:
+        shown = source.get('shown') or []
+        cited = '; '.join(f"{item.get('file')}:{item['lines'][0]}-{item['lines'][-1]}"
+                          for item in shown[:4] if isinstance(item, dict) and item.get('lines'))
+        refs.append(f"{source.get('project')}@{source.get('repo_commit')} {cited or source.get('mode')}")
+    return question.strip() + '\n[Source evidence] ' + ' | '.join(refs)
+
+
+async def last_source_requests(plugin, authorization, session_id):
+    """Re-read the newest source window of this session, for 'that line' follow-ups.
+
+    Only this session's own code_question rows for the same authorized project qualify; the
+    window is read again at the current revision, so a moved repository is reported, not hidden.
+    """
+    store = getattr(plugin, '_store', None)
+    if store is None or not session_id:
+        return [], ''
+    rows = await asyncio.to_thread(store.list_interactions, 30, session_id=session_id)
+    for row in rows:  # newest first
+        metadata = row.get('metadata') or {}
+        if row.get('kind') != 'code_question' or metadata.get('project') != authorization.get('name'):
+            continue
+        requests = []
+        for item in metadata.get('shown') or []:
+            lines = [line for line in (item.get('lines') or []) if type(line) is int and line > 0] if isinstance(item, dict) else []
+            if not lines or not isinstance(item.get('file'), str) or not item['file'].strip():
+                continue
+            start = min(lines)
+            requests.append({'mode': 'file', 'file': item['file'], 'offset': start,
+                             'limit': max(1, min(120, max(lines) - start + 1))})
+            if len(requests) == 3:
+                break
+        if requests:
+            return requests, str(metadata.get('commit') or '')
+    return [], ''
+
+
 async def explain_project_code(plugin, *, question, requests, language, output_target):
     with trace_call(getattr(plugin, 'logger', None)):
         return await _explain_project_code(plugin, question=question, requests=requests,
@@ -42,13 +93,19 @@ async def _explain_project_code(plugin, *, question, requests, language, output_
     def changed():
         return refuse('course_context_changed', '课程、会话或授权项目已变化，请核对当前材料后重新提问。',
                       'The course, session or authorized project changed. Please ask again about the current material.')
+    def invalid(detail):
+        return refuse('invalid_code_requests', '请指定一至三个有界源码范围后再讲解。',
+                      'Please specify one to three bounded source requests.', detail=detail)
+    # Omitting code_requests means "the code we were just reading"; it is resolved from this
+    # session's own records after the course and authorization are known, never guessed.
+    reuse = requests is None
     try:
-        requests = validate_code_requests(requests)
+        if not reuse:
+            requests = validate_code_requests(requests)
         if not isinstance(question, str) or not question.strip():
             raise ValueError('Include the learner question.')
     except ValueError as error:
-        return refuse('invalid_code_requests', '请指定一至三个有界源码范围后再讲解。',
-                      'Please specify one to three bounded source requests.', detail=str(error))
+        return invalid(str(error))
     with phase('material_snapshot'):
         snapshot = await plugin._study_native_material_snapshot(include_material=False)
     authorization = plugin._code_authorization()
@@ -58,6 +115,15 @@ async def _explain_project_code(plugin, *, question, requests, language, output_
     if not authorization:
         return refuse('NO_AUTHORIZED_PROJECT', '请先授权要学习的项目目录；我还没有读取源码。',
                       'Please authorize the project directory first; I have not read its source.')
+    previous_revision = ''
+    if reuse:
+        requests, previous_revision = await last_source_requests(plugin, authorization, context.get('session_id'))
+        if not requests:
+            return invalid('No earlier source window in this session to re-read; name the file or symbol.')
+        try:
+            requests = validate_code_requests(requests)
+        except ValueError as error:
+            return invalid(str(error))
     evidence, sources = [], []
     revision = None
     for request in requests:
@@ -91,6 +157,11 @@ async def _explain_project_code(plugin, *, question, requests, language, output_
             'Keep identifiers exact; full paths and revision hashes are returned separately as provenance, not spoken prose. '
             'Honor index freshness notes. A file tree or search match is not a function body. '
             'Default to two short, patient sentences without greetings or filler; explicit length preferences win.\n'
+            + (('This is a follow-up: the windows above are the source most recently read in this session, read again now. '
+                + (f'They were first read at revision {previous_revision} and the project is now at {revision}; '
+                   'line numbers may have moved, so say which revision you cite.\n'
+                   if previous_revision and previous_revision != revision else '\n'))
+               if reuse else '')
             + body)
     lock = getattr(plugin, '_study_explanation_language_lock', None)
     if lock is None:
@@ -99,7 +170,8 @@ async def _explain_project_code(plugin, *, question, requests, language, output_
         if not material_context_current(plugin, context) or plugin._code_authorization() != authorization:
             return changed()
         answer = await plugin._study_explain_for_turn(question=question, text=text, requested=language,
-            context=context, image='', captured_text='', output_target=output_target)
+            context=context, image='', captured_text='', output_target=output_target,
+            route_text=_route_text(question, requests), history_text=_history_text(question, sources))
         if not material_context_current(plugin, context) or plugin._code_authorization() != authorization:
             return changed()
         if answer.get('ok', True) and not answer.get('degraded'):

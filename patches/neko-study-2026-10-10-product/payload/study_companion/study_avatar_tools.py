@@ -822,6 +822,8 @@ class _StudyAvatarToolsMixin:
             "establish arrows. For teaching about the authorized project use material_source=project_code "
             "and one to three code_requests using existing study_code modes/file windows; the backend reads "
             "the actual filtered evidence for the teacher. Do not paste a code-tool summary into text. "
+            "For a follow-up about the code just discussed ('that line', 'what if I change it'), you may omit "
+            "code_requests: the backend re-reads this session's latest source window at the current revision. "
             "For named files use mode=file with a small window; include consumers/guards only when needed. "
             "This is the main teaching tool."
         ),
@@ -975,7 +977,8 @@ class _StudyAvatarToolsMixin:
                                                      output_target=output_target)
 
     async def _study_explain_for_turn(self, *, question: str, text: str, requested: str,
-                                    context: dict, image: str, captured_text: str, output_target: str = ""):
+                                    context: dict, image: str, captured_text: str, output_target: str = "",
+                                    route_text: str = "", history_text: str = ""):
         # previous first: the directive below writes the remembered course preference
         # into cfg.language, and that is the value a one-off request has to go back to.
         previous = str(getattr(self._cfg, "language", "") or "")
@@ -990,8 +993,12 @@ class _StudyAvatarToolsMixin:
             # override has to be applied there for the call and undone after it.
             if requested:
                 self._cfg.language = requested
+            # Source teaching routes on the question alone and stores the question plus its
+            # provenance; the evidence body still goes to the teacher in text.
+            extra = {key: value for key, value in (("_semantic_route_text", route_text),
+                                                   ("_history_input_text", history_text)) if value}
             payload = _envelope(await self.study_explain_text(text=body, vision_image_base64=image,
-                                                            _material_context=context))
+                                                            _material_context=context, **extra))
             reply = _first_text(payload, "reply", "summary", "answer", "explanation")
             if not reply:
                 return payload

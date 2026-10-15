@@ -208,5 +208,52 @@ class ProjectCodeTeaching(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(timing._current.get())
         self.h.study_explain_text.assert_not_awaited()
 
+    async def test_router_gets_question_and_targets_while_teacher_keeps_full_evidence(self):
+        await self.explain()
+        call = self.h.study_explain_text.call_args.kwargs
+        self.assertIn('17\\tif allowed:', call['text'])
+        route = call['_semantic_route_text']
+        self.assertIn('只用两句', route)
+        self.assertIn('main.py', route)
+        self.assertNotIn('if allowed', route)
+        self.assertNotIn('Authorized CodeGraph evidence', route)
+        stored = call['_history_input_text']
+        self.assertTrue(stored.startswith('解释源码的调用条件'))
+        self.assertIn('Project@revision-A main.py:17-18', stored)
+        self.assertNotIn('if allowed', stored)
+
+    def remember_read(self, project='Project', commit='revision-A', file='project/main.py', lines=(17, 18)):
+        self.store.append_interaction(kind='code_question', input_text=f'[{project}@{commit}] {file}',
+            output_text=f'Returned authorized source evidence: {file}:{lines[0]}-{lines[-1]}',
+            metadata={'project':project, 'commit':commit, 'shown':[{'file':file, 'lines':list(lines)}]},
+            session_id=self.h._study_session_id)
+
+    async def follow_up(self):
+        return await self.h.study_explain_tool(question='那如果改这一行会影响哪里？', material_source='project_code',
+                                               _ctx={'lanlan_name':'Role-A'})
+
+    async def test_follow_up_without_requests_rereads_latest_window_of_this_session(self):
+        self.remember_read(file='project/old.py', lines=(1, 2))
+        self.remember_read(file='project/main.py', lines=(17, 30))
+        result = await self.follow_up()
+        self.h.study_code_tool.assert_awaited_once_with(file='project/main.py', offset=17, limit=14, mode='file')
+        text = self.h.study_explain_text.call_args.kwargs['text']
+        self.assertIn('This is a follow-up', text)
+        self.assertNotIn('first read at revision', text)
+        self.assertEqual(result['reply'], 'A guarded call. One inference.')
+
+    async def test_follow_up_names_a_moved_revision_and_ignores_other_projects_and_sessions(self):
+        self.remember_read(commit='revision-old')
+        self.remember_read(project='Other', file='other/secret.py')
+        await self.follow_up()
+        self.h.study_code_tool.assert_awaited_once_with(file='project/main.py', offset=17, limit=2, mode='file')
+        self.assertIn('first read at revision revision-old and the project is now at revision-A',
+                      self.h.study_explain_text.call_args.kwargs['text'])
+        await self.h._restart_study_session(course_id='course-A')
+        self.h.study_code_tool.reset_mock()
+        result = await self.follow_up()
+        self.assertEqual(result['error'], 'invalid_code_requests')
+        self.h.study_code_tool.assert_not_awaited()
+
 
 if __name__ == '__main__': unittest.main(verbosity=2)

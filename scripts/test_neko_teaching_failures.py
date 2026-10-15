@@ -92,7 +92,8 @@ class TeachingFailureTest(unittest.TestCase):
         names = {"RELAY_NOTE", "_FENCE_LINE", "_FENCE_MARK", "_CODE_SPAN", "_SPEAKABLE_FIELDS",
                  "_speakable", "_teaching_failure_wording", "_teaching"}
         ns = definitions(PAYLOAD / "study_avatar_tools.py", names,
-                         {"json": json, "re": re, "_turn_language_request": lambda *_: ""},
+                         {"json": json, "re": re, "_turn_language_request": lambda *_: "",
+                          "__name__": "failure_product.avatar", "__package__": "failure_product"},
                          method="study_explain_tool")
         async def scenario():
             async def unexpected(**kwargs):

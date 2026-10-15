@@ -21,6 +21,21 @@ ROOT = Path(__file__).resolve().parents[1]
 LEDGER = ROOT / 'benchmarks/raw/neko-desktop-egress-cap'
 
 
+# The original single call is kept; followup3 checks source continuity across turns:
+# explain a window, ask an impact follow-up and a wrong claim without naming the code again.
+SCENARIOS = {
+    'single': [{
+        'question': '请解释 weather_service.dart 的非200状态分支，只用两句中文；上层处理没有证据就不要推断。',
+        'code_requests': [{'mode': 'file', 'file': 'weather_service.dart', 'offset': 1, 'limit': 29}]}],
+    'followup3': [
+        {'question': '请解释 weather_service.dart 里请求天气后怎样处理非200响应，只用两句中文；上层处理没有证据就不要推断。',
+         'code_requests': [{'mode': 'file', 'file': 'weather_service.dart', 'offset': 1, 'limit': 29}]},
+        {'question': '如果把刚才那段判断状态码的条件改成只在 statusCode >= 500 时抛异常，404 这种响应会怎样？两句中文。'},
+        {'question': '我觉得非200的时候它还是会先调用 Weather.fromJson 解析 body，对吧？请按刚才的源码核对，两句中文。'},
+    ],
+}
+
+
 def history_snapshot(database):
     with sqlite3.connect(database.resolve().as_uri() + '?mode=ro', uri=True) as connection:
         connection.row_factory = sqlite3.Row
@@ -51,7 +66,7 @@ async def main(options):
             or before['budgets'] != {'api.deepseek.com': 2000, 'www.lanlan.app': None, 'www.lanlan.tech': 0}
             or before['spent'].get('api.deepseek.com', 0) >= 1994):
         raise RuntimeError('Preserve the approved round and leave room for this bounded call.')
-    report = {'started_wall': time.time(), 'before': before, 'history_before': history_snapshot(database), 'timings': [],
+    report = {'scenario': options.scenario, 'started_wall': time.time(), 'before': before, 'history_before': history_snapshot(database), 'timings': [],
               'text_only': True, 'task_silent': True, 'room_microphone': False,
               'capture': False, 'loopback': False, 'native_started': False,
               'proof': 'real Study SDK/model timing, not autonomous avatar, device or human proof'}
@@ -64,7 +79,7 @@ async def main(options):
     log = ROOT / 'benchmarks/raw/neko-desktop-host.log'
     log_start = log.stat().st_size if log.exists() else 0
     command = host_command(options)
-    command[command.index('--api-budget') + 1] = '6'
+    command[command.index('--api-budget') + 1] = str(3 * len(SCENARIOS[options.scenario]))
     command[command.index('--hold') + 1] = '240'
     handle = output.with_suffix('.host.log').open('xb')
     process = None
@@ -91,31 +106,34 @@ async def main(options):
         report['ready'] = ready
         if not ready:
             raise RuntimeError('Study readiness failed: ' + reason)
-        print('Muted Study SDK ready; one bounded source-teacher callback', flush=True)
-        started = time.monotonic()
-        report['request_started_wall'] = time.time()
-        request = asyncio.create_task(asyncio.to_thread(call, 'study_explain', {
-            'material_source': 'project_code',
-            'question': '请解释 weather_service.dart 的非200状态分支，只用两句中文；上层处理没有证据就不要推断。',
-            'code_requests': [{'mode': 'file', 'file': 'weather_service.dart', 'offset': 1, 'limit': 29}],
-        }, timeout=95))
-        while not request.done():
-            if tracker.done():
-                tracker.result()
-            spent = json.loads(LEDGER.read_text(encoding='utf-8'))['spent'].get('api.deepseek.com', 0)
-            if spent - before['spent'].get('api.deepseek.com', 0) >= 12:
-                raise RuntimeError('Scene external-call ceiling reached; stop without retry.')
-            if time.monotonic() - started > 100:
-                raise TimeoutError('Existing callback observation expired; stop owned host, no restart.')
-            await asyncio.wait({request}, timeout=0.5)
-        report['result'] = await request
-        report['request_finished_wall'] = time.time()
-        report['callback_ms'] = round((time.monotonic() - started) * 1000, 3)
-        answer = report['result'].get('output', {})
-        if (report['result'].get('is_error') or answer.get('ok', True) is False
-                or answer.get('degraded') or not answer.get('reply')):
-            raise RuntimeError('Study callback failed; retain result, no retry.')
-        print('Single callback terminal; collecting content-free stage records', flush=True)
+        print(f'Muted Study SDK ready; {len(SCENARIOS[options.scenario])} bounded source-teacher callback(s)', flush=True)
+        report['turns'] = []
+        for arguments in SCENARIOS[options.scenario]:
+            started = time.monotonic()
+            turn = {'arguments': arguments, 'request_started_wall': time.time()}
+            report['turns'].append(turn)
+            request = asyncio.create_task(asyncio.to_thread(call, 'study_explain',
+                {'material_source': 'project_code', **arguments}, timeout=95))
+            while not request.done():
+                if tracker.done():
+                    tracker.result()
+                spent = json.loads(LEDGER.read_text(encoding='utf-8'))['spent'].get('api.deepseek.com', 0)
+                if spent - before['spent'].get('api.deepseek.com', 0) >= 12:
+                    raise RuntimeError('Scene external-call ceiling reached; stop without retry.')
+                if time.monotonic() - started > 100:
+                    raise TimeoutError('Existing callback observation expired; stop owned host, no restart.')
+                await asyncio.wait({request}, timeout=0.5)
+            turn['result'] = await request
+            turn['request_finished_wall'] = time.time()
+            turn['callback_ms'] = round((time.monotonic() - started) * 1000, 3)
+            save()
+            answer = turn['result'].get('output', {})
+            if (turn['result'].get('is_error') or answer.get('ok', True) is False
+                    or answer.get('degraded') or not answer.get('reply')):
+                raise RuntimeError('Study callback failed; retain result, no retry.')
+        report['result'] = report['turns'][0]['result']
+        report['callback_ms'] = report['turns'][0]['callback_ms']
+        print('Callbacks terminal; collecting content-free stage records', flush=True)
     except Exception as error:
         report['failure'] = type(error).__name__ + ': ' + str(error)
     finally:
@@ -142,6 +160,15 @@ async def main(options):
                 stream.seek(log_start)
                 for match in re.finditer(r'study_code_timing (\{[^\r\n]+\})', stream.read().decode('utf-8', 'replace')):
                     report['timings'].append(json.loads(match.group(1)))
+        # Content-free model audit of this launch: operation, tokens, latency, failure type.
+        report['api_audit'] = []
+        for path in sorted((ROOT / 'benchmarks/raw/evidence').glob('neko-product-api-*.jsonl')):
+            if path.stat().st_mtime >= report['started_wall']:
+                for line in path.read_text(encoding='utf-8').splitlines():
+                    row = json.loads(line) if line.strip() else {}
+                    if row.get('event') in ('completed', 'failed'):
+                        report['api_audit'].append({key: row.get(key) for key in
+                            ('event', 'call', 'operation', 'ms', 'input_tokens', 'output_tokens', 'error_type')})
         report['history_after'] = history_snapshot(database)
         report['old_history_unchanged'] = all(report['history_after'][table].get(key) == value
             for table, rows in report['history_before'].items() for key, value in rows.items())
@@ -158,6 +185,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--store', required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--scenario', choices=sorted(SCENARIOS), default='single')
     result = asyncio.run(main(parser.parse_args()))
     raise SystemExit(1 if any(result.get(k) for k in ('failure', 'cleanup_error', 'tracker_error'))
-                     or not result.get('old_history_unchanged') or len(result['timings']) != 1 else 0)
+                     or not result.get('old_history_unchanged')
+                     or len(result['timings']) != len(SCENARIOS[result['scenario']]) else 0)

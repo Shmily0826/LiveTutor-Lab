@@ -32,7 +32,8 @@ method = next(node for node in cls.body if isinstance(node, ast.AsyncFunctionDef
 namespace = {"Any": Any, "asyncio": asyncio, "StudyInputSemantics": Semantics,
              "match_topics": graph.match_topics, "build_knowledge_guidance_payload": graph.build_knowledge_guidance_payload,
              "LLM_OPERATION_CONCEPT_EXPLAIN": "explain", "LLM_OPERATION_KNOWLEDGE_TRACK": "track",
-             "LLM_OPERATION_SUMMARIZE_SESSION": "summary", "_SEMANTIC_ROUTE_MIN_CONFIDENCE": 0.6}
+             "LLM_OPERATION_SUMMARIZE_SESSION": "summary", "_SEMANTIC_ROUTE_MIN_CONFIDENCE": 0.6,
+             "phase": lambda name: __import__("contextlib").nullcontext()}
 exec(compile(ast.fix_missing_locations(ast.Module(body=[outcome, method], type_ignores=[])), "patched_context_support", "exec"), namespace)
 
 

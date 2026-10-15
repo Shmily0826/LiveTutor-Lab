@@ -380,7 +380,8 @@ class _TutorContextSupportMixin:
             return {}, _knowledge_guidance_outcome(status="not_applicable")
         seed = dict(context or {})
         query = str(
-            seed.get("topic_hint")
+            seed.get("semantic_route_text")
+            or seed.get("topic_hint")
             or seed.get("source_text")
             or seed.get("question")
             or seed.get("topic")
@@ -934,7 +935,7 @@ class _TutorContextSupportMixin:
             event = {
                 "operation": operation,
                 "kind": operation,
-                "input_text": reply.input_text,
+                "input_text": str((extra or {}).get("history_input_text") or reply.input_text),
                 "summary": summary,
                 "degraded": bool(reply.degraded),
                 "diagnostic": reply.diagnostic,
@@ -1011,7 +1012,7 @@ class _TutorContextSupportMixin:
                 self._store,
                 progress=progress,
                 kind=history_kind,
-                input_text=reply.input_text,
+                input_text=str((extra_context or {}).get("history_input_text") or reply.input_text),
                 output_text=reply.reply,
                 metadata={**metadata, **({"material_context": dict((extra_context or {})["_material_context"])}
                                          if (extra_context or {}).get("_material_context") else {})},

@@ -198,6 +198,8 @@ class _TutorExplainEntriesMixin:
         if self._agent is None:
             return Err(SdkError("study tutor agent is not initialized"))
         material_context = kwargs.pop("_material_context", None)
+        semantic_route_text = str(kwargs.pop("_semantic_route_text", "") or "").strip()
+        history_input_text = str(kwargs.pop("_history_input_text", "") or "").strip()
         async def material_is_current():
             if not material_context:
                 return True
@@ -301,6 +303,11 @@ class _TutorExplainEntriesMixin:
                 "source_text": source_text,
                 "deadline_monotonic": primary_deadline_monotonic,
             }
+            # Internal keys only: neither is in the prompt-context allowlist.
+            if semantic_route_text:
+                extra_context["semantic_route_text"] = semantic_route_text
+            if history_input_text:
+                extra_context["history_input_text"] = history_input_text
             if vision_image_payload:
                 extra_context["vision_enabled"] = True
                 extra_context["vision_image_base64"] = vision_image_payload
