@@ -32,3 +32,5 @@ raw只读profile SHA256 fbfb081828fb547fffa89665bfcc9756970bdfb11a994f7c10bf68ef
 完整工具关键路径尚需在实际教师场读取新计时，尤其sync/上下文/DB/surface；本阶段没有声称拿到这些未测数。优先沿现有静音SDK教学量具做一次必要有界真实验证（不Native、不mic），否则转A/C/E/F独立余项。Claude方案继续作为候选而非已验修复，不等其限额。
 
 原账本实核888/2000、app79/null、tech0，未重置/新增外呼。无新live handle、宿主、设备或音频；原Root脏树/index空/contract原SHA/Sky源码保留。Goal active，完整A–F及最终集中真人体验未完成。
+
+阶段59发布确认：14文件commit/push 5a78ec0c12b1f13c7c2fd559b1548970770724d9，远端exact、publisher clean、master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb，Root index空。发布仅源码/测试/文档，不含raw、DB、音频、备份或密钥。31为同组不同case，取消断言补强后只重跑该1，不重复计数。原888/79/0，无live。下一60复用原静音SDK callback与owned清理/超时量具读取真实完整计时；先核支持，不重开Native70、不开mic，不等待Claude。完整A–F/Goal active。

@@ -1,4 +1,4 @@
-> **当前：用户明确继续，Goal已核active（2026-10-15，阶段59）。** Claude限额不阻塞本地推进。先独立计时/离线核对源码教学延迟，保留路由、课程、历史与授权保护；本轮不mic/capture/loopback或播放声音，原账本888/2000、app79/null、tech0不变。旧暂停记录保留为历史。完整A–F不缩范围，完成依据实际证据。
+> **当前：用户明确继续，Goal已核active（2026-10-15，阶段60）。** Claude限额不阻塞本地推进。先独立计时/离线核对源码教学延迟，保留路由、课程、历史与授权保护；本轮不mic/capture/loopback或播放声音，原账本现890/2000、app79/null、tech0。旧暂停记录保留为历史。完整A–F不缩范围，完成依据实际证据。
 
 # 日常学习伙伴局部问题（阶段57后，未全局阻塞）
 
@@ -7,7 +7,12 @@
 每次压缩或自动续跑先完整读取 contract、plan、status、blockers，再读当前阶段报告；后续明确指令优先并同步记录。完成依据实际交付和证据；SOURCE/OFFLINE、真实模型/SQLite、Native接收排程、设备可听、真人体验分别记录，旧FAIL/PARTIAL不追改。
 
 
-## 最新阶段59：分段计时与本地证据
+
+## 最新阶段60：真实SDK计时，模型超时
+
+[阶段60报告](evidence/daily-companion-phase60-live-source-timing-2026-10-15.md)：修共享量具health预算1→90秒启动竞态后，73实际Study就绪/唯一callback；源码3.669秒，sync1.968秒/inventory0.675秒/query0.917秒/记录4ms。语义路由12秒、解释45秒超时，degraded=timeout，模型未通过、不冒语音提速。旧5interactions SHA不变/QA0，新增code_question仅源码记录；原账本890/2000、app79/null、tech0。owned28全清、端口空、SourceGate PASS。停止该线路无效重试并退避，下一61转B原固定WAV静音/裁剪离线分析，不等Claude，完整A–F/Goal active。71/72调用前失败原件保留。
+
+## 历史阶段59：分段计时与本地证据
 
 [阶段59报告](evidence/daily-companion-phase59-source-timing-2026-10-15.md)：每次调用独立、低内容计时已部署；31相关离线case通过（新2，不重复计数），SourceGate通过。只读实际CLI裸名2.271秒，其中inventory1.219秒；完整已知路径1.029秒，同源码SHA。不含sync/DB/surface/模型，不能冒端到端提速；暂不做路由并发或裸名缓存。manifest32/32与31直接部署项匹配，余index.html重算既有protected变换一致。原888/79/0，无live，Goal active。下一步一次必要静音SDK场补完整计时，完整A–F继续，不等Claude。
 
@@ -53,3 +58,9 @@ D56实际缺口：现源码返回后由角色自解释，不能以文字Focus62�
 56已发布9858528，SOURCE/OFFLINE和指定file文字角色69窄证已闭环；免费Native语音选tool/设备/真人仍待57，19.44秒及多读仍待。无live/原880/78/0，不全局blocked。
 57审查明确：旧teaching-text-chain因控制器授权被禁，不用其绕过；用已支持的output-only固定WAV。Native音频/排程与真正可听/人反馈分层，局部失败继续其它任务。
 57的free Native源码教师→实际PCM/renderer单例已通过并发布94a1f02；物理可听/术语发音/真人仍未验。新增测量窗口工具9.909秒及Native转写片段空格待58调查，不据转写猜音频结巴，不全局blocked。原888/79/0，无live，禁mic/loopback。
+
+60准备：只做一个静音真实SDK调用补59完整计时，范围见phase60报告。原888/79/0、无live，完整A–F/Goal active，不等待Claude。
+
+60唯一修正后72量具已启动exec97486；仅poll此handle，未终态不重启或冒真实模型通过。71调用前量具失败已保留，原888/79/0。
+
+60：72已终态/清理，Study未注册且零外呼。共享量具health预算1→90秒后唯一73已启动exec22094，只poll此handle；未终态不重启/不认模型通过。71/72原失败不覆盖。

@@ -37,7 +37,7 @@ CONTRASTS = [
 def host_command(options):
     return [str(host.SOURCE_PYTHON), '-X', 'utf8', str(ROOT/'scripts/neko_desktop_tutor_host.py'),
         '--source', '--core-provider', 'deepseek', '--store', options.store, '--hold', '380',
-        '--seconds', '1', '--api-budget', '24', '--text-only', '--egress-budget', '2000',
+        '--seconds', '90', '--api-budget', '24', '--text-only', '--egress-budget', '2000',
         '--budget-round', 'bargein-autocheck-20261012']
 
 
