@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 import shutil
 import socket
+import sqlite3
 import subprocess
 import time
 
@@ -54,6 +55,25 @@ SCENES = {
         explain('再看一下 api_config.dart 里的内容，两句中文。',
                 [{'mode': 'file', 'file': 'api_config.dart', 'offset': 1, 'limit': 30}],
                 note='second bare file name in the same host: inventory from cache'),
+    ],
+    # W5 step 5: a quiz, a deliberately wrong answer, then the learner's own correction.
+    'w5step5': [
+        start(),
+        {'tool': 'study_quiz', 'arguments': {'topic': 'weather_service.dart 对非200响应的处理',
+                                             'request': '只出一道简短的概念题，不要公布答案。'}, 'kind': 'quiz'},
+        {'tool': 'study_answer', 'arguments': {'answer': '非200的时候它会先调用 Weather.fromJson 解析 body，再返回结果。'},
+         'kind': 'wrong-answer'},
+        {'tool': 'study_session', 'arguments': {'action': 'status'}, 'kind': 'status'},
+        {'tool': 'study_answer', 'kind': 'correction',
+         'arguments': lambda turns: {'answer': '刚才说错了，非200时直接抛出异常，不会解析 body。',
+                                     'correction_of': {key: turns[-1]['output']['current_question'][key]
+                                                       for key in ('question_id', 'attempt_id')}}},
+    ],
+    # W5 step 4 as the Native voice route sent it: code_requests holding one bare string.
+    'w5strings': [
+        start(),
+        explain('如果把这个判断改成只在状态码大于等于500时才抛异常，404会怎样？两句中文，不确定的说明是推断。',
+                ['weather_service.dart'], kind='string-request'),
     ],
     'w2structure': [
         start(),
@@ -132,13 +152,16 @@ async def main(options):
             raise RuntimeError('Study readiness failed: ' + reason)
         for step in steps:
             started = time.monotonic()
-            result = await asyncio.to_thread(call, step['tool'], step['arguments'], timeout=95)
+            arguments = step['arguments'](report['turns']) if callable(step['arguments']) else step['arguments']
+            result = await asyncio.to_thread(call, step['tool'], arguments, timeout=95)
             output = result.get('output', {}) if isinstance(result, dict) else {}
             turn = {key: step[key] for key in ('kind', 'note') if key in step}
-            turn.update(tool=step['tool'], arguments=step['arguments'], ms=round((time.monotonic() - started) * 1000),
+            turn.update(tool=step['tool'], arguments=arguments, ms=round((time.monotonic() - started) * 1000),
                         ok=output.get('ok', True) is not False and not output.get('degraded') and not result.get('is_error'),
                         error=output.get('error') or output.get('diagnostic') or '',
-                        reply=str(output.get('reply') or ''), source_evidence=output.get('source_evidence'))
+                        reply=str(output.get('reply') or ''), source_evidence=output.get('source_evidence'),
+                        output={key: (value[:600] if isinstance(value, str) else value) for key, value in output.items()
+                                if key not in ('evidence', 'source_evidence', 'relay', '_study_material_binding', 'reply')})
             report['turns'].append(turn)
             report['ledger_now'] = spent()
             save(options.output, report)
@@ -170,6 +193,14 @@ async def main(options):
         for turn, timing in zip(explains, timings):
             turn['stages'] = [(item['name'], item['elapsed_ms']) for item in timing['stages']]
             turn['total_ms'] = timing['total_ms']
+        try:
+            with sqlite3.connect((data / 'study_companion.db').resolve().as_uri() + '?mode=ro', uri=True) as connection:
+                connection.row_factory = sqlite3.Row
+                report['db'] = {table: [{key: (str(value)[:160] if value is not None else None) for key, value in dict(row).items()}
+                                        for row in connection.execute(f'SELECT * FROM {table} ORDER BY id')]
+                                for table in ('qa_records', 'wrong_questions', 'mastery_snapshots')}
+        except sqlite3.Error as error:
+            report['db_error'] = str(error)
         report['ledger_after'] = spent()
         report['finalized'] = True
         save(options.output, report)

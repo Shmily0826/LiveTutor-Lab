@@ -3,6 +3,7 @@ from copy import deepcopy
 import logging
 from pathlib import Path
 import tempfile
+import types
 import unittest
 from unittest.mock import AsyncMock
 
@@ -39,7 +40,7 @@ class SourceQuestionKinds(unittest.IsolatedAsyncioTestCase):
         if request['mode'] == 'structure':
             return {'ok': True, 'mode': 'files', 'project': 'Project', 'repo_commit': 'rev-A', 'shown': [],
                     'evidence': TREE, 'index_sync': 'unchanged', 'note': 'A file tree, not source.'}
-        rows = SOURCES[request['file']]
+        rows = SOURCES[next(path for path in SOURCES if path.endswith(request['file'].rsplit('/', 1)[-1]))]
         low, high = request['offset'], request['offset'] + request['limit']
         lines = sorted(number for number in rows if low <= number < high)
         return {'ok': True, 'mode': 'node', 'project': 'Project', 'repo_commit': 'rev-A', 'index_sync': 'throttled',
@@ -124,6 +125,66 @@ class SourceQuestionKinds(unittest.IsolatedAsyncioTestCase):
         await self.h.study_explain_tool(question='继续', material_source='project_code', _ctx={'lanlan_name': 'Role-A'})
         files = [call.kwargs['file'] for call in self.h.study_code_tool.await_args_list]
         self.assertEqual(files, [CLIENT, SERVER])
+
+    async def test_an_empty_target_list_means_the_code_just_read_like_a_missing_one(self):
+        self.remember(CLIENT, [20, 21, 22, 23], call='c1')
+        for empty in (None, [], [{}], [{}, {}], '', '  '):
+            with self.subTest(empty=empty):
+                self.h.study_code_tool.reset_mock()
+                result = await self.h.study_explain_tool(question='如果改成只在500以上才抛，404会怎样？',
+                    material_source='project_code', code_requests=empty, _ctx={'lanlan_name': 'Role-A'})
+                self.h.study_code_tool.assert_awaited_once_with(mode='file', file=CLIENT, offset=20, limit=4)
+                self.assertTrue(result['reply'])
+
+    async def test_a_named_but_wrong_request_is_still_refused_and_its_shape_is_logged_without_values(self):
+        self.remember(CLIENT, [20, 21], call='c1')
+        records = []
+        self.h.logger = types.SimpleNamespace(info=records.append, warning=records.append, error=records.append, debug=lambda *_: None)
+        for wrong in ([{'root': 'outside'}], [{'file': ''}], [7], 7):
+            with self.subTest(wrong=wrong):
+                self.h.study_code_tool.reset_mock()
+                result = await self.h.study_explain_tool(question='解释', material_source='project_code', code_requests=wrong)
+                self.assertEqual(result['error'], 'invalid_code_requests')
+                self.h.study_code_tool.assert_not_awaited()
+        logged = ' | '.join(map(str, records))
+        self.assertIn("shape=list[1]:[['root']]", logged)
+        self.assertIn('shape=int', logged)
+        self.assertNotIn('outside', logged)
+
+    async def test_string_items_become_the_file_windows_they_name(self):
+        # Measured on the Native voice route: ["<one bare string>"] instead of [{"file": ...}].
+        cases = {
+            'weather_service.dart': (CLIENT, 1, 60),
+            'weather_service.dart:22-24': (CLIENT, 22, 3),
+            ' server/routes/weather.js:10 ': (SERVER, 6, 12),
+            'weather_service.dart:1-900': (CLIENT, 1, 120),
+        }
+        for text, (file, offset, limit) in cases.items():
+            with self.subTest(text=text):
+                self.h.study_code_tool.reset_mock()
+                requests = [text] if text != 'weather_service.dart' else text  # a bare string works too
+                await self.h.study_explain_tool(question='解释', material_source='project_code', code_requests=requests)
+                requested = self.h.study_code_tool.await_args.kwargs
+                self.assertEqual((requested['mode'], requested['offset'], requested['limit']), ('file', offset, limit))
+                self.assertEqual(requested['file'].rsplit('/', 1)[-1], file.rsplit('/', 1)[-1])
+
+    async def test_free_text_strings_name_no_source_so_the_last_window_is_reused(self):
+        self.remember(CLIENT, [20, 21, 22, 23], call='c1')
+        for requests in (['刚才那段代码'], ['the code we just read', 'that line']):
+            with self.subTest(requests=requests):
+                self.h.study_code_tool.reset_mock()
+                await self.h.study_explain_tool(question='如果改成500，404会怎样？', material_source='project_code', code_requests=requests)
+                self.h.study_code_tool.assert_awaited_once_with(mode='file', file=CLIENT, offset=20, limit=4)
+
+    async def test_strings_alongside_objects_keep_the_objects_and_the_three_request_cap(self):
+        await self.h.study_explain_tool(question='解释', material_source='project_code', code_requests=[
+            {'mode': 'file', 'file': SERVER, 'offset': 7, 'limit': 5}, 'weather_service.dart:20-23'])
+        self.assertEqual([call.kwargs['file'] for call in self.h.study_code_tool.await_args_list], [SERVER, 'weather_service.dart'])
+        self.h.study_code_tool.reset_mock()
+        result = await self.h.study_explain_tool(question='解释', material_source='project_code',
+                                                 code_requests=['a.dart', 'b.dart', 'c.dart', 'd.dart'])
+        self.assertEqual(result['error'], 'invalid_code_requests')
+        self.h.study_code_tool.assert_not_awaited()
 
 
 if __name__ == '__main__':

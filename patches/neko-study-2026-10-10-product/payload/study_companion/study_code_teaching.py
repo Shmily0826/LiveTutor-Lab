@@ -1,6 +1,7 @@
 """Read bounded authorized CodeGraph evidence for the existing Study teacher."""
 import asyncio
 import json
+import re
 
 from .study_materials import material_context_current
 from .study_call_trace import phase, trace_call
@@ -26,6 +27,65 @@ def validate_code_requests(requests):
             raise ValueError('Specify the source file or query.')
         normalized.append({**request, 'mode': mode, 'offset': offset, 'limit': limit})
     return normalized
+
+
+_FILE_REF = re.compile(
+    r'^(?P<file>[\w./\-]+\.(?:dart|js|jsx|ts|tsx|py|java|kt|swift|c|cc|cpp|h|cs|go|rs|rb|php|json|ya?ml|md|html|css|xml))'
+    r'(?::(?P<start>\d{1,5})(?:\s*[-–]\s*(?P<end>\d{1,5}))?)?$')
+
+
+def coerce_code_requests(requests):
+    """Read a provider's string items as the file windows they obviously name.
+
+    Measured on the Native voice route (2026-10-15): the model sent code_requests as a list holding
+    one bare string instead of an object, and the whole call was refused. A string that is a file
+    name or path (optionally with :line or :start-end) becomes a bounded file request; free text
+    names no source and is dropped, so an otherwise empty list means "the code just read".
+    Objects, and anything that is neither, are passed through to the normal validation.
+    """
+    if isinstance(requests, str):
+        requests = [requests]
+    if not isinstance(requests, list) or not any(isinstance(item, str) for item in requests):
+        return requests
+    coerced = []
+    for item in requests:
+        if not isinstance(item, str):
+            coerced.append(item)
+            continue
+        match = _FILE_REF.match(item.strip())
+        if match:
+            if match['end']:
+                start, end = int(match['start']), int(match['end'])
+            elif match['start']:  # one line: a little context either side
+                start = max(1, int(match['start']) - 4)
+                end = start + 11
+            else:
+                start, end = 1, 60
+            coerced.append({'mode': 'file', 'file': match['file'], 'offset': max(1, start),
+                            'limit': max(1, min(120, end - start + 1))})
+    return coerced
+
+
+def target_list_omitted(requests):
+    """True when the caller named no source at all, which means "the code we were just reading".
+
+    The tool schema leaves code_requests optional, but a model-side serializer may hand over null,
+    an empty list, empty objects or an empty string for "none". Only truly empty values count;
+    anything that names a field, even a wrong one, is still validated and refused.
+    """
+    if requests is None:
+        return True
+    if isinstance(requests, str):
+        return not requests.strip()
+    return isinstance(requests, list) and all(isinstance(item, dict) and not item for item in requests)
+
+
+def request_shape(requests):
+    """Types and key names only, never values: enough to see what a provider actually sent."""
+    if isinstance(requests, list):
+        return 'list[%d]:%s' % (len(requests), [sorted(item) if isinstance(item, dict) else type(item).__name__
+                                                  for item in requests[:4]])
+    return type(requests).__name__
 
 
 def _route_text(question, requests):
@@ -116,12 +176,17 @@ async def _explain_project_code(plugin, *, question, requests, language, output_
     def changed():
         return refuse('course_context_changed', '课程、会话或授权项目已变化，请核对当前材料后重新提问。',
                       'The course, session or authorized project changed. Please ask again about the current material.')
+    shape = request_shape(requests)
+    requests = coerce_code_requests(requests)
     def invalid(detail):
+        log = getattr(plugin, 'logger', None)
+        if log is not None:
+            log.info(f'study_explain project_code refused: {detail[:60]} shape={shape}')
         return refuse('invalid_code_requests', '请指定一至三个有界源码范围后再讲解。',
                       'Please specify one to three bounded source requests.', detail=detail)
     # Omitting code_requests means "the code we were just reading"; it is resolved from this
     # session's own records after the course and authorization are known, never guessed.
-    reuse = requests is None
+    reuse = target_list_omitted(requests)
     try:
         if not reuse:
             requests = validate_code_requests(requests)
