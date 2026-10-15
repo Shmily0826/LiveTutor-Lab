@@ -136,7 +136,7 @@
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
-      "sha256": "8404d8cd91b9892821a0a9fb62d328f230220ebb3c3e60aa90a23d80416b1d4f",
+      "sha256": "893866814758bde0e7f485a6f83bf436bb17b47ff50c776d1e86f1f91b6576b4",
       "deployed_matches": true,
       "phase29_delta_prior_sha256": "afb52dbbc047fd3cf20eab2c536fcdde9d1cba36fe4056a489bda27fe6123af9",
       "phase29_verification": "Specific errors41 / correct100 and restart42 / Chinese then English43 observed; final reminder-negative narrowing source+6 offline only; all historical failures retained.",
@@ -157,7 +157,9 @@
       "codex_20261016_wb_native_prior_sha256": "65f3ef46e5f0772ce88306420d4f2e3447dcca578940440f124df81e0efbe07c",
       "codex_20261016_wb_native_verification": "Native product scene reproduced valid correction_of on the first ungraded answer. Submit that exact idle pending attempt once; retain mismatch/in-progress/retry guards. Evidence recorded in W-B report.",
       "codex_r2_p3-source-depth_prior_sha256": "02ba05c72556d858d781a7c58e3516a442046f4e3896daaf3a5c9f3e6226f451",
-      "codex_r2_p3-source-depth_verification": "See docs/evidence/codex-r2-p3-source-depth-2026-10-16.md; offline/SDK/Native/human evidence are separate."
+      "codex_r2_p3-source-depth_verification": "See docs/evidence/codex-r2-p3-source-depth-2026-10-16.md; offline/SDK/Native/human evidence are separate.",
+      "codex_r2_p4-pointing_prior_sha256": "8404d8cd91b9892821a0a9fb62d328f230220ebb3c3e60aa90a23d80416b1d4f",
+      "codex_r2_p4-pointing_verification": "See docs/evidence/codex-r2-p4-pointing-2026-10-16.md; offline/SDK/Native/human evidence are separate."
     },
     {
       "path": "payload/study_companion/study_ocr_pipeline.py",

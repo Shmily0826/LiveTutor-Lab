@@ -6,7 +6,8 @@
 - audio_allowed=false；禁止采集/回环/改音量；固定WAV仅output-only。原日常数据/日志只读。
 - P1：角色指导冲突修复；新增2项测试通过、SourceGate PASS、补丁全patched。
 - P2：6个固定WAV场完成；KEEP=100/HOLD=1500连续2场1条ASR+教师+音频，普通句最大增加0.426s识别/0.299s首包；已设默认。
-- P3：教师控制流/逐句relay/序列化对象窄修；无预读新库Native唯一修后重试完整两句成功；P4进行中，P5～P8待推进。
+- P3：无预读新库修后Native完整两句成功，已发布beb9014/bf94cea；P4三场均无accepted指示，停止该线并待复核。
+- P5：无模型resume_brief实现中，6项新增+课程8/重启3/角色指导2通过；尚未部署，正在独立验证。P6～P8待推进。
 - 开工基线105模块：98通过，7个历史失败原始输出已保存；最终逐测试签名比较。
 - P1已发布8a28e98；P2已发布4d5f242；P3发布中。仅既有codex/daily-learning-companion工作树，不合并主分支。
 - P2完成账本1361/116，第二轮已用91/400；P3实际文字场另记每场前后。
@@ -15,6 +16,7 @@
 ## 待 Opus 复核
 - 需要宿主/仲裁/传输改动时记录证据并转下一项，本轮未新增此类改动。
 - 旧日志缺完整response.done.output和部分响应开始事件，空回合原因尚未确定。
+- P4：PNG错误身份被拒；HTML说标好了却没有guide command。三场上限已到，不能将语音宣称当高亮成功。
 
 ## 历史（只追加）
 
@@ -114,3 +116,13 @@
 - R2 Native p3-native-b 场后 {'api.deepseek.com': 1379, 'www.lanlan.app': 118}；exit=0。
 
 - R2 Native p4-native-a 场前 {'api.deepseek.com': 1379, 'www.lanlan.app': 118}；任务库neko-daily-speech-acceptance-r2-p4-a，固定WAV/output-only。
+
+- R2 Native p4-native-a 场后 {'api.deepseek.com': 1388, 'www.lanlan.app': 119}；exit=0。
+
+- R2 Native p4-native-b 场前 {'api.deepseek.com': 1388, 'www.lanlan.app': 119}；任务库neko-daily-speech-acceptance-r2-p4-b，固定WAV/output-only。
+
+- R2 Native p4-native-b 场后 {'api.deepseek.com': 1397, 'www.lanlan.app': 120}；exit=0。
+
+- R2 Native p4-native-html 场前 {'api.deepseek.com': 1397, 'www.lanlan.app': 120}；任务库neko-daily-speech-acceptance-r2-p4-html，固定WAV/output-only。
+
+- R2 Native p4-native-html 场后 {'api.deepseek.com': 1406, 'www.lanlan.app': 121}；exit=0。

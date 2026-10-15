@@ -495,13 +495,17 @@ class _StudyAvatarToolsMixin:
 
     @llm_tool(
         name="study_point",
-        description=("Point within the controlled learning surface only; the learner selects and scrolls. "
+        description=("When the learner says '指给我看/标出来' or asks to highlight an arrow, call this tool. "
+                     "Point within the controlled learning surface only; the learner selects and scrolls. "
+                     "No desktop window title is needed: kind='status' returns this surface's active material identity. "
                      "For displayed source use kind='source', the original source_line and symbol "
                      "(and source_file if ambiguous). The tool resolves the actual original file line "
                      "from current filtered evidence; no CSS or opaque material ID is needed. "
                      "For diagrams inspect kind='status' first, copy a returned selector/material_id, "
                      "or provide an evidence-based normalized image rectangle. Never invent CSS "
-                     "like .code-line:nth-child or desktop coordinates. This only highlights."),
+                     "like .code-line:nth-child or desktop coordinates. If an image has no evidenced region locator, "
+                     "do not invent a rectangle; ask the learner to select the corresponding HTML with named targets. "
+                     "This only highlights."),
         parameters={"type": "object", "properties": {
             "kind": {"type": "string", "enum": ["source", "selector", "rect", "clear", "status"], "default": "status"},
             "material_id": {"type": "string"}, "selector": {"type": "string"},
