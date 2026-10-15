@@ -3,6 +3,7 @@ import asyncio
 from copy import deepcopy
 import importlib
 import logging
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -154,6 +155,58 @@ class ProjectCodeTeaching(unittest.IsolatedAsyncioTestCase):
         missing = await self.explain(language='en-US')
         self.assertTrue(missing['reply'].startswith('Please authorize'))
         self.assertEqual(self.h._cfg.language, 'zh-CN')
+
+    async def test_overlapping_calls_have_separate_timings_without_source_or_question_text(self):
+        entered = asyncio.Event()
+        release = asyncio.Event()
+        count = 0
+        async def read(**request):
+            nonlocal count
+            count += 1
+            if count == 2:
+                entered.set()
+            await release.wait()
+            return self.source(request)
+        self.h.study_code_tool = AsyncMock(side_effect=read)
+        with self.assertLogs(self.h.logger, level='INFO') as logs:
+            tasks = [asyncio.create_task(self.explain()) for _ in range(2)]
+            await asyncio.wait_for(entered.wait(), 2)
+            release.set()
+            answers = await asyncio.gather(*tasks)
+        self.assertTrue(all('source_evidence' in answer and 'error' not in answer for answer in answers))
+        traces = [json.loads(record.getMessage().split('study_code_timing ', 1)[1])
+                  for record in logs.records if record.getMessage().startswith('study_code_timing ')]
+        self.assertEqual(len(traces), 2)
+        self.assertNotEqual(traces[0]['id'], traces[1]['id'])
+        for trace in traces:
+            self.assertEqual([s['name'] for s in trace['stages']], ['material_snapshot', 'source_request'])
+            self.assertTrue(all(s['elapsed_ms'] >= 0 and s['outcome'] == 'ok' for s in trace['stages']))
+            self.assertNotIn('if allowed', json.dumps(trace))
+            self.assertNotIn('解释源码', json.dumps(trace))
+
+    async def test_cancelled_read_preserves_cancel_and_clears_call_trace(self):
+        timing = importlib.import_module('product_study.study_call_trace')
+        entered = asyncio.Event()
+        async def read(**request):
+            entered.set()
+            await asyncio.Event().wait()
+        self.h.study_code_tool = AsyncMock(side_effect=read)
+        async def run_cancelled_call():
+            try:
+                return await self.explain()
+            except asyncio.CancelledError:
+                self.assertIsNone(timing._current.get())
+                raise
+        with self.assertLogs(self.h.logger, level='INFO') as logs:
+            task = asyncio.create_task(run_cancelled_call())
+            await asyncio.wait_for(entered.wait(), 2)
+            task.cancel()
+            with self.assertRaises(asyncio.CancelledError):
+                await task
+        trace = json.loads(logs.records[-1].getMessage().split('study_code_timing ', 1)[1])
+        self.assertEqual(trace['stages'][-1]['outcome'], 'error')
+        self.assertIsNone(timing._current.get())
+        self.h.study_explain_text.assert_not_awaited()
 
 
 if __name__ == '__main__': unittest.main(verbosity=2)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from time import monotonic
+from .study_call_trace import phase
 
 from ._general_narration import prepare_general_narration_content
 from ._solution_structure import (
@@ -307,12 +308,13 @@ class _TutorExplainEntriesMixin:
                 # Native explicit text has its own immutable source. Do not add
                 # an unrelated picture still saved on this course by default.
                 extra_context.update(vision_enabled=False, vision_image_base64="", vision_snapshot={})
-            tutor_context = await self._build_learning_context(
-                LLM_OPERATION_CONCEPT_EXPLAIN,
-                input_text=source_text,
-                extra=extra_context,
-                session_id=material_context["session_id"] if material_context else None,
-            )
+            with phase('learning_context'):
+                tutor_context = await self._build_learning_context(
+                    LLM_OPERATION_CONCEPT_EXPLAIN,
+                    input_text=source_text,
+                    extra=extra_context,
+                    session_id=material_context["session_id"] if material_context else None,
+                )
             if material_context and (tutor_context.get("course_id") != material_context["course_id"]
                                      or not await material_is_current()):
                 return Err(SdkError("课程已切换，请重新选择当前课程的图片后提交。", code="course_context_changed"))
@@ -321,14 +323,15 @@ class _TutorExplainEntriesMixin:
                 raise asyncio.TimeoutError
             agent_context = dict(tutor_context)
             agent_context["_reply_material_is_current"] = material_is_current
-            reply = await asyncio.wait_for(
-                self._agent.concept_explain(
-                    source_text,
-                    mode=active_mode,
-                    context=agent_context,
-                ),
-                timeout=primary_remaining,
-            )
+            with phase('concept_explain'):
+                reply = await asyncio.wait_for(
+                    self._agent.concept_explain(
+                        source_text,
+                        mode=active_mode,
+                        context=agent_context,
+                    ),
+                    timeout=primary_remaining,
+                )
             if not await material_is_current():
                 return Err(SdkError("课程已切换，请重新选择当前课程的图片后提交。", code="course_context_changed"))
             communication = getattr(self._cfg, "communication", None)

@@ -18,14 +18,16 @@
     },
     {
       "path": "payload/study_companion/entry_tutor_context_support.py",
-      "sha256": "23e9ca838d18f74aaf76ce59e87089f12f5d09d75810b839f862e47dd4d4de4f",
+      "sha256": "c1c3126f63b533622b464371f9626a1c93c4dbe20d6875f66e1364ff02eae3e9",
       "deployed_matches": true,
       "phase30_prior_sha256": "d201a761890707d9ea22a544e18a37820d9fa07a492b0dfaabd9c73209f4f49f",
       "phase30_verification": "Independent source/offline cross-subject 820-seed routing fixture passed; actual silent SDK44 no unrelated guidance, one grade/old4QA and formal hashes preserved. Whole teaching semantics PARTIAL; not Native/human acceptance.",
       "phase31_prior_sha256": "08280ce2e8bf0077cce36b7764f9aef30b00c3c4818dba152f44509c2b512446",
       "phase31_verification": "Reviewed source/offline same-question identity12 and related grading guards; actual silent SDK45 two grades across host restart retained old5QA/mastery/formal/FSRS and one new question identity. No old-topic merge or cross-question/Native/device/human acceptance; direct-entry language still PARTIAL.",
       "phase44_prior_sha256": "0848b0574cda5c21f4098bc1355e2456bc50bea4765a4e492820db1c089ff7b7",
-      "phase44_verification": "Independent source/offline relevant history12 and related course8/binding12/material14; exact default SHA and deployed imports12. Silent real SDK52 with114 labelled synthetic QA: semantic route and actual explain prompt selected old mistake plus same-binding correction, model acknowledged both, QA unchanged. Reply also made unsupported exhaustive-history negative: semantic scope PARTIAL. No Native/device/human proof; free-label identity and5000 metadata bound remain."
+      "phase44_verification": "Independent source/offline relevant history12 and related course8/binding12/material14; exact default SHA and deployed imports12. Silent real SDK52 with114 labelled synthetic QA: semantic route and actual explain prompt selected old mistake plus same-binding correction, model acknowledged both, QA unchanged. Reply also made unsupported exhaustive-history negative: semantic scope PARTIAL. No Native/device/human proof; free-label identity and5000 metadata bound remain.",
+      "phase59_prior_sha256": "23e9ca838d18f74aaf76ce59e87089f12f5d09d75810b839f862e47dd4d4de4f",
+      "phase59_verification": "Per-call content-free timings; offline isolation/cancellation and existing boundaries checked. No provider performance or audible/human acceptance claimed."
     },
     {
       "path": "payload/study_companion/entry_tutor_question_entries.py",
@@ -149,16 +151,20 @@
     },
     {
       "path": "payload/study_companion/study_code_tools.py",
-      "sha256": "a080b174bc918e234f891403b0455d72164bc053a9441bdd6395d56ba2d75ba0",
+      "sha256": "6e29c608df5d7040bd91941ee512a1e6b46d50ec6c3aa1490cdbcd1df39b8b41",
       "deployed_matches": true,
       "reason": "Required existing avatar code-tool mixin; included during publication dependency closure",
       "phase50_prior_sha256": "8ff871153a7eadf5ab7e4b9203cd5eea760be62e8ab1528f26e0091226412897",
-      "phase50_verification": "Main source/offline file-window10 (6 new), structure1 and revision1; actual CLI unique basename/suffix exact windows and ambiguous2 no source, current7aae20f. No model/Native/device/human guarantee; DSML containment pending."
+      "phase50_verification": "Main source/offline file-window10 (6 new), structure1 and revision1; actual CLI unique basename/suffix exact windows and ambiguous2 no source, current7aae20f. No model/Native/device/human guarantee; DSML containment pending.",
+      "phase59_prior_sha256": "a080b174bc918e234f891403b0455d72164bc053a9441bdd6395d56ba2d75ba0",
+      "phase59_verification": "Per-call content-free timings; offline isolation/cancellation and existing boundaries checked. No provider performance or audible/human acceptance claimed."
     },
     {
       "path": "payload/study_companion/entry_tutor_explain_entries.py",
-      "sha256": "9b3601565e8c554c5be159aa2c6d031bbf3e87b96906a4c5283900c1ff7e29e9",
-      "deployed_matches": true
+      "sha256": "599e6c6cb7c511c7efcf170705c842f4e4fd4261b6e81a907e600d5e58b43ebe",
+      "deployed_matches": true,
+      "phase59_prior_sha256": "9b3601565e8c554c5be159aa2c6d031bbf3e87b96906a4c5283900c1ff7e29e9",
+      "phase59_verification": "Per-call content-free timings; offline isolation/cancellation and existing boundaries checked. No provider performance or audible/human acceptance claimed."
     },
     {
       "path": "payload/study_companion/learning_preferences.py",
@@ -213,9 +219,17 @@
     },
     {
       "path": "payload/study_companion/study_code_teaching.py",
-      "sha256": "05e1de9d45cee9e5a9301c226c4257e02e4d5c37d47f7c8650490674dea0c815",
+      "sha256": "14f774586746b9c714f39a3713de11e1e2b86a4ae8a70469eb211eefe5246d87",
       "deployed_matches": true,
-      "phase56_verification": "Source/offline adapter8 + related material26/language6/native teaching binding5; cold card initialization existing3+new text1. Real role text68 teacher correct but filler/redundant reads PARTIAL;69 automatic study_explain project_code delegated actual CodeGraph file21-28@7aae20f, exact two-sentence teacher reply relayed and saved in existing SQLite. Cold text guidance actually present. Native free voice/device/human pending; extra preliminary source read and19.44s remain."
+      "phase56_verification": "Source/offline adapter8 + related material26/language6/native teaching binding5; cold card initialization existing3+new text1. Real role text68 teacher correct but filler/redundant reads PARTIAL;69 automatic study_explain project_code delegated actual CodeGraph file21-28@7aae20f, exact two-sentence teacher reply relayed and saved in existing SQLite. Cold text guidance actually present. Native free voice/device/human pending; extra preliminary source read and19.44s remain.",
+      "phase59_prior_sha256": "05e1de9d45cee9e5a9301c226c4257e02e4d5c37d47f7c8650490674dea0c815",
+      "phase59_verification": "Per-call content-free timings; offline isolation/cancellation and existing boundaries checked. No provider performance or audible/human acceptance claimed."
+    },
+    {
+      "path": "payload/study_companion/study_call_trace.py",
+      "sha256": "b84a6ec5fd470d51184a6eee84269c106601beb14866db7bfa262cdb2bc07c44",
+      "deployed_matches": true,
+      "phase59_verification": "Per-call content-free timings; offline isolation/cancellation and existing boundaries checked. No provider performance or audible/human acceptance claimed."
     }
   ],
   "prior_deployment": "benchmarks/raw/neko-product-data/plugin-code/study_companion",

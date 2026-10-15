@@ -1,8 +1,15 @@
+> **当前：用户明确继续，Goal已核active（2026-10-15，阶段59）。** Claude限额不阻塞本地推进。先独立计时/离线核对源码教学延迟，保留路由、课程、历史与授权保护；本轮不mic/capture/loopback或播放声音，原账本888/2000、app79/null、tech0不变。旧暂停记录保留为历史。完整A–F不缩范围，完成依据实际证据。
+
 # 日常学习伙伴局部问题（阶段57后，未全局阻塞）
 
-完整任务以[原始 contract](daily-companion-contract-2026-10-14.md)全文为准，不摘要替代、不修改；169行，SHA256 `FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33`。Goal `01a13531-0341-7611-afc2-5c472a7ccf50` active，完整A–F不缩范围、不因局部失败结束。沿用户指定模型，不擅自换模型。
+完整任务以[原始 contract](daily-companion-contract-2026-10-14.md)全文为准，不摘要替代、不修改；169行，SHA256 `FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33`。Goal `01a13531-0341-7611-afc2-5c472a7ccf50` active（用户明确继续，接口已核），完整A–F不缩范围、不因局部失败结束。沿用户指定模型，不擅自换模型。
 
 每次压缩或自动续跑先完整读取 contract、plan、status、blockers，再读当前阶段报告；后续明确指令优先并同步记录。完成依据实际交付和证据；SOURCE/OFFLINE、真实模型/SQLite、Native接收排程、设备可听、真人体验分别记录，旧FAIL/PARTIAL不追改。
+
+
+## 最新阶段59：分段计时与本地证据
+
+[阶段59报告](evidence/daily-companion-phase59-source-timing-2026-10-15.md)：每次调用独立、低内容计时已部署；31相关离线case通过（新2，不重复计数），SourceGate通过。只读实际CLI裸名2.271秒，其中inventory1.219秒；完整已知路径1.029秒，同源码SHA。不含sync/DB/surface/模型，不能冒端到端提速；暂不做路由并发或裸名缓存。manifest32/32与31直接部署项匹配，余index.html重算既有protected变换一致。原888/79/0，无live，Goal active。下一步一次必要静音SDK场补完整计时，完整A–F继续，不等Claude。
 
 ## 当前局部缺陷与恢复条件
 
@@ -45,3 +52,4 @@ D56实际缺口：现源码返回后由角色自解释，不能以文字Focus62�
 
 56已发布9858528，SOURCE/OFFLINE和指定file文字角色69窄证已闭环；免费Native语音选tool/设备/真人仍待57，19.44秒及多读仍待。无live/原880/78/0，不全局blocked。
 57审查明确：旧teaching-text-chain因控制器授权被禁，不用其绕过；用已支持的output-only固定WAV。Native音频/排程与真正可听/人反馈分层，局部失败继续其它任务。
+57的free Native源码教师→实际PCM/renderer单例已通过并发布94a1f02；物理可听/术语发音/真人仍未验。新增测量窗口工具9.909秒及Native转写片段空格待58调查，不据转写猜音频结巴，不全局blocked。原888/79/0，无live，禁mic/loopback。

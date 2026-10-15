@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import threading
+from .study_call_trace import phase
 
 from .entry_common import (
     Any,
@@ -491,9 +492,10 @@ class _TutorContextSupportMixin:
                     status=status, guidance=guidance, source="query_match"
                 )
 
-            semantics, route_status, route_reason = await self._route_study_input_semantics(
-                query, context=seed
-            )
+            with phase('semantic_route'):
+                semantics, route_status, route_reason = await self._route_study_input_semantics(
+                    query, context=seed
+                )
             if "_agent_quota_reservation" in seed and context is not None:
                 context["_agent_quota_reservation"] = seed[
                     "_agent_quota_reservation"

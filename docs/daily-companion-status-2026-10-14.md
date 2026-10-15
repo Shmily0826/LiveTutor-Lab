@@ -1,8 +1,15 @@
-# 日常学习伙伴状态（阶段57 Native源码教师窄通过，整体未完成）
+> **当前：用户明确继续，Goal已核active（2026-10-15，阶段59）。** Claude限额不阻塞本地推进。先独立计时/离线核对源码教学延迟，保留路由、课程、历史与授权保护；本轮不mic/capture/loopback或播放声音，原账本888/2000、app79/null、tech0不变。旧暂停记录保留为历史。完整A–F不缩范围，完成依据实际证据。
 
-完整任务以[原始 contract](daily-companion-contract-2026-10-14.md)全文为准，不摘要替代、不修改；169行，SHA256 `FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33`。Goal `01a13531-0341-7611-afc2-5c472a7ccf50` active，完整A–F不缩范围、不因局部失败结束。沿用户指定模型，不擅自换模型。
+# 日常学习伙伴状态（阶段59计时/只读CLI通过，整体未完成）
+
+完整任务以[原始 contract](daily-companion-contract-2026-10-14.md)全文为准，不摘要替代、不修改；169行，SHA256 `FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33`。Goal `01a13531-0341-7611-afc2-5c472a7ccf50` active（用户明确继续，接口已核），完整A–F不缩范围、不因局部失败结束。沿用户指定模型，不擅自换模型。
 
 每次压缩或自动续跑先完整读取 contract、plan、status、blockers，再读当前阶段报告；后续明确指令优先并同步记录。完成依据实际交付和证据；SOURCE/OFFLINE、真实模型/SQLite、Native接收排程、设备可听、真人体验分别记录，旧FAIL/PARTIAL不追改。
+
+
+## 最新阶段59：分段计时与本地证据
+
+[阶段59报告](evidence/daily-companion-phase59-source-timing-2026-10-15.md)：每次调用独立、低内容计时已部署；31相关离线case通过（新2，不重复计数），SourceGate通过。只读实际CLI裸名2.271秒，其中inventory1.219秒；完整已知路径1.029秒，同源码SHA。不含sync/DB/surface/模型，不能冒端到端提速；暂不做路由并发或裸名缓存。manifest32/32与31直接部署项匹配，余index.html重算既有protected变换一致。原888/79/0，无live，Goal active。下一步一次必要静音SDK场补完整计时，完整A–F继续，不等Claude。
 
 ## 当前阶段57
 
@@ -64,3 +71,22 @@
 56发布确认：9858528a665c2f960be22cb284e5efd59f18894a已核远端exact/主分支不变/publisher clean/Root index空/contract原SHA，原880/78/0且无live。下一57 Native输出专用集成，不mic；详见56报告。
 57开始：已审现有output-only固定输入/Native观察器，准备一条本地合成源码短问；原880/78/0，无live。详见phase57报告。
 57唯一Native输出专用70已启动exec40093；复用69store/原3 interactions SHA基线/QA0，固定WAV9.423秒，原880/78/0。只poll同handle，未终态不重启；不mic/capture/loopback，不调音量。
+57发布94a1f02abb8e4556ffb137fcd0b8f1885a3e9e5b已核remote exact/master不变/publisher clean/Root index空/contract原SHA。原888/2000、app79/null、tech0/0，无live；下一58按57报告处理测出的等待与转写空格。
+
+## 用户授权公开仓库并准备 Claude 定向求解（2026-10-15）
+
+用户明确要求将仓库改为公开，供免费版Claude读取，并将任务从全仓审查收窄为具体问题求解。执行前已fetch远端；gitleaks8.30.1（官方release及同release SHA256校验）扫描本地全部refs历史，233 commits，exit0/0 findings；未发现历史路径中.env/DB/录音/私钥文件。扫描只作为预检，不作无泄漏绝对保证。未改源码、历史或分支。
+
+已执行gh repo edit公开，并由已认证gh与无认证GitHub REST分别确认PUBLIC/private=false。目标仍codex/daily-learning-companion@94a1f02；未改master、未新push。仓库公开作用于整个仓库及历史，不只该功能分支。
+
+Claude任务聚焦Native源码教学延迟：本例首PCM14.686秒，工具9.909秒，其中源码/上下文4.690秒未拆、semantic2.915秒、解释2.269秒。请其只定位必要路径，给有证据的最小优化/补测方案，不做全仓审查；不得直接删除课程、历史、授权和版本保护。阶段58空格已来自provider、语义路由并非已证冗余，作为已知条件直接提供给Claude。未向Claude发送消息。
+
+Claude官方文档说明GitHub集成支持私有仓库，未出现不等同免费版禁止；需要给Claude GitHub App授予仓库访问权。已告知用户加号→Add from GitHub并限选文件。Goal继续paused，不启动测试/音频/模型调用；原账本不变。
+
+## Claude一次性交接包（文档交付，Goal仍暂停）
+
+已读取用户转贴的Claude完整建议并核对可用性：公开payload已有tutor_llm_agent.py和study_materials.py；_semantic_routing.py在本地base运行依赖；宿主配额实际位于utils/config_manager/quota.py而非单文件；Native源码在忽略的neko-product-host中。原始JSON/WAV/DB按约不整体上传。
+
+已将必需源码摘录、路径与SHA、Apache LICENSE/NOTICE、run51白名单事件投影打包到docs/evidence/claude-handoff-2026-10-15。来源当前快照不冒充历史51源码；不包含转写正文、工具参数、token或完整原始日志。gitleaks目录预检0发现，链接/围栏/JSON校验通过。仅该目录5文档文件发布b9f75ab550de4b89fa65201aba80cf8c2843446a，远端exact、master仍f1e8f3、publisher clean；未改产品实现或启动测试/音频/模型。
+
+关键补充：metered宿主在reserve时即持久计数，consume只消费内存凭证；非metered另支，不与原DeepSeek外呼账本混为一谈。Claude并发建议仍待计时/取消/截止时间/预留归属验证，不直接采用。双ASR方案有诊断价值，4个样本不证明稳定阈值；未观测provider ACK不能靠源码注释补认。Goal保持paused，用户只需传单一README入口让Claude一次读取必要现有上下文；缺失的运行观测留待后续明确继续。

@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from plugin.sdk.plugin import llm_tool
+from .study_call_trace import phase
 
 # A path is dropped if it names a credential store, or if it does not live under the
 # authorized prefix. Sibling copies of the same repository fail the second test.
@@ -541,11 +542,14 @@ class _StudyCodeToolsMixin:
                 resolve_file = True
             except (ValueError, OSError) as error:
                 return {"ok": False, "error": "INVALID_SOURCE_FILE_REQUEST", "detail": str(error)[:200]}
-        synced = await self._code_sync(cli, authorized)
-        head = await self._code_head(authorized["root"])
+        with phase('index_sync'):
+            synced = await self._code_sync(cli, authorized)
+        with phase('source_revision'):
+            head = await self._code_head(authorized["root"])
         if resolve_file:
             try:
-                inventory = await _run([*cli, "files", "--path", authorized["root"], "-j"])
+                with phase('file_inventory'):
+                    inventory = await _run([*cli, "files", "--path", authorized["root"], "-j"])
                 if inventory.returncode != 0:
                     return {"ok": False, "error": f"CODEGRAPH_EXIT_{inventory.returncode}"}
                 candidates = _indexed_file_candidates(inventory.stdout, authorized, file or text, offset, limit)
@@ -565,7 +569,8 @@ class _StudyCodeToolsMixin:
         if index_file:
             command = [*cli, "node", "--file", index_file, "--offset", str(offset), "--limit", str(limit), "--path", authorized["root"]]
         try:
-            done = await _run(command)
+            with phase('source_query'):
+                done = await _run(command)
         except Exception as exc:
             return {"ok": False, "error": f"CODEGRAPH_FAILED: {type(exc).__name__}: {str(exc)[:180]}"}
         if done.returncode != 0:
@@ -618,8 +623,9 @@ class _StudyCodeToolsMixin:
                     if not self._code_leak(kept, authorized):
                         evidence = "\n".join(kept).strip()
                         shown = _shown(kept, authorized["root"], authorized["prefix"])
-        self._code_receipt(sub, text, authorized, stats, evidence, shown, synced, head)
-        await self._code_record(sub, text, authorized, shown, stats, repo_commit=head or authorized["commit"])
+        with phase('source_record'):
+            self._code_receipt(sub, text, authorized, stats, evidence, shown, synced, head)
+            await self._code_record(sub, text, authorized, shown, stats, repo_commit=head or authorized["commit"])
         if log is not None:
             # The acceptance has to prove the product asked, so record the call itself.
             log.info(f"study_code mode={sub} query={text[:70]!r} root={authorized['root']} "
@@ -666,7 +672,8 @@ class _StudyCodeToolsMixin:
         barren += (" index_sync=throttled only means a recent index refresh was reused; source queries still run. "
                    "It is not a service limit or a reason to wait for recovery. For missing specific file lines, "
                    "use mode=file with the actual indexed file path and a small offset/limit.")
-        surface = await _publish_code_surface(authorized["name"], head or authorized["commit"], evidence)
+        with phase('source_surface'):
+            surface = await _publish_code_surface(authorized["name"], head or authorized["commit"], evidence)
         return {"ok": True, "mode": sub, "project": authorized["name"], "commit": authorized["commit"],
                 "learning_surface": surface,
                 "repo_commit": head or authorized["commit"], "evidence": evidence,

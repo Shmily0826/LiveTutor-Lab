@@ -3,6 +3,7 @@ import asyncio
 import json
 
 from .study_materials import material_context_current
+from .study_call_trace import phase, trace_call
 
 
 def validate_code_requests(requests):
@@ -28,6 +29,12 @@ def validate_code_requests(requests):
 
 
 async def explain_project_code(plugin, *, question, requests, language, output_target):
+    with trace_call(getattr(plugin, 'logger', None)):
+        return await _explain_project_code(plugin, question=question, requests=requests,
+                                          language=language, output_target=output_target)
+
+
+async def _explain_project_code(plugin, *, question, requests, language, output_target):
     english = (language or plugin._study_effective_language()).lower().startswith('en')
     def refuse(code, zh, en, **extra):
         return {'ok': False, 'error': code, 'reply': en if english else zh,
@@ -42,7 +49,8 @@ async def explain_project_code(plugin, *, question, requests, language, output_t
     except ValueError as error:
         return refuse('invalid_code_requests', '请指定一至三个有界源码范围后再讲解。',
                       'Please specify one to three bounded source requests.', detail=str(error))
-    snapshot = await plugin._study_native_material_snapshot(include_material=False)
+    with phase('material_snapshot'):
+        snapshot = await plugin._study_native_material_snapshot(include_material=False)
     authorization = plugin._code_authorization()
     if snapshot is None:
         return changed()
@@ -55,7 +63,8 @@ async def explain_project_code(plugin, *, question, requests, language, output_t
     for request in requests:
         if not material_context_current(plugin, context) or plugin._code_authorization() != authorization:
             return changed()
-        result = await plugin.study_code_tool(**request)
+        with phase('source_request'):
+            result = await plugin.study_code_tool(**request)
         if not material_context_current(plugin, context) or plugin._code_authorization() != authorization:
             return changed()
         if not isinstance(result, dict) or not result.get('ok') or not str(result.get('evidence') or '').strip():

@@ -3,12 +3,13 @@ import ast
 from pathlib import Path
 import types
 import unittest
+import test_neko_product_course_memory  # Existing offline package, without the desktop/audio host.
 
 ROOT=Path(__file__).resolve().parents[1]
 PATH=ROOT/'patches/neko-study-2026-10-10-product/payload/study_companion/study_code_tools.py'
 tree=ast.parse(PATH.read_text(encoding='utf-8'))
 tree.body=[n for n in tree.body if not (isinstance(n,ast.ImportFrom) and n.module=='plugin.sdk.plugin')]
-scope={'__name__':'actual_code_tool_fixture','llm_tool':lambda **kwargs:lambda fn:fn}
+scope={'__name__':'actual_code_tool_fixture','__package__':'product_study','llm_tool':lambda **kwargs:lambda fn:fn}
 exec(compile(tree,str(PATH),'exec'),scope)
 calls=[]
 async def run(command,**kwargs):

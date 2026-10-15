@@ -14,6 +14,9 @@ SOURCE = ROOT / 'patches/neko-study-2026-10-10-product/payload/study_companion/e
 spec = importlib.util.spec_from_file_location('actual_materials', SOURCE.with_name('study_materials.py'))
 materials = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(materials)
+trace_spec = importlib.util.spec_from_file_location('actual_call_trace', SOURCE.with_name('study_call_trace.py'))
+call_trace = importlib.util.module_from_spec(trace_spec)
+trace_spec.loader.exec_module(call_trace)
 
 
 class EntryError(dict):
@@ -41,6 +44,7 @@ def explain_namespace():
     def unexpected_error(_host, error, **kwargs):
         raise AssertionError(f'unexpected product error: {type(error).__name__}: {error}')
     return {'asyncio': asyncio, 'monotonic': time.monotonic, '_PRIMARY_EXPLAIN_TIMEOUT_SECONDS': 70,
+            'phase': call_trace.phase,
             'english_prose_spans': spans,
             '_plugin_lock': lambda lock: lock, 'Err': EntryError, 'SdkError': StudyError,
             'handle_user_intent': lambda text, **kwargs: {'matched': False, 'remaining_text': text},
