@@ -1322,6 +1322,69 @@ class StudyStore:
             ),
         )
 
+    def resume_brief(self, course_id: str) -> dict[str, Any]:
+        """Read existing course facts across sessions, without a model or stored summary."""
+        course = str(course_id or '').strip()
+        brief = {'course_id': course, 'available': False, 'source_windows': [],
+                 'last_learning_question': '', 'last_quiz': {}, 'last_grade': {},
+                 'next_step': 'choose_learning_material', 'data_source': 'existing_sqlite_readonly'}
+        if not course:
+            return brief
+        conn = self._require_read_conn()
+        rows = conn.execute(
+            "SELECT i.metadata, i.session_id FROM interactions i JOIN sessions s ON s.id=i.session_id "
+            "WHERE s.course_id=? AND i.kind='code_question' ORDER BY i.id DESC LIMIT 3", (course,)).fetchall()
+        call, session = None, None
+        for index, row in enumerate(rows):
+            metadata = self._json_loads(row['metadata'], {})
+            if not isinstance(metadata, dict):
+                continue
+            if index == 0:
+                call, session = metadata.get('call'), row['session_id']
+            elif not call or metadata.get('call') != call or row['session_id'] != session:
+                continue
+            shown_rows = metadata.get('shown')
+            for shown in shown_rows if isinstance(shown_rows, list) else []:
+                if not isinstance(shown, dict) or not isinstance(shown.get('file'), str):
+                    continue
+                saved_lines = shown.get('lines')
+                lines = [line for line in saved_lines if type(line) is int and line > 0] if isinstance(saved_lines, list) else []
+                if lines:
+                    window = {'file': shown['file'][:400], 'start_line': min(lines), 'end_line': max(lines),
+                              'project': str(metadata.get('project') or '')[:200],
+                              'revision': str(metadata.get('commit') or '')[:80]}
+                    if window not in brief['source_windows']:
+                        brief['source_windows'].insert(0, window)
+        latest = conn.execute(
+            "SELECT i.input_text FROM interactions i JOIN sessions s ON s.id=i.session_id "
+            "WHERE s.course_id=? AND i.kind='concept_explain' ORDER BY i.id DESC LIMIT 1", (course,)).fetchone()
+        if latest:
+            brief['last_learning_question'] = str(latest['input_text']).split('\n[Source evidence]')[0][:1000]
+        quiz = conn.execute(
+            "SELECT i.output_text FROM interactions i JOIN sessions s ON s.id=i.session_id "
+            "WHERE s.course_id=? AND i.kind IN ('question_generate','targeted_question_generate') "
+            "ORDER BY i.id DESC LIMIT 1", (course,)).fetchone()
+        if quiz:
+            brief['last_quiz'] = {'question': str(quiz['output_text'])[:1000]}
+        grades = self.list_qa_records(1, course_id=course)
+        if grades:
+            row = grades[-1]
+            question = row['question'] if isinstance(row['question'], dict) else {}
+            evaluation = row['eval_result'] if isinstance(row['eval_result'], dict) else {}
+            brief['last_grade'] = {key: question.get(key, '') for key in ('question_id', 'attempt_id', 'question')}
+            brief['last_grade'].update(score=evaluation.get('score'), verdict=evaluation.get('verdict', ''),
+                                       recorded_at=row['created_at'])
+            if not brief['last_quiz']:
+                brief['last_quiz'] = {'question': str(question.get('question') or '')[:1000]}
+        brief['available'] = bool(brief['source_windows'] or brief['last_learning_question'] or brief['last_quiz'] or grades)
+        if brief['last_grade'].get('verdict') in {'wrong', 'partial'}:
+            brief['next_step'] = 'review_last_answer'
+        elif brief['source_windows']:
+            brief['next_step'] = 'continue_source_with_a_followup'
+        elif brief['available']:
+            brief['next_step'] = 'review_last_learning_question'
+        return brief
+
     def list_interactions(self, limit: int = 20, *, session_id: str = "", course_id: str = "", exclude_session_id: str = "") -> list[dict[str, Any]]:
         session_key = str(session_id or "").strip()
         query = "SELECT id, kind, input_text, output_text, metadata, created_at, session_id FROM interactions"

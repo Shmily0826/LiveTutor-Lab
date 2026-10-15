@@ -83,14 +83,16 @@
     },
     {
       "path": "payload/study_companion/store.py",
-      "sha256": "9cbbd1f3edbf16b0adf461ce85d40a28ffcb87737f7f62e4dc3661142bc1d43a",
+      "sha256": "e901116e8a90491ac52db8a8e11f73ba2771dd46a622f32e4763a422826e0e7c",
       "deployed_matches": true,
       "phase31_prior_sha256": "838f73ab768a6adcf4f3caef75e6e3ed03680c349fdcdfc4b2b34549ea3868ad",
       "phase31_verification": "Reviewed source/offline same-question identity12 and related grading guards; actual silent SDK45 two grades across host restart retained old5QA/mastery/formal/FSRS and one new question identity. No old-topic merge or cross-question/Native/device/human acceptance; direct-entry language still PARTIAL.",
       "phase44_prior_sha256": "4c6a7cb0e87619200f79d5dc7c42d22782eaafac794772b9c16ffc0db5f982a3",
       "phase44_verification": "Independent source/offline relevant history12 and related course8/binding12/material14; exact default SHA and deployed imports12. Silent real SDK52 with114 labelled synthetic QA: semantic route and actual explain prompt selected old mistake plus same-binding correction, model acknowledged both, QA unchanged. Reply also made unsupported exhaustive-history negative: semantic scope PARTIAL. No Native/device/human proof; free-label identity and5000 metadata bound remain.",
       "phase45_prior_sha256": "d3b54be66ff5106ebf0dd5427de69151dc5f12924589a97c57623fee9119a79b",
-      "phase45_verification": "Independent source/offline concept label10, binding12/history13 and Main material14; default exact deployment/import23. Existing bindings/history precede unique eligible exact catalog aliases; unknown question scope not promoted, no old-ID merge. Silent real SDK53 actual prompt coverage plus two-sentence old-mistake/correction reply without exhaustive negative,114 synthetic QA unchanged. Cross-question grading alias identity is SOURCE/OFFLINE only; no Native/device/human proof or universal semantic guarantee."
+      "phase45_verification": "Independent source/offline concept label10, binding12/history13 and Main material14; default exact deployment/import23. Existing bindings/history precede unique eligible exact catalog aliases; unknown question scope not promoted, no old-ID merge. Silent real SDK53 actual prompt coverage plus two-sentence old-mistake/correction reply without exhaustive negative,114 synthetic QA unchanged. Cross-question grading alias identity is SOURCE/OFFLINE only; no Native/device/human proof or universal semantic guarantee.",
+      "codex_r2_p5-resume_prior_sha256": "9cbbd1f3edbf16b0adf461ce85d40a28ffcb87737f7f62e4dc3661142bc1d43a",
+      "codex_r2_p5-resume_verification": "See docs/evidence/codex-r2-p5-resume-2026-10-16.md; offline/SDK/Native/human evidence are separate."
     },
     {
       "path": "payload/study_companion/store_qa.py",
@@ -136,7 +138,7 @@
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
-      "sha256": "893866814758bde0e7f485a6f83bf436bb17b47ff50c776d1e86f1f91b6576b4",
+      "sha256": "5ade76ea869cc01ee326acf37019615489b0f74c34dbae9ba8ad05f7ba2a9119",
       "deployed_matches": true,
       "phase29_delta_prior_sha256": "afb52dbbc047fd3cf20eab2c536fcdde9d1cba36fe4056a489bda27fe6123af9",
       "phase29_verification": "Specific errors41 / correct100 and restart42 / Chinese then English43 observed; final reminder-negative narrowing source+6 offline only; all historical failures retained.",
@@ -159,7 +161,13 @@
       "codex_r2_p3-source-depth_prior_sha256": "02ba05c72556d858d781a7c58e3516a442046f4e3896daaf3a5c9f3e6226f451",
       "codex_r2_p3-source-depth_verification": "See docs/evidence/codex-r2-p3-source-depth-2026-10-16.md; offline/SDK/Native/human evidence are separate.",
       "codex_r2_p4-pointing_prior_sha256": "8404d8cd91b9892821a0a9fb62d328f230220ebb3c3e60aa90a23d80416b1d4f",
-      "codex_r2_p4-pointing_verification": "See docs/evidence/codex-r2-p4-pointing-2026-10-16.md; offline/SDK/Native/human evidence are separate."
+      "codex_r2_p4-pointing_verification": "See docs/evidence/codex-r2-p4-pointing-2026-10-16.md; offline/SDK/Native/human evidence are separate.",
+      "codex_r2_p5-resume_prior_sha256": "893866814758bde0e7f485a6f83bf436bb17b47ff50c776d1e86f1f91b6576b4",
+      "codex_r2_p5-resume_verification": "See docs/evidence/codex-r2-p5-resume-2026-10-16.md; offline/SDK/Native/human evidence are separate.",
+      "codex_r2_p5-resume-detail_prior_sha256": "22dcff1800a063c84d1a127b7941bf6904ec2bdce805dedb8bcb544fed6ea1ea",
+      "codex_r2_p5-resume-detail_verification": "See docs/evidence/codex-r2-p5-resume-detail-2026-10-16.md; offline/SDK/Native/human evidence are separate.",
+      "codex_r2_p5-resume-wording_prior_sha256": "a13f4545bc799e9be8c190961be052cc7efd12b6a8151298efb337620d115744",
+      "codex_r2_p5-resume-wording_verification": "See docs/evidence/codex-r2-p5-resume-wording-2026-10-16.md; offline/SDK/Native/human evidence are separate."
     },
     {
       "path": "payload/study_companion/study_ocr_pipeline.py",

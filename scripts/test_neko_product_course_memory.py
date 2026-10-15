@@ -113,7 +113,7 @@ for method in summary_methods:
 
 avatar_tree = ast.parse((SOURCE / "study_avatar_tools.py").read_text(encoding="utf-8"))
 avatar_defs = [node for node in avatar_tree.body if isinstance(node, ast.FunctionDef)
-               and node.name in {"_envelope", "_relay_for_data"}]
+               and node.name in {"_envelope", "_relay_for_data", "_resume_wording", "_zh_number"}]
 avatar_class = next(node for node in avatar_tree.body if isinstance(node, ast.ClassDef))
 session_tool = next(node for node in avatar_class.body if getattr(node, "name", "") == "study_session_tool")
 session_tool.decorator_list = []

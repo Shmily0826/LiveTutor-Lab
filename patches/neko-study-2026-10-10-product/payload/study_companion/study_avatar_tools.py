@@ -165,6 +165,37 @@ def _ack_wording(language: str, state: dict[str, Any]) -> str:
     return f"已经换到 {course} 这门课" + (f"（{zh_detail}）。" if zh_detail else "。")
 
 
+def _resume_wording(language: str, brief: dict[str, Any]) -> str:
+    """Format saved facts, without inventing teaching or spending a model request."""
+    english = str(language).startswith('en')
+    course = str(brief.get('course_id') or '')[:100]
+    if not brief.get('available'):
+        return (f'Course {course} has no saved learning record to resume. Please choose learning material.'
+                if english else f'课程{course}还没有可供接续的学习记录，请先选择学习材料。')
+    sources = []
+    for window in brief.get('source_windows', [])[:3]:
+        name = str(window['file']).replace('\\', '/').rsplit('/', 1)[-1]
+        start, end = str(window['start_line']), str(window['end_line'])
+        sources.append(f'{name} lines {start} to {end}' if english else
+                       f'{name}第{_zh_number(start)}至{_zh_number(end)}行')
+    source = '; '.join(sources) if sources else ('no saved source window' if english else '尚无源码范围记录')
+    quiz = brief.get('last_quiz') or {}
+    question = str(quiz.get('question') or ('no saved quiz' if english else '尚无出题记录'))[:300]
+    grade = brief.get('last_grade') or {}
+    score = grade.get('score')
+    mark = (f'latest recorded grade {score}' if english else f'最近一次评分{score}分') if score is not None else ('no recorded grade' if english else '尚无成绩记录')
+    if quiz.get('grade_status') == 'not_graded':
+        mark = ('current quiz is not graded; ' if english else '当前题尚未评分；') + mark
+    steps = {'review_last_answer': ('review the last wrong answer before trying again', '先复习最近的错答，再重新作答'),
+             'answer_pending_question': ('answer the pending question', '先回答当前待答题'),
+             'continue_source_with_a_followup': ('continue with a question about this source', '继续最近的源码追问'),
+             'review_last_learning_question': ('return to the latest learning question', '继续最近的学习问题'),
+             'choose_learning_material': ('choose learning material', '选择学习材料')}
+    next_step = steps.get(brief.get('next_step'), steps['choose_learning_material'])[0 if english else 1]
+    return (f'Last course: {course}; source: {source}. Latest quiz: {question}; {mark}. Next: {next_step}.'
+            if english else f'上次课程是{course}，源码读到{source}。最近一题是“{question}”；{mark}。建议下一步{next_step}。')
+
+
 def _teaching_failure_wording(tool: str, diagnostic: str, language: str) -> str:
     if diagnostic == "visual_context_missing":
         if str(language).lower().startswith("zh"):
@@ -726,6 +757,10 @@ class _StudyAvatarToolsMixin:
     @llm_tool(
         name="study_session",
         description=(
+            "For '我们上次讲到哪了/上次/进度' or a generic last-time/progress question, call "
+            "action='status' and answer from resume_brief, not recall_memory. This brief costs no model "
+            "call and reads saved course/source windows/latest quiz and grade across sessions; "
+            "if available=false, honestly say there is no saved learning history for this course. "
             "Report or change the study session. Call with action='status' to see "
             "the active course, session, mode and recent mistakes; action='start' "
             "with a course_id to explicitly begin a fresh session and retire its held quiz; "
@@ -771,13 +806,25 @@ class _StudyAvatarToolsMixin:
             learning = await asyncio.to_thread(self._course_learning_state, active_course)
             state["recent_answer_records"] = learning["recent_answers"]
             state["weak_topics"] = learning["weak_topics"]
+        state['resume_brief'] = await asyncio.to_thread(self._store.resume_brief, active_course)
+        if active_course != str(self._state.study_course_id or ''):
+            return {'ok': False, 'error': 'course_context_changed'}
+        if held:
+            state['resume_brief']['last_quiz'] = {
+                **state['current_question'], 'grade_status': 'graded' if held.get('attempt_evaluated') else 'not_graded'}
+            state['resume_brief']['available'] = True
+        if held and not held.get('attempt_evaluated'):
+            state['resume_brief']['next_step'] = 'answer_pending_question'
         language = self._study_effective_language()
-        # Only an ack has nothing to teach, so only an ack gets pre-worded: a status read
-        # also carries course_id, and calling it "Course switched to ..." would be false.
+        state['resume_brief']['spoken_recap'] = _resume_wording(language, state['resume_brief'])
+        # Keep the derived recap separate from a course-switch acknowledgement.
         wording = _ack_wording(language, state) if action in {"start", "set_course"} else ""
         if wording:
             return {"ok": True, **state, "say_this": wording, "relay": RELAY_NOTE}
-        return state | {"relay": _relay_for_data(language)}
+        return state | {"relay": _relay_for_data(language) +
+            " For a last-time recap, read resume_brief.spoken_recap exactly as written, every sentence, "
+            "including course, source range, quiz, numeric grade and next step. Do not shorten it or "
+            "attach an older grade to a pending question. Other status questions may use the data fields."}
 
     @llm_tool(
         name="study_read_window",
@@ -1313,7 +1360,8 @@ class _StudyAvatarToolsMixin:
     @llm_tool(
         name="study_summary",
         description=(
-            "Summarize the current study session: what was covered, which answers were "
+            "For a short restart/last-time recap use study_session(action=status) and its no-model "
+            "resume_brief first, not recall_memory. Summarize the current study session: what was covered, which answers were "
             "wrong, and what to practise next. Call when the learner wraps up or asks how "
             "they are doing. The summary is saved to their learning record."
         ),

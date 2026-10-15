@@ -7,10 +7,11 @@
 - P1：角色指导冲突修复；新增2项测试通过、SourceGate PASS、补丁全patched。
 - P2：6个固定WAV场完成；KEEP=100/HOLD=1500连续2场1条ASR+教师+音频，普通句最大增加0.426s识别/0.299s首包；已设默认。
 - P3：无预读新库修后Native完整两句成功，已发布beb9014/bf94cea；P4三场均无accepted指示，停止该线并待复核。
-- P5：无模型resume_brief实现中，6项新增+课程8/重启3/角色指导2通过；尚未部署，正在独立验证。P6～P8待推进。
+- P5：无模型摘要/本地事实措辞已部署，新增7项通过；真实文字重启链和Native完整泛问通过；一次404复述行号有误，听感/真人待验。
+- P6：只读大小/首包分析完成，结果体约2KB未见明显膨胀，不做无根据的缩减A/B；报告待发布。P7～P8待推进。
 - 开工基线105模块：98通过，7个历史失败原始输出已保存；最终逐测试签名比较。
-- P1已发布8a28e98；P2已发布4d5f242；P3发布中。仅既有codex/daily-learning-companion工作树，不合并主分支。
-- P2完成账本1361/116，第二轮已用91/400；P3实际文字场另记每场前后。
+- 已发布P1 8a28e98、P2 4d5f242、P3 beb9014/bf94cea、P4 18789b0；P5待Native后发布。仅既有发布工作树，不合并主分支。
+- P5末账本1441/123，第二轮已用171/400；P7一键准备新课程运行中；各场前后追加于历史末尾。
 - 打断/Realtime/暂扣离线12+19+7通过；可听性/真人未验收。
 
 ## 待 Opus 复核
@@ -126,3 +127,27 @@
 - R2 Native p4-native-html 场前 {'api.deepseek.com': 1397, 'www.lanlan.app': 120}；任务库neko-daily-speech-acceptance-r2-p4-html，固定WAV/output-only。
 
 - R2 Native p4-native-html 场后 {'api.deepseek.com': 1406, 'www.lanlan.app': 121}；exit=0。
+
+- R2 SDK codex-r2-p5-sdk 场前 {'api.deepseek.com': 1406, 'www.lanlan.app': 121}；任务库 neko-r2-p5-sdk、文字模式。
+
+- R2 SDK codex-r2-p5-sdk 场后 {'api.deepseek.com': 1408, 'www.lanlan.app': 121}。
+
+- R2 SDK codex-r2-p5-sdk-b 场前 {'api.deepseek.com': 1408, 'www.lanlan.app': 121}；任务库 neko-r2-p5-sdk-b、文字模式。
+
+- R2 SDK codex-r2-p5-sdk-b 场后 {'api.deepseek.com': 1412, 'www.lanlan.app': 121}。
+
+- R2 SDK codex-r2-p5-sdk-b 场前 {'api.deepseek.com': 1412, 'www.lanlan.app': 121}；任务库 neko-r2-p5-sdk-b、文字模式。
+
+- R2 SDK codex-r2-p5-sdk-b 场后 {'api.deepseek.com': 1420, 'www.lanlan.app': 121}。
+
+- R2 Native p5-native-a 场前 {'api.deepseek.com': 1420, 'www.lanlan.app': 121}；任务库neko-r2-resume-native-a，固定WAV/output-only。
+
+- R2 Native p5-native-a 场后 {'api.deepseek.com': 1420, 'www.lanlan.app': 121}；exit=1。
+
+- R2 Native p5-native-a 场前 {'api.deepseek.com': 1420, 'www.lanlan.app': 121}；任务库neko-r2-resume-native-a，固定WAV/output-only。
+
+- R2 Native p5-native-a 场后 {'api.deepseek.com': 1435, 'www.lanlan.app': 122}；exit=0。
+
+- R2 Native p5-native-b 场前 {'api.deepseek.com': 1435, 'www.lanlan.app': 122}；任务库neko-r2-resume-native-b，固定WAV/output-only。
+
+- R2 Native p5-native-b 场后 {'api.deepseek.com': 1441, 'www.lanlan.app': 123}；exit=0。
