@@ -5,7 +5,8 @@
 - DeepSeek起点1270/+400/停止1670；Lanlan起点110不限；Goal tokens不限；audio_allowed=false。
 - P1角色指导修复已发布8a28e98；P2六场扫描完成，默认KEEP100/HOLD1500。
 - P2末账本1361/116；连续两场单条ASR+教师+音频，普通句对照未增加超过1s。
-- P3完成并发布；P4三场Native均无accepted指示，已停止并记录FAIL；P5实现/离线验证中，P6～P8待推进。
+- P3完成并发布；P4三场Native无accepted指示，已停止并记录FAIL；P5已发布0812e68，Native完整接续事实通过。
+- P6诊断完成、延迟根因未知；P7一键准备成功；P8开始完整彩排。
 - 可听性和真人待用户；没有开麦、采集、回环或改音量。
 
 ## 待 Opus 复核
