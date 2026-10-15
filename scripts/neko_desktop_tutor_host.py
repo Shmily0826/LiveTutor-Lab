@@ -201,6 +201,8 @@ def apply_voice_host_patch(hosts=None, source_app=None) -> str:
         import neko_study_wait_notice_patch as wait_notice_patch
         results.append(f"{host_root.name}/pause-hold={pause_hold_patch.apply_to(host_root / pause_hold_patch.TARGET)}")
         results.append(f"{host_root.name}/wait-notice={wait_notice_patch.apply_to(host_root / wait_notice_patch.TARGET)}")
+        import neko_empty_turn_notice_patch as empty_turn_patch
+        results.append(f"{host_root.name}/empty-turn={empty_turn_patch.apply_to(host_root / empty_turn_patch.TARGET)}")
     import neko_pipe_output_patch as pipe_patch
     results.append(f"source/pipe-output={pipe_patch.apply_to(source_app)}")
     import neko_source_focus_patch as source_focus_patch

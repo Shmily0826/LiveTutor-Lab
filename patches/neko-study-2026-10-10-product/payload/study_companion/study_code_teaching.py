@@ -50,33 +50,40 @@ def _history_text(question, sources):
     return question.strip() + '\n[Source evidence] ' + ' | '.join(refs)
 
 
-async def last_source_requests(plugin, authorization, session_id):
-    """Re-read the newest source window of this session, for 'that line' follow-ups.
+async def last_source_requests(plugin, authorization, session_id, course_id=''):
+    """Re-read the newest source window for 'that line' follow-ups.
 
-    Only this session's own code_question rows for the same authorized project qualify; the
-    window is read again at the current revision, so a moved repository is reported, not hidden.
+    This session's own code_question rows come first. Every course switch, return and
+    restart starts a new session, so when this one has read nothing yet, the same course's
+    earlier sessions qualify too. Only rows for the same authorized project count, and the
+    window is read again at the current revision, so a moved repository is reported.
+    Returns (requests, revision first read at, whether it came from an earlier session).
     """
     store = getattr(plugin, '_store', None)
     if store is None or not session_id:
-        return [], ''
-    rows = await asyncio.to_thread(store.list_interactions, 30, session_id=session_id)
-    for row in rows:  # newest first
-        metadata = row.get('metadata') or {}
-        if row.get('kind') != 'code_question' or metadata.get('project') != authorization.get('name'):
-            continue
-        requests = []
-        for item in metadata.get('shown') or []:
-            lines = [line for line in (item.get('lines') or []) if type(line) is int and line > 0] if isinstance(item, dict) else []
-            if not lines or not isinstance(item.get('file'), str) or not item['file'].strip():
+        return [], '', False
+    scopes = [(dict(session_id=session_id), False)]
+    if str(course_id or '').strip():
+        scopes.append((dict(course_id=str(course_id).strip()), True))
+    for scope, earlier in scopes:
+        rows = await asyncio.to_thread(store.list_interactions, 30, **scope)
+        for row in rows:  # newest first
+            metadata = row.get('metadata') or {}
+            if row.get('kind') != 'code_question' or metadata.get('project') != authorization.get('name'):
                 continue
-            start = min(lines)
-            requests.append({'mode': 'file', 'file': item['file'], 'offset': start,
-                             'limit': max(1, min(120, max(lines) - start + 1))})
-            if len(requests) == 3:
-                break
-        if requests:
-            return requests, str(metadata.get('commit') or '')
-    return [], ''
+            requests = []
+            for item in metadata.get('shown') or []:
+                lines = [line for line in (item.get('lines') or []) if type(line) is int and line > 0] if isinstance(item, dict) else []
+                if not lines or not isinstance(item.get('file'), str) or not item['file'].strip():
+                    continue
+                start = min(lines)
+                requests.append({'mode': 'file', 'file': item['file'], 'offset': start,
+                                 'limit': max(1, min(120, max(lines) - start + 1))})
+                if len(requests) == 3:
+                    break
+            if requests:
+                return requests, str(metadata.get('commit') or ''), earlier and row.get('session_id') != session_id
+    return [], '', False
 
 
 async def explain_project_code(plugin, *, question, requests, language, output_target):
@@ -115,9 +122,10 @@ async def _explain_project_code(plugin, *, question, requests, language, output_
     if not authorization:
         return refuse('NO_AUTHORIZED_PROJECT', '请先授权要学习的项目目录；我还没有读取源码。',
                       'Please authorize the project directory first; I have not read its source.')
-    previous_revision = ''
+    previous_revision, from_earlier_session = '', False
     if reuse:
-        requests, previous_revision = await last_source_requests(plugin, authorization, context.get('session_id'))
+        requests, previous_revision, from_earlier_session = await last_source_requests(
+            plugin, authorization, context.get('session_id'), context.get('course_id'))
         if not requests:
             return invalid('No earlier source window in this session to re-read; name the file or symbol.')
         try:
@@ -165,7 +173,9 @@ async def _explain_project_code(plugin, *, question, requests, language, output_
                 'Keep identifiers exact; full paths and revision hashes are returned separately as provenance, not spoken prose. '
                 'Honor index freshness notes. A file tree or search match is not a function body. '
                 'Default to two short, patient sentences without greetings or filler; explicit length preferences win.\n'
-                + (('This is a follow-up: the windows above are the source most recently read in this session, read again now. '
+                + (('This is a follow-up: the windows above are the source most recently read '
+                    + ('in an earlier session of this course' if from_earlier_session else 'in this session')
+                    + ', read again now. '
                     + (f'They were first read at revision {previous_revision} and the project is now at {revision}; '
                        'line numbers may have moved, so say which revision you cite.\n'
                        if previous_revision and previous_revision != revision else '\n'))

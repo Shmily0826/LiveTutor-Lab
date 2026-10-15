@@ -40,7 +40,7 @@
     {
       "path": "main_logic/omni_realtime_client/_transport.py",
       "base_sha256": "2d6c058206c1beafc3e1d35a8f5111042ff509a31f398053ce7b97a825242423",
-      "patched_sha256": "7aad306d1bea1def77709f0c2b9577f0102e9a4077527fb2f794c770e9a2675d",
+      "patched_sha256": "eab9f86a1d22478b1a6b13de580684883632378c09979ed75b7c71947ea9139e",
       "resealed_utc": "2026-10-13T14:38:47.980810+00:00",
       "resealed_reason": "Bounded free-route late-ASR raw tool dispatch, pinned original connection/session, one expected scope advance, foreign retirement rejects; onset, PCM, response lifecycle unchanged; 6 candidate, 5 existing tool lifecycle and 19 barge guards passed; actual role/voice not yet verified.",
       "verified_by": {
@@ -528,7 +528,9 @@
     "replayed_by": "neko_desktop_tutor_host.apply_voice_host_patch on every --source launch",
     "backups": [
       "benchmarks/raw/evidence/claude-m3-before",
-      "benchmarks/raw/evidence/claude-m2-before"
-    ]
+      "benchmarks/raw/evidence/claude-m2-before",
+      "benchmarks/raw/evidence/claude-m5-before"
+    ],
+    "empty_turn": "scripts/neko_empty_turn_notice_patch.py: 3 s after a response with no audio, text or tool call to a complete user transcript (<8 s old), if nothing else happened, the status toast says 角色这次没有回应，请再说一遍。 No re-request, arbiter untouched; NEKO_EMPTY_TURN_NOTICE=0 disables."
   }
 }

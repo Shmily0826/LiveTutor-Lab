@@ -274,7 +274,14 @@ class ProjectCodeTeaching(unittest.IsolatedAsyncioTestCase):
         self.h.study_code_tool.assert_awaited_once_with(file='project/main.py', offset=17, limit=2, mode='file')
         self.assertIn('first read at revision revision-old and the project is now at revision-A',
                       self.h.study_explain_text.call_args.kwargs['text'])
+        # A restart or course return starts a new session; the same course's earlier read still counts.
         await self.h._restart_study_session(course_id='course-A')
+        self.h.study_code_tool.reset_mock()
+        await self.follow_up()
+        self.h.study_code_tool.assert_awaited_once_with(file='project/main.py', offset=17, limit=2, mode='file')
+        self.assertIn('in an earlier session of this course', self.h.study_explain_text.call_args.kwargs['text'])
+        # Another course never inherits it.
+        await self.h._restart_study_session(course_id='course-B')
         self.h.study_code_tool.reset_mock()
         result = await self.follow_up()
         self.assertEqual(result['error'], 'invalid_code_requests')

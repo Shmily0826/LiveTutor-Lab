@@ -8,6 +8,7 @@ import unittest
 
 import neko_voice_host_patch as patch
 import neko_pause_hold_patch as pause_hold
+import neko_empty_turn_notice_patch as empty_turn
 from neko_phrase_input_patch import normalize_phrase_helpers, normalize_phrase_transport
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,12 +30,14 @@ class PhrasePatchReplay(unittest.TestCase):
                 # Same order as the launch chain (apply_voice_host_patch).
                 if relative == pause_hold.TARGET:
                     pause_hold.apply_to(target)
+                    empty_turn.apply_to(target)
                 actual = target.read_bytes()
                 ast.parse(actual.decode('utf-8'))
                 self.assertEqual(patch.state(target), 'patched')
                 self.assertEqual(patch.apply_to(target), 'already patched')
                 if relative == pause_hold.TARGET:
                     self.assertEqual(pause_hold.apply_to(target), 'already patched')
+                    self.assertEqual(empty_turn.apply_to(target), 'already patched')
                 self.assertEqual(target.read_bytes(), actual)
                 for host in patch.HOSTS:
                     self.assertEqual(actual, (host / relative).read_bytes())

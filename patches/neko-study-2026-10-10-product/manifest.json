@@ -228,13 +228,14 @@
     },
     {
       "path": "payload/study_companion/study_code_teaching.py",
-      "sha256": "3eb420c54e4a446e947b1f8b73c99523b50194cf32610bcbe8f39842cb226d69",
+      "sha256": "808a66033e4ea2a350b4f70c11b5ea5353b5da3dbe0a720d75ce5afe6d2266e5",
       "deployed_matches": true,
       "phase56_verification": "Source/offline adapter8 + related material26/language6/native teaching binding5; cold card initialization existing3+new text1. Real role text68 teacher correct but filler/redundant reads PARTIAL;69 automatic study_explain project_code delegated actual CodeGraph file21-28@7aae20f, exact two-sentence teacher reply relayed and saved in existing SQLite. Cold text guidance actually present. Native free voice/device/human pending; extra preliminary source read and19.44s remain.",
       "phase59_prior_sha256": "05e1de9d45cee9e5a9301c226c4257e02e4d5c37d47f7c8650490674dea0c815",
       "phase59_verification": "Per-call content-free timings; offline isolation/cancellation and existing boundaries checked. No provider performance or audible/human acceptance claimed.",
       "claude_m1_prior_sha256": "14f774586746b9c714f39a3713de11e1e2b86a4ae8a70469eb211eefe5246d87",
-      "claude_m2_prior_sha256": "4facd327d0222679ebe37f319ca70ec45cb0d85bf59ab2c80daa90ced5705c93"
+      "claude_m2_prior_sha256": "4facd327d0222679ebe37f319ca70ec45cb0d85bf59ab2c80daa90ced5705c93",
+      "claude_m5_prior_sha256": "3eb420c54e4a446e947b1f8b73c99523b50194cf32610bcbe8f39842cb226d69"
     },
     {
       "path": "payload/study_companion/study_call_trace.py",
@@ -460,5 +461,10 @@
     "scope": "Bare-name file inventory reused while the authorized tree fingerprint equals a synced tree; semantic routing for project_code starts while the source is read and is consumed only for the identical query (else cancelled, inline route as before); prefetch reservation moves into the request context; every exit cancels and awaits it.",
     "offline": "test_neko_code_sync_fingerprint (+1), test_neko_source_route_memory (+1), test_neko_project_code_teaching (+1); 45 modules OK",
     "backup": "benchmarks/raw/evidence/claude-m2-payload-before"
+  },
+  "claude_m5_course_followup": {
+    "scope": "A follow-up without code_requests falls back from this session to the same course's earlier sessions (same authorized project, re-read at the current revision, teacher told it is from an earlier session); other courses never inherit.",
+    "real_scene": "benchmarks/raw/evidence/claude-m5-continuity-1.json",
+    "backup": "benchmarks/raw/evidence/claude-m5-payload-before"
   }
 }

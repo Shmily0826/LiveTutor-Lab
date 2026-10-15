@@ -1,5 +1,5 @@
 diff --git a/main_logic/omni_realtime_client/_transport.py b/main_logic/omni_realtime_client/_transport.py
-index f04aba0..bfb6d0a 100644
+index f04aba0..9464a76 100644
 --- a/main_logic/omni_realtime_client/_transport.py
 +++ b/main_logic/omni_realtime_client/_transport.py
 @@ -251,6 +251,9 @@ class _TransportMixin:
@@ -736,7 +736,44 @@ index f04aba0..bfb6d0a 100644
      async def _analyze_image_with_vision_model(
          self,
          image_b64: str,
-@@ -2423,6 +3025,12 @@ class _TransportMixin:
+@@ -2341,6 +2943,36 @@ class _TransportMixin:
+             # with it — the turn itself already happened either way.
+             logger.debug("realtime usage accounting skipped: %s", exc)
+ 
++    def _livetutor_note_empty_answer(self) -> None:
++        """LiveTutor: a complete question answered with nothing gets a visible retry hint."""
++        if __import__("os").environ.get("NEKO_EMPTY_TURN_NOTICE", "1") != "1":
++            return
++        asked = getattr(self, "_late_raw_transcript_at", 0.0) or 0.0
++        if (self._audio_delta_count or self._current_response_transcript
++                or getattr(self, "_livetutor_call_seen_at", 0.0) >= asked
++                or not 0 < time.time() - asked < 8.0
++                or getattr(self, "_livetutor_empty_notice_for", None) == asked
++                or self.on_status_message is None):
++            return
++        self._livetutor_empty_notice_for = asked
++        done_before = self._response_done_total
++        generation = self._connection_generation
++
++        async def notice():
++            await asyncio.sleep(3.0)
++            if (self._connection_generation != generation
++                    or self._response_done_total != done_before
++                    or self._is_responding or self._audio_delta_count
++                    or getattr(self, "_late_raw_transcript_at", 0.0) != asked
++                    or getattr(self, "_livetutor_call_seen_at", 0.0) >= asked
++                    or time.time() - getattr(self, "_user_recent_activity_time", 0.0) < 2.0):
++                return
++            logger.info("[empty-turn] question at %.3f got an empty answer; showing retry hint", asked)
++            await self.on_status_message("角色这次没有回应，请再说一遍。")
++
++        task = asyncio.get_running_loop().create_task(notice())
++        task.add_done_callback(lambda done: done.cancelled() or done.exception())
++
+     def _take_response_transcript(self) -> str:
+         """Close the books on what this turn actually said.
+ 
+@@ -2423,6 +3055,12 @@ class _TransportMixin:
          if pending is None or not self.on_output_transcript:
              return
          text, is_first = pending
@@ -749,7 +786,7 @@ index f04aba0..bfb6d0a 100644
          await self.on_output_transcript(text, is_first)
  
      def _clear_turn_response_state(self) -> None:
-@@ -2453,11 +3061,14 @@ class _TransportMixin:
+@@ -2453,11 +3091,14 @@ class _TransportMixin:
          self._turn_epoch += 1
          self._current_turn_epoch = self._turn_epoch
          self._current_turn_host_id = self._read_host_turn_id()
@@ -769,7 +806,7 @@ index f04aba0..bfb6d0a 100644
          self._interrupted = False
          # A stable successor id also closes the id-less quarantine opened by
          # a fail-open release; ordered socket delivery puts this evidence
-@@ -2617,7 +3228,9 @@ class _TransportMixin:
+@@ -2617,7 +3258,9 @@ class _TransportMixin:
                  self._current_turn_host_id,
              )
              return
@@ -780,7 +817,7 @@ index f04aba0..bfb6d0a 100644
              # This provider family has no speech_stopped event. Reaching the
              # owned response terminal is its authoritative native-input
              # boundary. The ownership checks above ensure a late terminal can
-@@ -3130,6 +3743,10 @@ class _TransportMixin:
+@@ -3130,6 +3773,10 @@ class _TransportMixin:
                          return
                      continue
  
@@ -791,7 +828,15 @@ index f04aba0..bfb6d0a 100644
                  if event_type == "session.updated":
                      self._notify_session_updated(event)
                      handler = self.extra_event_handlers.get(event_type)
-@@ -3328,6 +3945,7 @@ class _TransportMixin:
+@@ -3285,6 +3932,7 @@ class _TransportMixin:
+                         )
+                         self._inflight_tool_args.pop(event.get("call_id") or "", None)
+                         continue
++                    self._livetutor_call_seen_at = time.time()
+                     name = event.get("name") or ""
+                     raw_args = event.get("arguments") or ""
+                     call_id = event.get("call_id") or ""
+@@ -3328,6 +3976,7 @@ class _TransportMixin:
                                  ),
                                  call_id=call_id,
                                  raw_arguments=raw_args,
@@ -799,7 +844,15 @@ index f04aba0..bfb6d0a 100644
                              ),
                              owner,
                              # Groups this call with the parallel siblings the
-@@ -3439,6 +4057,7 @@ class _TransportMixin:
+@@ -3372,6 +4021,7 @@ class _TransportMixin:
+                     self._record_response_usage(event.get("response"))
+                     if finalize_response is False:
+                         continue
++                    self._livetutor_note_empty_answer()
+                     self._clear_turn_response_state()
+                     # 响应完成，检测重复度
+                     await self._record_response_repetition(
+@@ -3439,6 +4089,7 @@ class _TransportMixin:
                      logger.info("input_audio_buffer.committed observed (total=%d)", self._input_audio_committed_total)
                  # Handle interruptions
                  elif event_type == "input_audio_buffer.speech_started":
@@ -807,7 +860,7 @@ index f04aba0..bfb6d0a 100644
                      self.note_user_turn_started()
                      self._ensure_voice_handoff_audio_timeline()
                      self._voice_handoff_server_item_id = event.get("item_id")
-@@ -3502,6 +4121,9 @@ class _TransportMixin:
+@@ -3502,6 +4153,9 @@ class _TransportMixin:
                      self._client_vad_last_speech_time = _now
                      self._user_recent_activity_time = _now
                  elif event_type == "conversation.item.input_audio_transcription.completed":
@@ -817,7 +870,7 @@ index f04aba0..bfb6d0a 100644
                      already_scoped = self._raw_transcript_was_already_scoped(
                          event.get("item_id")
                      )
-@@ -3510,16 +4132,24 @@ class _TransportMixin:
+@@ -3510,16 +4164,24 @@ class _TransportMixin:
                          # boundary events. The completed transcript is then the
                          # first authoritative signal that a new user turn has
                          # begun, so stale tool work must retire here.
@@ -843,7 +896,7 @@ index f04aba0..bfb6d0a 100644
                  elif event_type in ["response.audio_transcript.done", "response.output_audio_transcript.done"]:
                      self._print_input_transcript = False
                      # [ISSUE4b] Voice-without-text fix. Audio deltas and transcript
-@@ -3540,13 +4170,21 @@ class _TransportMixin:
+@@ -3540,13 +4202,21 @@ class _TransportMixin:
                              or _audio_already_spoken
                          )
                      ):
@@ -866,7 +919,7 @@ index f04aba0..bfb6d0a 100644
                      if event_type in ["response.text.delta", "response.output_text.delta"]:
                          if self.on_text_delta:
                              if "glm" not in self._model_lower:
-@@ -3564,6 +4202,11 @@ class _TransportMixin:
+@@ -3564,6 +4234,11 @@ class _TransportMixin:
                          if self.on_audio_delta:
                              audio_bytes = base64.b64decode(event["delta"])
                              self._ai_recent_activity_time = time.time()
@@ -878,7 +931,7 @@ index f04aba0..bfb6d0a 100644
                              await self.on_audio_delta(audio_bytes)
                              if await retire_if_replaced():
                                  return
-@@ -3590,6 +4233,12 @@ class _TransportMixin:
+@@ -3590,6 +4265,12 @@ class _TransportMixin:
                          if self.on_output_transcript and self._is_first_transcript_chunk:
                              transcript = event.get("transcript", "")
                              if transcript:
@@ -891,7 +944,7 @@ index f04aba0..bfb6d0a 100644
                                  await self.on_output_transcript(transcript, True)
                                  if await retire_if_replaced():
                                      return
-@@ -3604,11 +4253,23 @@ class _TransportMixin:
+@@ -3604,11 +4285,23 @@ class _TransportMixin:
                              else:
                                  if self._output_transcript_buffer:
                                      # logger.info(f"{self._output_transcript_buffer} is_first_chunk: True")
@@ -915,7 +968,7 @@ index f04aba0..bfb6d0a 100644
                                  await self.on_output_transcript(delta, self._is_first_transcript_chunk)
                                  if await retire_if_replaced():
                                      return
-@@ -3792,7 +4453,22 @@ class _TransportMixin:
+@@ -3792,7 +4485,22 @@ class _TransportMixin:
          theirs.
          """
  
@@ -938,7 +991,7 @@ index f04aba0..bfb6d0a 100644
          self._clear_input_route_identities()
          self._advance_tool_scope()
          # A pending proactive outcome belongs to the connection that created
-@@ -4030,6 +4706,7 @@ class _TransportMixin:
+@@ -4030,6 +4738,7 @@ class _TransportMixin:
          # before the task's first line must not be a window where they still
          # think the transport is healthy.
          self._fatal_error_occurred = True
@@ -946,7 +999,7 @@ index f04aba0..bfb6d0a 100644
          await self._own_teardown(
              "_failed_transport_close_task",
              lambda: self._detach_for_failed_transport(reason),
-@@ -4114,6 +4791,7 @@ class _TransportMixin:
+@@ -4114,6 +4823,7 @@ class _TransportMixin:
  
      async def close(self) -> None:
          """Close the WebSocket connection."""
