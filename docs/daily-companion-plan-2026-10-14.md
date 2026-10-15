@@ -1,6 +1,6 @@
-> **当前：用户明确继续，Goal已核active（2026-10-15，阶段60）。** Claude限额不阻塞本地推进。先独立计时/离线核对源码教学延迟，保留路由、课程、历史与授权保护；本轮不mic/capture/loopback或播放声音，原账本现890/2000、app79/null、tech0。旧暂停记录保留为历史。完整A–F不缩范围，完成依据实际证据。
+> **当前：用户明确继续，Goal已核active（2026-10-15，阶段61）。** Claude限额不阻塞本地推进。本轮完成离线静音/裁剪分析与诊断补齐，下一转受控材料UI，保留完整保护；本轮不mic/capture/loopback或播放声音，原账本现890/2000、app79/null、tech0。旧暂停记录保留为历史。完整A–F不缩范围，完成依据实际证据。
 
-# 日常学习伙伴执行计划（阶段59计时/只读CLI通过，整体未完成）
+# 日常学习伙伴执行计划（阶段61离线诊断通过，整体未完成）
 
 完整任务以[原始 contract](daily-companion-contract-2026-10-14.md)全文为准，不摘要替代、不修改；169行，SHA256 `FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33`。Goal `01a13531-0341-7611-afc2-5c472a7ccf50` active（用户明确继续，接口已核），完整A–F不缩范围、不因局部失败结束。沿用户指定模型，不擅自换模型。
 
@@ -8,7 +8,12 @@
 
 
 
-## 最新阶段60：真实SDK计时，模型超时
+
+## 最新阶段61：原语音离线分析与诊断补齐
+
+[阶段61报告](evidence/daily-companion-phase61-phrase-diagnostics-2026-10-15.md)：原47固定WAV按SHA找到，重建speech-end与51一致；15752样本减少为内部纯零压缩，不当句尾裁剪或代理端点证据。新增有界压缩坐标、batch摘要、逐块本地写入诊断及严格白名单解析，PCM/节奏/分轮/打断不变、默认phrase/AUTO仍OFF。分组去重95个离线case（新4），旧打包清单10→已发布17修正并复核；SourceGate通过。原890/79/0无外呼、无live或音频设备；自然停顿仍未验。下一62转A/E/F受控界面流程和恢复，完整A–F/Goal active。
+
+## 历史阶段60：真实SDK计时，模型超时
 
 [阶段60报告](evidence/daily-companion-phase60-live-source-timing-2026-10-15.md)：修共享量具health预算1→90秒启动竞态后，73实际Study就绪/唯一callback；源码3.669秒，sync1.968秒/inventory0.675秒/query0.917秒/记录4ms。语义路由12秒、解释45秒超时，degraded=timeout，模型未通过、不冒语音提速。旧5interactions SHA不变/QA0，新增code_question仅源码记录；原账本890/2000、app79/null、tech0。owned28全清、端口空、SourceGate PASS。停止该线路无效重试并退避，下一61转B原固定WAV静音/裁剪离线分析，不等Claude，完整A–F/Goal active。71/72调用前失败原件保留。
 
@@ -33,7 +38,7 @@
 
 ## 不可丢失的操作约束
 
-- 原账本 `bargein-autocheck-20261012`，不重置/不换轮。最新实核DS888/2000、app79/null、tech0/0；启动前再核。连接保留单场超时/异常停止/退避，不换其它付费供应商，不为耗额度测试；计数非金额。
+- 原账本 `bargein-autocheck-20261012`，不重置/不换轮。最新实核DS890/2000、app79/null、tech0/0；启动前再核。连接保留单场超时/异常停止/退避，不换其它付费供应商，不为耗额度测试；计数非金额。
 - 必要扬声器仅用户已设4%，不调音量；当前静音。禁房间/物理/虚拟麦克风、capture初始化、loopback；旧真人许可不延续。固定WAV仅文件/内存/WS，发声须审output-only。核心成熟后一次10–20分钟human，须重新明确准备好了，不逐句让用户等待。
 - 保留Root脏master/空index/.workbuddy/用户历史；不reset/clean/stash/清库。仅精确allowlist审后commit/push codex/，不合主/强推/覆盖历史，排除密钥/DB/WAV/raw/备份。
 - Sky Scout源码/项目内索引/原HTML只读，复用已有两图、47WAV、CodeGraph、SQLite。Root当前无.codegraph；Sky定位先CodeGraph。localhost用全局web-inspector，不查个人Chrome、不装项目Playwright；六目录删除审批拒绝不绕过。
@@ -66,3 +71,5 @@
 57已发布94a1f02；58先核源码/上下文4.69秒和语义2.915秒的必要工作与保护，再做有依据最小优化；不要为了提速丢课程、历史或概念一致性。70 Native窄证不重跑，余A–F仍保留。
 
 60准备：只做一个静音真实SDK调用补59完整计时，范围见phase60报告。原888/79/0、无live，完整A–F/Goal active，不等待Claude。
+
+61开始：原WAV已按SHA找到、离线speech-end重建匹配；补非音频内容的压缩位置/写入诊断，不改处理或分轮。原890/79/0、无live，不等待Claude/不重试模型，完整A–F继续。

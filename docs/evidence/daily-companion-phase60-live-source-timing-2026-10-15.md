@@ -27,3 +27,6 @@ cleanup无错/tracker无错，28条owned进程记录当前全部终止；owned h
 ## 阻塞转向
 
 该模型线路停止无效重试，不为确认恢复立即开新请求；至少退避15分钟，之后也须有必要用例或外部恢复证据才安排一次有界调用，不自动探活。此为本场模型超时，不推断全站服务故障，不标全局blocked。下一61转B：复用51原固定WAV/本地裁剪和提交实现，离线分析内部静音及样本差，不需要模型/扬声器/麦克风。完整A–F与C/E/F余项继续。
+
+60发布确认：7文件commit/push ba309dc9e88123bb19021a33a38e15f9af99584e，远端exact、master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。仅源码量具/共享启动参数/文档，不含raw、DB、音频、密钥或备份。原890/79/0，所有owned已清，Goal active；不是教学或设备通过。
+下一61已有定位：51第三WAV原件SHA9685bbb3db11102e45e85e6475523cf2a28ee9d9f259b069f8f8e38c811b84ff，raw字段input只描述fixed WAV，不保存路径；可在任务evidence目录按SHA找现有文件，禁止重新制作材料。phrase_deliveries最后一项含source/output/compressed_zero/written及wall，不含实际送出PCM。现buffer._flush_zero_pause实现只压缩被后续保留帧包围的exact-zero内部静音，前导/尾部保留；不能把原WAV直接冒RNNoise之后的已送PCM，也不能从ASR到达时刻猜provider端点。保留51原严格FAIL，先做离线可证明部分，再决定需补的诊断。

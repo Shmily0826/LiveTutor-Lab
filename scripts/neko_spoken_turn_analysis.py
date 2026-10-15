@@ -153,6 +153,42 @@ def parse_phrase_deliveries(log_text):
             if not all(_timestamp(v) is not None and v >= 0 for v in public.values()):
                 continue
             public.update(result="written_waiting_provider_boundary", input_timebase=raw["input_timebase"])
+            if 'output_pcm_sha256' in raw:
+                extra = {key: raw[key] for key in ('input_sequence', 'output_pcm_sha256', 'captured_start_estimated_wall',
+                    'compressed_zero_intervals', 'compressed_intervals_truncated', 'local_append_count',
+                    'local_append_writes', 'local_append_writes_truncated')}
+                if (not isinstance(extra['output_pcm_sha256'], str)
+                        or not re.fullmatch('[0-9a-f]{64}', extra['output_pcm_sha256'])
+                        or _timestamp(extra['captured_start_estimated_wall']) is None
+                        or extra['captured_start_estimated_wall'] < 0
+                        or type(extra['input_sequence']) is not int or extra['input_sequence'] < 0
+                        or any(type(extra[k]) is not bool for k in
+                               ('compressed_intervals_truncated', 'local_append_writes_truncated'))):
+                    continue
+                intervals, writes = extra['compressed_zero_intervals'], extra['local_append_writes']
+                if (not isinstance(intervals, list) or len(intervals) > 32
+                        or any(not isinstance(pair, list) or len(pair) != 2
+                               or any(type(n) is not int for n in pair)
+                               or not 0 <= pair[0] < pair[1] <= public['source_samples'] for pair in intervals)
+                        or any(a[1] > b[0] for a, b in zip(intervals, intervals[1:]))
+                        or not isinstance(writes, list) or len(writes) > 32
+                        or type(extra['local_append_count']) is not int or extra['local_append_count'] < len(writes)):
+                    continue
+                if any(not isinstance(w, dict) or set(w) != {'samples', 'written_wall', 'elapsed_ms'}
+                       or type(w['samples']) is not int or w['samples'] <= 0
+                       or any(_timestamp(w[k]) is None or w[k] < 0 for k in ('written_wall', 'elapsed_ms'))
+                       for w in writes):
+                    continue
+                removed = sum(end - start for start, end in intervals)
+                written = sum(w['samples'] for w in writes)
+                if (public['source_samples'] - public['output_samples'] != public['compressed_zero_samples']
+                        or public['written_samples'] != public['output_samples']
+                        or removed > public['compressed_zero_samples'] or written > public['written_samples']
+                        or not extra['compressed_intervals_truncated'] and removed != public['compressed_zero_samples']
+                        or not extra['local_append_writes_truncated'] and
+                           (written != public['written_samples'] or extra['local_append_count'] != len(writes))):
+                    continue
+                public.update(extra)
             if public not in records:  # The host has two logging handlers for the same record.
                 records.append(public)
         except (KeyError, ValueError, TypeError):

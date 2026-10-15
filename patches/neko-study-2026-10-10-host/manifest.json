@@ -409,14 +409,18 @@
   "runtime_helpers": [
     {
       "path": "scripts/neko_phrase_input_buffer.py",
-      "sha256": "2bb1a65c72ac4bbf122ea9327de58df9d806572d6fa30f04c3eeca3132d9e99b",
-      "deployed_path": "neko_phrase_input_buffer.py"
+      "sha256": "4eecdc3e3c58b5940d9176812ee4a5ca69bbdfab78a82e6ae48ac070f471fc8c",
+      "deployed_path": "neko_phrase_input_buffer.py",
+      "phase61_prior_sha256": "2bb1a65c72ac4bbf122ea9327de58df9d806572d6fa30f04c3eeca3132d9e99b",
+      "phase61_scope": "Bounded diagnostic offsets, digest and local writes only; PCM/endpoint/interrupt behavior unchanged; offline proof only."
     },
     {
       "path": "scripts/neko_phrase_input_transport.py",
-      "sha256": "d247be713381aae91a71608441f9a06d3be0b5ccb868a8b667c9d70f44ce548b",
+      "sha256": "86cd4c9429264838775163cd85a7c808e07b23438105a855364af37397cae80a",
       "deployed_path": "neko_phrase_input_transport.py",
-      "phase43_prior_sha256": "58bfe9f9513d45b6cb92a4adcedb4d81014e5a85c02870a3f712ac5407f5d07b"
+      "phase43_prior_sha256": "58bfe9f9513d45b6cb92a4adcedb4d81014e5a85c02870a3f712ac5407f5d07b",
+      "phase61_prior_sha256": "d247be713381aae91a71608441f9a06d3be0b5ccb868a8b667c9d70f44ce548b",
+      "phase61_scope": "Bounded diagnostic offsets, digest and local writes only; PCM/endpoint/interrupt behavior unchanged; offline proof only."
     },
     {
       "path": "scripts/neko_output_only_runtime.py",

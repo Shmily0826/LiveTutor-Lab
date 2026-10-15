@@ -447,7 +447,14 @@ class PatchIsTheDeliverableTest(unittest.TestCase):
                           "main_logic/core/tts_runtime.py",
                           "main_routers/websocket_router.py",
                           "static/app/app-websocket.js",
-                          "static/app/app-audio-playback.js"])
+                          "static/app/app-audio-playback.js",
+                          "main_logic/core/tts_lifecycle.py",
+                          "main_logic/core/tool_calling.py",
+                          "app/main_server/character_runtime.py",
+                          "main_logic/omni_realtime_client/_audio.py",
+                          "main_logic/core/turn.py",
+                          "main_logic/omni_realtime_client/_wire_trace.py",
+                          "main_logic/omni_realtime_client/_response_arbiter.py"])
         # ...and the Gemini gate is the one the free route plays through. Patching only the
         # transport is what left three sessions with zero onset lines while 56 s of answer
         # came out of the speaker.

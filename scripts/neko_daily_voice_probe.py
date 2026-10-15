@@ -715,9 +715,10 @@ async def main(args):
             # These bounded diagnostic lines contain event timestamps, not credentials.
             report["timing_log"] = [line for line in fresh_log.splitlines() if any(mark in line for mark in (
                 "voice user_transcript", "TRIGGER entry='__llm_tool__study_", "首个 audio.delta", "/api/llm-tools/callback/study_companion/", "native-timing", "study voice admission", "study voice identical", "study-material-audio", "[study-grade-event]", "[study-grade-tail]"))]
-            if grade_enabled:
+            if grade_enabled or report.get('experimental_phrase_input'):
                 from neko_spoken_turn_analysis import parse_phrase_deliveries
                 report['phrase_deliveries'] = parse_phrase_deliveries(fresh_log)
+            if grade_enabled:
                 report['grade_markers'] = []
                 for line in fresh_log.splitlines():
                     if '[study-grade-event] ' in line:

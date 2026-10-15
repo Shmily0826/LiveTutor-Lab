@@ -58,6 +58,8 @@ class SealedPhrase:
     captured_start: float
     speech_end_at: float
     sealed_at: float
+    compressed_zero_intervals: tuple[tuple[int, int], ...] = ()  # Source sample offsets, end exclusive.
+    compressed_intervals_truncated: bool = False
 
 
 class PhraseInputBuffer:
@@ -82,6 +84,9 @@ class PhraseInputBuffer:
         self._zero_keep_bytes = max(2, int(internal_zero_seconds * SAMPLE_RATE) * 2)
         self._pcm = bytearray()
         self._zero_pending_bytes = 0
+        self._zero_pending_start = None
+        self._compressed_intervals = []
+        self._compressed_intervals_truncated = False
         self._source_bytes = 0
         self._compressed_zero_bytes = 0
         self.peak_buffered_bytes = 0
@@ -101,6 +106,8 @@ class PhraseInputBuffer:
         self.failure_reason = code
         self._pcm.clear()
         self._zero_pending_bytes = 0
+        self._zero_pending_start = None
+        self._compressed_intervals.clear()
         self._sealed = None
         raise PhraseBufferError(code)
 
@@ -144,6 +151,8 @@ class PhraseInputBuffer:
         if not speech_active and not any(pcm16):
             # Exact all-zero PCM only. Quiet bytes need not be allocated until
             # we know whether this is an internal pause or the terminal tail.
+            if self._zero_pending_bytes == 0:
+                self._zero_pending_start = (self._source_bytes - len(pcm16)) // 2
             self._zero_pending_bytes += len(pcm16)
         else:
             self._flush_zero_pause(internal=True)
@@ -162,9 +171,16 @@ class PhraseInputBuffer:
         # followed by another retained frame within this phrase can shrink.
         if internal and self._speech_end is not None:
             keep = min(keep, self._zero_keep_bytes)
+        if keep < self._zero_pending_bytes:
+            if len(self._compressed_intervals) < 32:
+                self._compressed_intervals.append((self._zero_pending_start + keep // 2,
+                                                   self._zero_pending_start + self._zero_pending_bytes // 2))
+            else:
+                self._compressed_intervals_truncated = True
         self._compressed_zero_bytes += self._zero_pending_bytes - keep
         self._pcm.extend(bytes(keep))
         self._zero_pending_bytes = 0
+        self._zero_pending_start = None
 
     def tick(self, *, ownership: PhraseOwnership, now: float | None = None) -> PhraseState:
         self.assert_current(ownership)
@@ -181,7 +197,8 @@ class PhraseInputBuffer:
             self._pcm.clear()
             self._sealed = SealedPhrase(self.local_phrase_id, self.ownership, pcm,
                 self._source_bytes // 2, len(pcm) // 2, self._compressed_zero_bytes // 2,
-                self._start, self._speech_end, when)
+                self._start, self._speech_end, when, tuple(self._compressed_intervals),
+                self._compressed_intervals_truncated)
             self.state = PhraseState.SEALED
         return self.state
 
@@ -198,6 +215,8 @@ class PhraseInputBuffer:
     def close(self) -> None:
         self._pcm.clear()
         self._zero_pending_bytes = 0
+        self._zero_pending_start = None
+        self._compressed_intervals.clear()
         self._sealed = None
         self.state = PhraseState.CLOSED
         self.failure_reason = "phrase_closed"

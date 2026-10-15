@@ -1,6 +1,6 @@
-> **当前：用户明确继续，Goal已核active（2026-10-15，阶段60）。** Claude限额不阻塞本地推进。先独立计时/离线核对源码教学延迟，保留路由、课程、历史与授权保护；本轮不mic/capture/loopback或播放声音，原账本现890/2000、app79/null、tech0。旧暂停记录保留为历史。完整A–F不缩范围，完成依据实际证据。
+> **当前：用户明确继续，Goal已核active（2026-10-15，阶段61）。** Claude限额不阻塞本地推进。本轮完成离线静音/裁剪分析与诊断补齐，下一转受控材料UI，保留完整保护；本轮不mic/capture/loopback或播放声音，原账本现890/2000、app79/null、tech0。旧暂停记录保留为历史。完整A–F不缩范围，完成依据实际证据。
 
-# 日常学习伙伴状态（阶段59计时/只读CLI通过，整体未完成）
+# 日常学习伙伴状态（阶段61离线诊断通过，整体未完成）
 
 完整任务以[原始 contract](daily-companion-contract-2026-10-14.md)全文为准，不摘要替代、不修改；169行，SHA256 `FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33`。Goal `01a13531-0341-7611-afc2-5c472a7ccf50` active（用户明确继续，接口已核），完整A–F不缩范围、不因局部失败结束。沿用户指定模型，不擅自换模型。
 
@@ -8,7 +8,12 @@
 
 
 
-## 最新阶段60：真实SDK计时，模型超时
+
+## 最新阶段61：原语音离线分析与诊断补齐
+
+[阶段61报告](evidence/daily-companion-phase61-phrase-diagnostics-2026-10-15.md)：原47固定WAV按SHA找到，重建speech-end与51一致；15752样本减少为内部纯零压缩，不当句尾裁剪或代理端点证据。新增有界压缩坐标、batch摘要、逐块本地写入诊断及严格白名单解析，PCM/节奏/分轮/打断不变、默认phrase/AUTO仍OFF。分组去重95个离线case（新4），旧打包清单10→已发布17修正并复核；SourceGate通过。原890/79/0无外呼、无live或音频设备；自然停顿仍未验。下一62转A/E/F受控界面流程和恢复，完整A–F/Goal active。
+
+## 历史阶段60：真实SDK计时，模型超时
 
 [阶段60报告](evidence/daily-companion-phase60-live-source-timing-2026-10-15.md)：修共享量具health预算1→90秒启动竞态后，73实际Study就绪/唯一callback；源码3.669秒，sync1.968秒/inventory0.675秒/query0.917秒/记录4ms。语义路由12秒、解释45秒超时，degraded=timeout，模型未通过、不冒语音提速。旧5interactions SHA不变/QA0，新增code_question仅源码记录；原账本890/2000、app79/null、tech0。owned28全清、端口空、SourceGate PASS。停止该线路无效重试并退避，下一61转B原固定WAV静音/裁剪离线分析，不等Claude，完整A–F/Goal active。71/72调用前失败原件保留。
 
@@ -16,7 +21,7 @@
 
 [阶段59报告](evidence/daily-companion-phase59-source-timing-2026-10-15.md)：每次调用独立、低内容计时已部署；31相关离线case通过（新2，不重复计数），SourceGate通过。只读实际CLI裸名2.271秒，其中inventory1.219秒；完整已知路径1.029秒，同源码SHA。不含sync/DB/surface/模型，不能冒端到端提速；暂不做路由并发或裸名缓存。manifest32/32与31直接部署项匹配，余index.html重算既有protected变换一致。原888/79/0，无live，Goal active。下一步一次必要静音SDK场补完整计时，完整A–F继续，不等Claude。
 
-## 当前阶段57
+## 历史阶段57
 
 [完整报告](evidence/daily-companion-phase57-native-source-2026-10-15.md)
 
@@ -103,3 +108,8 @@ Claude官方文档说明GitHub集成支持私有仓库，未出现不等同免�
 60唯一修正后72量具已启动exec97486；仅poll此handle，未终态不重启或冒真实模型通过。71调用前量具失败已保留，原888/79/0。
 
 60：72已终态/清理，Study未注册且零外呼。共享量具health预算1→90秒后唯一73已启动exec22094，只poll此handle；未终态不重启/不认模型通过。71/72原失败不覆盖。
+
+60发布确认：7文件commit/push ba309dc9e88123bb19021a33a38e15f9af99584e，远端exact、master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。仅源码量具/共享启动参数/文档，不含raw、DB、音频、密钥或备份。原890/79/0，所有owned已清，Goal active；不是教学或设备通过。
+下一61已有定位：51第三WAV原件SHA9685bbb3db11102e45e85e6475523cf2a28ee9d9f259b069f8f8e38c811b84ff，raw字段input只描述fixed WAV，不保存路径；可在任务evidence目录按SHA找现有文件，禁止重新制作材料。phrase_deliveries最后一项含source/output/compressed_zero/written及wall，不含实际送出PCM。现buffer._flush_zero_pause实现只压缩被后续保留帧包围的exact-zero内部静音，前导/尾部保留；不能把原WAV直接冒RNNoise之后的已送PCM，也不能从ASR到达时刻猜provider端点。保留51原严格FAIL，先做离线可证明部分，再决定需补的诊断。
+
+61开始：原WAV已按SHA找到、离线speech-end重建匹配；补非音频内容的压缩位置/写入诊断，不改处理或分轮。原890/79/0、无live，不等待Claude/不重试模型，完整A–F继续。

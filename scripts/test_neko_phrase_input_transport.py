@@ -1,6 +1,7 @@
 """Actual Core/Omni methods with a local queue socket; no provider/audio device."""
 import asyncio
 import base64
+import hashlib
 import json
 import os
 import struct
@@ -91,12 +92,16 @@ class PhraseTransport(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(self.client._native_phrase_protects_input())
 
     async def test_write_is_bounded_chunked_and_owned_response_boundary_releases_clear(self):
-        self.client._WS_FRAME_LIMIT = 8192
+        self.client._WS_FRAME_LIMIT = 4096
         await self.phrase()
         await self.finish_writer()
         chunks = [item for item in self.socket.sent if item['type'] == 'input_audio_buffer.append']
         self.assertGreater(len(chunks), 1)
-        self.assertTrue(all(len(json.dumps(item)) < 8192 for item in chunks))
+        self.assertTrue(all(len(json.dumps(item)) < 4096 for item in chunks))
+        report = self.client._native_phrase_last_delivery
+        self.assertGreater(report['local_append_count'], 32)
+        self.assertEqual(len(report['local_append_writes']), 32)
+        self.assertTrue(report['local_append_writes_truncated'])
         self.assertEqual(self.manager._omni_mic_audio_bytes, len(self.written()))
         self.assertTrue(self.client._native_phrase_protects_input())
         sequence = self.client._voice_handoff_input_sequence
@@ -139,8 +144,20 @@ class PhraseTransport(unittest.IsolatedAsyncioTestCase):
         self.assertGreaterEqual(report['write_elapsed_ms'], 0)
         self.assertLessEqual(report['sealed_wall'], report['started_wall'])
         self.assertLessEqual(report['first_write_wall'], report['completed_wall'])
+        self.assertEqual(report['output_pcm_sha256'], hashlib.sha256(self.written()).hexdigest())
+        self.assertLessEqual(report['captured_start_estimated_wall'], report['speech_end_estimated_wall'])
+        self.assertEqual(report['local_append_count'], len(report['local_append_writes']))
+        self.assertEqual(sum(w['samples'] for w in report['local_append_writes']), report['written_samples'])
+        self.assertFalse(report['local_append_writes_truncated'])
+        self.assertEqual(sorted(w['written_wall'] for w in report['local_append_writes']),
+                         [w['written_wall'] for w in report['local_append_writes']])
         logged = json.loads(logs.records[0].getMessage().split('native phrase delivery ', 1)[1])
-        self.assertEqual(logged, report)
+        self.assertEqual(logged, json.loads(json.dumps(report)))
+        from neko_spoken_turn_analysis import parse_phrase_deliveries
+        parsed = parse_phrase_deliveries(logs.records[0].getMessage())
+        self.assertEqual(len(parsed), 1)
+        self.assertEqual(parsed[0]['output_pcm_sha256'], report['output_pcm_sha256'])
+        self.assertEqual(parsed[0]['local_append_writes'], report['local_append_writes'])
         for private in ('audio', 'pcm16', 'owner_token', 'session_id', 'event_id', 'transcript'):
             self.assertNotIn(private, logged)
 

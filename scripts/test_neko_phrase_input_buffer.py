@@ -53,12 +53,44 @@ class CollectorChecks(unittest.TestCase):
         result = self.finish()
         self.assertEqual(result.pcm16, first + pcm(.1) + second + pcm(1.2))
         self.assertEqual(result.compressed_zero_samples, 12_800)
+        self.assertEqual(result.compressed_zero_intervals, ((9600, 22400),))
+        self.assertFalse(result.compressed_intervals_truncated)
         self.assertEqual(result.source_samples - result.output_samples, 12_800)
         self.assertTrue(result.local_phrase_id.startswith("local_phrase_"))
         self.assertEqual(result.ownership, self.owner)
         self.assertEqual(self.buffer.buffered_bytes, 0)
         with self.assertRaisesRegex(PhraseBufferError, "already_taken"):
             self.buffer.take(ownership=self.owner)
+
+    def test_compression_coordinates_reconstruct_bytes_with_leading_and_trailing_silence(self):
+        parts = [(pcm(.2), False), (pcm(.1, 40), True), (pcm(.3), False),
+                 (pcm(.1, 70), True), (pcm(.5), False), (pcm(.1, 90), True)]
+        for data, speech in parts:
+            self.feed(data, speech)
+        result = self.finish()
+        original = b''.join(data for data, _ in parts) + pcm(1.2)
+        self.assertEqual(result.compressed_zero_intervals, ((6400, 9600), (12800, 19200)))
+        rebuilt = bytearray()
+        previous = 0
+        for start, end in result.compressed_zero_intervals:
+            rebuilt.extend(original[previous * 2:start * 2])
+            self.assertFalse(any(original[start * 2:end * 2]))
+            previous = end
+        rebuilt.extend(original[previous * 2:])
+        self.assertEqual(bytes(rebuilt), result.pcm16)
+        self.assertEqual(sum(end - start for start, end in result.compressed_zero_intervals),
+                         result.compressed_zero_samples)
+
+    def test_diagnostic_interval_limit_does_not_limit_actual_compression(self):
+        for _ in range(35):
+            self.feed(pcm(.01, 50), True)
+            self.feed(pcm(.2), False)
+        self.feed(pcm(.01, 80), True)
+        result = self.finish()
+        self.assertEqual(len(result.compressed_zero_intervals), 32)
+        self.assertTrue(result.compressed_intervals_truncated)
+        self.assertEqual(result.compressed_zero_samples, 35 * 1600)
+        self.assertEqual(result.source_samples - result.output_samples, 35 * 1600)
 
     def test_soft_nonzero_vad_false_pause_not_cut(self):
         first, last = pcm(.2, 640), pcm(.2, -640)

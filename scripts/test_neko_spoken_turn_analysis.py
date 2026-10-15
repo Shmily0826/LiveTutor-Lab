@@ -97,6 +97,34 @@ class GradeLatencyTest(unittest.TestCase):
                     started_wall=111.27, first_write_wall=111.29, first_write_completed_ms=20,
                     completed_wall=111.31, write_elapsed_ms=40, result="written_waiting_provider_boundary")
 
+    def rich_phrase(self):
+        return dict(self.phrase(), input_sequence=1, output_pcm_sha256='b' * 64, captured_start_estimated_wall=100.,
+                    compressed_zero_intervals=[[8000, 9000]], compressed_intervals_truncated=False,
+                    local_append_count=2, local_append_writes_truncated=False,
+                    local_append_writes=[{'samples': 8000, 'written_wall': 111.29, 'elapsed_ms': 20.},
+                                         {'samples': 8000, 'written_wall': 111.30, 'elapsed_ms': 30.}])
+
+    def test_extended_diagnostics_are_retained_without_raw_content_and_deduplicated(self):
+        raw = dict(self.rich_phrase(), audio='PRIVATE PCM', owner_token='PRIVATE OWNER')
+        line = 'native phrase delivery ' + json.dumps(raw)
+        parsed = parse_phrase_deliveries(line + '\n' + line)
+        self.assertEqual(parsed, [self.rich_phrase()])
+        self.assertNotIn('PRIVATE', repr(parsed))
+
+    def test_invalid_extended_diagnostics_cannot_smuggle_content_or_false_counts(self):
+        raw = self.rich_phrase()
+        cases = [('output_pcm_sha256', 'PRIVATE'), ('compressed_zero_intervals', [[8000, 19000]]),
+                 ('compressed_zero_intervals', [[8000, 9000]] * 33),
+                 ('local_append_writes', [{'samples': 16000, 'written_wall': 111.,
+                                           'elapsed_ms': 3., 'token': 'PRIVATE'}]),
+                 ('local_append_count', True), ('compressed_intervals_truncated', 'PRIVATE'),
+                 ('input_sequence', 'PRIVATE'), ('source_samples', 18000),
+                 ('captured_start_estimated_wall', float('inf'))]
+        for key, value in cases:
+            with self.subTest(key=key, value=value):
+                self.assertEqual(parse_phrase_deliveries('native phrase delivery ' +
+                    json.dumps(dict(raw, **{key: value}))), [])
+
     def scene(self):
         ids = dict(course_id="course", session_id="session", question_id="q", attempt_id="a")
         return dict(turns=[dict(input_wall=100., fixed_speech_end_wall=110., observation_end_wall=130.)],

@@ -1,6 +1,6 @@
-> **当前：用户明确继续，Goal已核active（2026-10-15，阶段60）。** Claude限额不阻塞本地推进。先独立计时/离线核对源码教学延迟，保留路由、课程、历史与授权保护；本轮不mic/capture/loopback或播放声音，原账本现890/2000、app79/null、tech0。旧暂停记录保留为历史。完整A–F不缩范围，完成依据实际证据。
+> **当前：用户明确继续，Goal已核active（2026-10-15，阶段61）。** Claude限额不阻塞本地推进。本轮完成离线静音/裁剪分析与诊断补齐，下一转受控材料UI，保留完整保护；本轮不mic/capture/loopback或播放声音，原账本现890/2000、app79/null、tech0。旧暂停记录保留为历史。完整A–F不缩范围，完成依据实际证据。
 
-# 日常学习伙伴局部问题（阶段57后，未全局阻塞）
+# 日常学习伙伴局部问题（阶段61后，未全局阻塞）
 
 完整任务以[原始 contract](daily-companion-contract-2026-10-14.md)全文为准，不摘要替代、不修改；169行，SHA256 `FD518311C0B3FAFBE038B2BBD83D8EB0DE8986212BCB4B86FCCAB22464084C33`。Goal `01a13531-0341-7611-afc2-5c472a7ccf50` active（用户明确继续，接口已核），完整A–F不缩范围、不因局部失败结束。沿用户指定模型，不擅自换模型。
 
@@ -8,7 +8,12 @@
 
 
 
-## 最新阶段60：真实SDK计时，模型超时
+
+## 最新阶段61：原语音离线分析与诊断补齐
+
+[阶段61报告](evidence/daily-companion-phase61-phrase-diagnostics-2026-10-15.md)：原47固定WAV按SHA找到，重建speech-end与51一致；15752样本减少为内部纯零压缩，不当句尾裁剪或代理端点证据。新增有界压缩坐标、batch摘要、逐块本地写入诊断及严格白名单解析，PCM/节奏/分轮/打断不变、默认phrase/AUTO仍OFF。分组去重95个离线case（新4），旧打包清单10→已发布17修正并复核；SourceGate通过。原890/79/0无外呼、无live或音频设备；自然停顿仍未验。下一62转A/E/F受控界面流程和恢复，完整A–F/Goal active。
+
+## 历史阶段60：真实SDK计时，模型超时
 
 [阶段60报告](evidence/daily-companion-phase60-live-source-timing-2026-10-15.md)：修共享量具health预算1→90秒启动竞态后，73实际Study就绪/唯一callback；源码3.669秒，sync1.968秒/inventory0.675秒/query0.917秒/记录4ms。语义路由12秒、解释45秒超时，degraded=timeout，模型未通过、不冒语音提速。旧5interactions SHA不变/QA0，新增code_question仅源码记录；原账本890/2000、app79/null、tech0。owned28全清、端口空、SourceGate PASS。停止该线路无效重试并退避，下一61转B原固定WAV静音/裁剪离线分析，不等Claude，完整A–F/Goal active。71/72调用前失败原件保留。
 
@@ -20,7 +25,7 @@
 
 | 项目 | 当前证据、已尝试与恢复方向 |
 |---|---|
-| B 自然停顿/晚尾 | 真实语音场51完整PCM已写仍2ASR；phrase压零不解决代理端分轮，默认phrase/AUTO OFF。旧MANUAL未有完整endpoint关闭ACK，不能冒已支持/永不支持。free registry supports_independent_asr=false；虽有faster_whisper缓存，不翻flag冒接通。停止同输入无效重试；核代理协议或已有适配，期间推进C/D/E/F。 |
+| B 自然停顿/晚尾 | 真实场51单sealed delivery后仍2ASR，原严格FAIL保留；压零后仍失败，尚不能唯一归因代理端点。61已补无内容诊断，默认phrase/AUTO OFF。旧MANUAL未有完整endpoint关闭ACK，不能冒已支持/永不支持。free registry supports_independent_asr=false；虽有faster_whisper缓存，不翻flag冒接通。停止同输入无效重试；核代理协议或已有适配，期间推进C/D/E/F。 |
 | D 源码推理质量 | 59值/键混淆、cap3与DSML失败；50定位/51过滤/52输出分开修。61输出完整但30/100反例错，且无条件泛化“值交换过校验”、偏长/加stars。通用guidance并未解决。53文字62数值窄PASS；56新project_code经Study教师69两句原样转述窄PASS，68多话/多读保留PARTIAL。fresh text缺卡跳过guidance已修。仍重复先查一次文件/19.44秒，57 Native70单例源码教师/两句音频排程已窄PASS；物理发音仍待。其它题型/推理不扩大，不硬编码Sky答案。 |
 | A/E 完整UI与指示 | 受控HTML/图/源码指示、材料重开已有窄证；47真实task初始页面仍Refreshing/完整asyncReady已65窄PASS，真实task点击仍待。48同任务profile两次无Translate popup不是所有Chrome永久保证。任意桌面定位未证明；继续受控表面和位置更新，不冒全桌面支持。 |
 | C 范围与身份 | SDK场52旧真实bounded-history穷尽否定失败保留；SDK场53定向两句召回只补窄证，不追改旧场。登记精确别名/绑定优先已有source/offline，未知自由语义/旧多ID不猜合；跨题模型评分等余证继续，不另建记忆系统。 |
@@ -29,9 +34,9 @@
 
 ## 操作边界
 
-沿原账本bargein-autocheck-20261012，最新888/2000、app79/null、tech0/0，不重置/换轮/换付费供应商。限流退避并停止无效重试；局部失败写清证据、尝试、恢复条件后继续其它任务。没有需要同一外部条件才能推进的全局阻塞，不将困难/待人工/单项失败标全局blocked。六目录删除审批拒绝不绕过，保留用户数据及无关脏改动。
+沿原账本bargein-autocheck-20261012，最新890/2000、app79/null、tech0/0，不重置/换轮/换付费供应商。限流退避并停止无效重试；局部失败写清证据、尝试、恢复条件后继续其它任务。没有需要同一外部条件才能推进的全局阻塞，不将困难/待人工/单项失败标全局blocked。六目录删除审批拒绝不绕过，保留用户数据及无关脏改动。
 
-所有本场owned进程和端口已清，无等待中的live handle。下一步可自主做57 Native输出专用集成；完整状态与证据见[status](daily-companion-status-2026-10-14.md)。
+所有本场owned进程和端口已清，无等待中的live handle。下一步自主推进62受控材料窗/UI恢复；完整状态与证据见[status](daily-companion-status-2026-10-14.md)。
 
 精简前完整原bytes历史已独占归档：[through52](evidence/daily-companion-blockers-history-through-phase52-2026-10-15.md)，SHA256 `e58d1570ef6c1c07ef2a904e503f39f9ec50d0571d8c12f01ab2db09387531f2`。历史原件不改；原contract不变。旧档相对链接按原docs位置理解。
 
@@ -64,3 +69,5 @@ D56实际缺口：现源码返回后由角色自解释，不能以文字Focus62�
 60唯一修正后72量具已启动exec97486；仅poll此handle，未终态不重启或冒真实模型通过。71调用前量具失败已保留，原888/79/0。
 
 60：72已终态/清理，Study未注册且零外呼。共享量具health预算1→90秒后唯一73已启动exec22094，只poll此handle；未终态不重启/不认模型通过。71/72原失败不覆盖。
+
+61开始：原WAV已按SHA找到、离线speech-end重建匹配；补非音频内容的压缩位置/写入诊断，不改处理或分轮。原890/79/0、无live，不等待Claude/不重试模型，完整A–F继续。

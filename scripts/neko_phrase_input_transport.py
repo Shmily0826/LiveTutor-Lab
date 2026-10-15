@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import hashlib
 import json
 import logging
 import time
@@ -197,7 +198,12 @@ class NativePhraseUplink:
                   'input_sequence': sequence,
                   'source_samples': batch.source_samples, 'output_samples': batch.output_samples,
                   'compressed_zero_samples': batch.compressed_zero_samples, 'written_samples': 0,
+                  'output_pcm_sha256': hashlib.sha256(batch.pcm16).hexdigest(),
+                  'compressed_zero_intervals': batch.compressed_zero_intervals,
+                  'compressed_intervals_truncated': batch.compressed_intervals_truncated,
+                  'local_append_count': 0, 'local_append_writes': [], 'local_append_writes_truncated': False,
                   'input_timebase': 'arrival_derived_sample_estimate',
+                  'captured_start_estimated_wall': batch.captured_start,
                   'speech_end_estimated_wall': batch.speech_end_at,
                   'sealed_estimated_wall': batch.sealed_at, 'sealed_wall': sealed_wall,
                   'queue_wait_ms': (started_monotonic - sealed_monotonic) * 1000,
@@ -231,6 +237,12 @@ class NativePhraseUplink:
                 if event.get('type') != 'input_audio_buffer.append' or count is None:
                     return  # The lane may also send its own cancellation event.
                 report['written_samples'] += count
+                report['local_append_count'] += 1
+                if len(report['local_append_writes']) < 32:
+                    report['local_append_writes'].append({'samples': count, 'written_wall': time.time(),
+                        'elapsed_ms': (time.monotonic() - started_monotonic) * 1000})
+                else:
+                    report['local_append_writes_truncated'] = True
                 report.setdefault('first_write_wall', time.time())
                 report.setdefault('first_write_completed_ms', (time.monotonic() - sealed_monotonic) * 1000)
                 if not submission_current():
