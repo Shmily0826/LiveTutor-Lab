@@ -3,6 +3,7 @@ import asyncio
 import importlib
 from pathlib import Path
 import tempfile
+import time
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -71,6 +72,25 @@ class CodeTiming(unittest.IsolatedAsyncioTestCase):
             self.assertIn('source_retry_' + name, stages)
         for name in ('source_retry_sync', 'source_retry_query'):
             self.assertGreaterEqual(stages[name]['elapsed_ms'], 20)
+
+    async def test_unchanged_tree_empty_result_does_not_sync_or_query_again(self):
+        self.h._code_sync = Mixin._code_sync.__get__(self.h)
+        fingerprint = await asyncio.to_thread(actual.scope['_code_tree_fingerprint'], str(self.root))
+        self.h._remember_synced_fingerprint(str(self.root), fingerprint)
+        for recent_sync in (False, True):
+            self.h._code_sync_at = {}
+            if recent_sync:
+                self.h._code_sync_at[str(self.root)] = time.monotonic()
+            calls = []
+            async def run(command):
+                calls.append(command)
+                self.assertNotEqual(command[1], 'sync')
+                return SimpleNamespace(returncode=0, stdout='')
+            result, stages = await self.invoke(run, query='LEARNER_CONTENT_MARKER')
+            self.assertEqual(result['index_sync'], 'throttled' if recent_sync else 'unchanged')
+            self.assertEqual(len(calls), 1)
+            self.assertIn('source_retry_sync', stages)
+            self.assertNotIn('source_retry_query', stages)
 
     async def test_leak_refusal_keeps_record_and_retry_unreachable(self):
         self.h._code_leak = lambda *args: 'unsafe'

@@ -455,7 +455,8 @@ class _StudyCodeToolsMixin:
             fingerprint = await asyncio.to_thread(_code_tree_fingerprint, root)
         except Exception:
             fingerprint = ""
-        if not force and fingerprint and self._code_synced_fingerprint(root) == fingerprint:
+        # Force bypasses throttling, not proof that the indexed tree is unchanged.
+        if fingerprint and self._code_synced_fingerprint(root) == fingerprint:
             return "unchanged"
         try:
             done = await _run([*cli, "sync", str(Path(root).parent)], timeout=90)

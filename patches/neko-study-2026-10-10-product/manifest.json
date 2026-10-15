@@ -156,7 +156,7 @@
     },
     {
       "path": "payload/study_companion/study_code_tools.py",
-      "sha256": "70c4e831331bd239e0a253fc95a1fe45f92ff55d3bed8b91fc4716c7be0d116b",
+      "sha256": "9d389504681dd7ca9a869b1cd854df842686780145bbfdcafa06cec0d881c01e",
       "deployed_matches": true,
       "reason": "Required existing avatar code-tool mixin; included during publication dependency closure",
       "phase50_prior_sha256": "8ff871153a7eadf5ab7e4b9203cd5eea760be62e8ab1528f26e0091226412897",
@@ -166,7 +166,9 @@
       "claude_m1_prior_sha256": "6e29c608df5d7040bd91941ee512a1e6b46d50ec6c3aa1490cdbcd1df39b8b41",
       "claude_m2_prior_sha256": "6fac1e770cb14f67d032027aac746019f15c436715e9b871ce5fdd6bb2c72b72",
       "codex_followup_prior_sha256": "c3df2774fc0637746bd414dcff7e9adb2e333f4e183c9b8699e891044c2bf035",
-      "codex_followup_verification": "Timing only: filter/leak/shown/window/empty-retry phases; normalized AST unchanged. No filters, authorization, revision checks or retry behavior changed. See docs/evidence/codex-followup-gap-emptyturn-2026-10-15.md."
+      "codex_followup_verification": "Timing only: filter/leak/shown/window/empty-retry phases; normalized AST unchanged. No filters, authorization, revision checks or retry behavior changed. See docs/evidence/codex-followup-gap-emptyturn-2026-10-15.md.",
+      "codex_resync_skip_prior_sha256": "70c4e831331bd239e0a253fc95a1fe45f92ff55d3bed8b91fc4716c7be0d116b",
+      "codex_resync_skip_verification": "Force still bypasses throttling, but an unchanged successful-sync fingerprint skips sync and empty-result requery. Changed/unavailable fingerprints and missing state retain sync. Offline 52 tests passed; no live timing. See docs/evidence/codex-resync-skip-2026-10-15.md."
     },
     {
       "path": "payload/study_companion/entry_tutor_explain_entries.py",

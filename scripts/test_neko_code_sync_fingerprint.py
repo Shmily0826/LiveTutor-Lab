@@ -5,6 +5,7 @@ from pathlib import Path
 import tempfile
 import types
 import unittest
+from unittest.mock import patch
 import test_neko_product_course_memory  # Existing offline package, without the desktop/audio host.
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -56,7 +57,7 @@ class SyncFingerprint(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.syncs), 1)
         self.assertEqual(self.syncs[0], ['codegraph', 'sync', str(self.root.parent)])
 
-    async def test_edit_add_delete_rename_or_force_still_sync_while_build_output_does_not(self):
+    async def test_edit_add_delete_rename_still_sync_while_build_output_does_not(self):
         h = Harness(self.data)
         await self.sync(h)
         main = self.root / 'lib/main.dart'
@@ -72,8 +73,34 @@ class SyncFingerprint(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(await self.sync(h), 'synced')
         (self.root / 'build/out.bin').write_bytes(b'artifact')
         self.assertEqual(await self.sync(h), 'unchanged')
-        self.assertEqual(await self.sync(h, force=True), 'synced')
-        self.assertEqual(len(self.syncs), 6)
+        self.assertEqual(len(self.syncs), 5)
+
+    async def test_force_skips_unchanged_tree_with_cached_or_saved_success(self):
+        h = Harness(self.data)
+        self.assertEqual(await self.sync(h), 'synced')
+        for plugin in (h, Harness(self.data)):
+            self.assertEqual(await plugin._code_sync(['codegraph'], self.grant, force=True), 'unchanged')
+        self.assertEqual(len(self.syncs), 1)
+
+    async def test_force_syncs_after_a_new_file_even_inside_throttle_window(self):
+        h = Harness(self.data)
+        self.assertEqual(await self.sync(h), 'synced')
+        (self.root / 'lib/new.dart').write_text('class New {}', encoding='utf-8')
+        self.assertEqual(await h._code_sync(['codegraph'], self.grant, force=True), 'synced')
+        self.assertEqual(len(self.syncs), 2)
+
+    async def test_force_syncs_without_saved_state(self):
+        self.assertEqual(await Harness(self.data)._code_sync(['codegraph'], self.grant, force=True), 'synced')
+        self.assertEqual(len(self.syncs), 1)
+
+    async def test_force_syncs_when_fingerprinting_fails(self):
+        h = Harness(self.data)
+        self.assertEqual(await self.sync(h), 'synced')
+        def unreadable(root):
+            raise OSError('fixture')
+        with patch.dict(scope, {'_code_tree_fingerprint': unreadable}):
+            self.assertEqual(await h._code_sync(['codegraph'], self.grant, force=True), 'synced')
+        self.assertEqual(len(self.syncs), 2)
 
     async def test_file_listing_is_reused_only_for_an_unchanged_synced_tree(self):
         listings = []
