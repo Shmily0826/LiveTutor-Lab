@@ -136,7 +136,7 @@
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
-      "sha256": "ed4a9729ac8e61288b3b5260cc5e0e5bbe97e701360a118d39c25192c9b0740f",
+      "sha256": "fb8cf3b0d590a4af56cda10af6d080e92f4480f910fae66d20a74d180af88c7a",
       "deployed_matches": true,
       "phase29_delta_prior_sha256": "afb52dbbc047fd3cf20eab2c536fcdde9d1cba36fe4056a489bda27fe6123af9",
       "phase29_verification": "Specific errors41 / correct100 and restart42 / Chinese then English43 observed; final reminder-negative narrowing source+6 offline only; all historical failures retained.",
@@ -149,7 +149,9 @@
       "claude_m1_prior_sha256": "edf4c252359879912b6cba5977879df7d594624f56e7639682b09ce1ca5c5c80",
       "claude_m2_prior_sha256": "98626a8994ca4a468247c4b98c1375872742d60ba6147b100709ba3b206e3f4b",
       "claude_w2w4_prior_sha256": "6f12ca4550c802c30646f95c0edc4d2b96d3df7b47ea9dd98f265eb94de6e492",
-      "claude_w2w4_note": "W2: structure fold keeps top-level folders; follow-up re-reads every window of the last explanation (call id in code_question rows). W4: line references respelled for speech."
+      "claude_w2w4_note": "W2: structure fold keeps top-level folders; follow-up re-reads every window of the last explanation (call id in code_question rows). W4: line references respelled for speech.",
+      "codex_20261016_wa_prior_sha256": "ed4a9729ac8e61288b3b5260cc5e0e5bbe97e701360a118d39c25192c9b0740f",
+      "codex_20261016_wa_verification": "Tool discovery separates source lookup from teaching and names spoken code intents/follow-up reuse. Offline schema and source-teacher tests; Native evidence recorded separately."
     },
     {
       "path": "payload/study_companion/study_ocr_pipeline.py",
@@ -158,7 +160,7 @@
     },
     {
       "path": "payload/study_companion/study_code_tools.py",
-      "sha256": "4bc220e4960e177df9c37fb15458515aa2f20fb157b81177caed7180f52969ac",
+      "sha256": "127b8fb69cee16a68dfcd7418d763c87364c89e9aff660ccc2cbf6f67f750461",
       "deployed_matches": true,
       "reason": "Required existing avatar code-tool mixin; included during publication dependency closure",
       "phase50_prior_sha256": "8ff871153a7eadf5ab7e4b9203cd5eea760be62e8ab1528f26e0091226412897",
@@ -174,7 +176,9 @@
       "claude_w2w4_prior_sha256": "9d389504681dd7ca9a869b1cd854df842686780145bbfdcafa06cec0d881c01e",
       "claude_w2w4_note": "W2: structure fold keeps top-level folders; follow-up re-reads every window of the last explanation (call id in code_question rows). W4: line references respelled for speech.",
       "claude_w2b_prior_sha256": "e222ae8a0eead208253ddb445779628df36008dcea519f814319689cc8b49261",
-      "claude_w2b_note": "W2: file-tree note forbids asserting module-to-module calls from a tree"
+      "claude_w2b_note": "W2: file-tree note forbids asserting module-to-module calls from a tree",
+      "codex_20261016_wa_prior_sha256": "4bc220e4960e177df9c37fb15458515aa2f20fb157b81177caed7180f52969ac",
+      "codex_20261016_wa_verification": "Tool discovery separates source lookup from teaching and names spoken code intents/follow-up reuse. Offline schema and source-teacher tests; Native evidence recorded separately."
     },
     {
       "path": "payload/study_companion/entry_tutor_explain_entries.py",

@@ -845,6 +845,13 @@ class _StudyAvatarToolsMixin:
     @llm_tool(
         name="study_explain",
         description=(
+            "Use this tool for spoken project-code teaching: '这段代码怎么处理', '这一行是什么意思', "
+            "'如果改成……会怎样', '再讲讲', how code works, line meaning, or hypothetical changes. "
+            "Set material_source=project_code; do not substitute study_code for this teaching call. "
+            "For a named file, pass code_requests as objects, for example "
+            "[{\"mode\":\"file\",\"file\":\"weather_service.dart\",\"offset\":1,\"limit\":40}]. "
+            "For follow-ups on the last source window, omit code_requests and keep the learner's "
+            "whole question in question, not in an explore query. "
             "Explain a concept, a piece of code, or the last window the learner had you "
             "read. Leave text empty to explain the material already captured by "
             "study_read_window. Put the learner's own words in question, including "

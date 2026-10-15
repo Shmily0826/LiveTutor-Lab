@@ -558,11 +558,13 @@ class _StudyCodeToolsMixin:
     @llm_tool(
         name="study_code",
         description=(
-            "Answer a question about the learner's OWN project from its real source code, using "
-            "the project index the learner authorized. Choose the mode by the SHAPE of the "
-            "question: mode='explore' takes a whole sentence and is the one to use for 'where is "
-            "X implemented', 'how does the data get from A to B', 'why is it done this way', "
-            "'what would break if I changed X'. mode='symbol' and mode='impact' only accept an "
+            "Lookup source evidence only in the learner's authorized project; this is not the teaching tool. "
+            "For spoken questions such as '这段代码怎么处理', '这一行是什么意思', '如果改成……会怎样', "
+            "or '再讲讲', use study_explain with material_source=project_code. Follow-ups may omit "
+            "code_requests there to re-read the last source window. Use study_code alone only to locate "
+            "or inspect evidence before teaching. mode='explore' uses code identifiers and a focused "
+            "English query, never the learner's whole Chinese sentence. "
+            "mode='symbol' and mode='impact' only accept an "
             "exact name the index can match, like 'LocationStorage::save' or '_confirm'; "
             "mode='find' wants a name fragment. mode='structure' takes no question at all and "
             "answers 'what is this project' or 'how is it divided' with the file tree from the "
@@ -575,7 +577,7 @@ class _StudyCodeToolsMixin:
             "path suffix is also accepted if unique in the authorized index; if ambiguous, choose "
             "the relevant returned candidate instead of guessing. "
             "Sending a sentence to symbol/find returns "
-            "nothing - use explore instead. mode='explore' is the default for a reason. The index "
+            "nothing - extract identifiers for a focused explore lookup instead. The index "
             "is synced before it answers (see index_sync), so code the learner just wrote is "
             "included. The answer must rest on the returned evidence: cite file path and symbol "
             "for anything you state as source fact, call anything not in the evidence an "
