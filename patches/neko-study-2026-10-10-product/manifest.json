@@ -136,7 +136,7 @@
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
-      "sha256": "fb8cf3b0d590a4af56cda10af6d080e92f4480f910fae66d20a74d180af88c7a",
+      "sha256": "02ba05c72556d858d781a7c58e3516a442046f4e3896daaf3a5c9f3e6226f451",
       "deployed_matches": true,
       "phase29_delta_prior_sha256": "afb52dbbc047fd3cf20eab2c536fcdde9d1cba36fe4056a489bda27fe6123af9",
       "phase29_verification": "Specific errors41 / correct100 and restart42 / Chinese then English43 observed; final reminder-negative narrowing source+6 offline only; all historical failures retained.",
@@ -151,7 +151,11 @@
       "claude_w2w4_prior_sha256": "6f12ca4550c802c30646f95c0edc4d2b96d3df7b47ea9dd98f265eb94de6e492",
       "claude_w2w4_note": "W2: structure fold keeps top-level folders; follow-up re-reads every window of the last explanation (call id in code_question rows). W4: line references respelled for speech.",
       "codex_20261016_wa_prior_sha256": "ed4a9729ac8e61288b3b5260cc5e0e5bbe97e701360a118d39c25192c9b0740f",
-      "codex_20261016_wa_verification": "Tool discovery separates source lookup from teaching and names spoken code intents/follow-up reuse. Offline schema and source-teacher tests; Native evidence recorded separately."
+      "codex_20261016_wa_verification": "Tool discovery separates source lookup from teaching and names spoken code intents/follow-up reuse. Offline schema and source-teacher tests; Native evidence recorded separately.",
+      "codex_20261016_wb_prior_sha256": "fb8cf3b0d590a4af56cda10af6d080e92f4480f910fae66d20a74d180af88c7a",
+      "codex_20261016_wb_verification": "Preserve SDK error code and return actionable spoken grading failures without fabricated scores. Offline legacy-picture quiz/restart/wrong/correction append plus failure paths; real-model evidence separate.",
+      "codex_20261016_wb_native_prior_sha256": "65f3ef46e5f0772ce88306420d4f2e3447dcca578940440f124df81e0efbe07c",
+      "codex_20261016_wb_native_verification": "Native product scene reproduced valid correction_of on the first ungraded answer. Submit that exact idle pending attempt once; retain mismatch/in-progress/retry guards. Evidence recorded in W-B report."
     },
     {
       "path": "payload/study_companion/study_ocr_pipeline.py",

@@ -102,7 +102,12 @@ def _envelope(result: Any) -> dict[str, Any]:
             if isinstance(value, dict):
                 return {"ok": True, **value}
             return {"ok": True, "result": value}
-        return {"ok": False, "error": str(getattr(result, "error", result))[:400]}
+        error = getattr(result, "error", result)
+        payload = {"ok": False, "error": str(error)[:400]}
+        code = getattr(error, "code", None)
+        if code:
+            payload["code"] = str(code)
+        return payload
     if isinstance(result, dict):
         return {"ok": True, **result}
     return {"ok": True, "result": result}
@@ -1170,6 +1175,31 @@ class _StudyAvatarToolsMixin:
         identity = {key: str(payload.get(key) or "") for key in ("question_id", "attempt_id")}
         return await self._study_bind_native_teaching_result(payload, result, context, target, question_identity=identity)
 
+    def _study_answer_failure(self, payload, *, code=""):
+        """An unsuccessful grade must give the learner a next step, never a score."""
+        code = str(payload.get("code") or code or "GRADE_UNAVAILABLE")
+        chinese = self._study_effective_language().lower().startswith("zh")
+        if code in {"QUESTION_CONTEXT_CHANGED", "QUESTION_MISMATCH", "course_context_changed"}:
+            reply = ("题目或课程上下文已变化，我不能确认这次成绩。请先查看学习记录并确认当前题目，必要时重新出题。" if chinese else
+                     "The question or course context changed, so I cannot confirm this result. Check the learning record and current question; request a new question if needed.")
+        elif code == "ATTEMPT_ALREADY_EVALUATED":
+            reply = ("这次作答已经评分，没有重复记分。如果要更正，请明确说要更正刚才的答案。" if chinese else
+                     "This attempt was already graded; no duplicate score was added. Say explicitly if you want to correct that answer.")
+        elif code in {"ATTEMPT_NOT_RETRYABLE", "ATTEMPT_IN_PROGRESS"}:
+            reply = ("这次作答还不能更正或仍在评分，没有新增成绩。请确认当前题目的评分状态后再试。" if chinese else
+                     "This attempt cannot be corrected yet or is still being graded. Check its grading status before trying again.")
+        else:
+            reply = ("评分服务这次没有返回可确认的结果，我不能确认这次成绩。请先查看学习记录，再决定是否重试。" if chinese else
+                     "The grading service did not return a confirmed result. Please check the learning record before deciding whether to retry.")
+        logger = getattr(self, "logger", None)
+        if logger is not None:
+            logger.warning(f"study_answer unavailable code={code[:80]}")
+        result = {**payload, "ok": False, "tool": "study_answer", "status": "unavailable", "code": code,
+                  "reply": reply, "relay": "Say reply exactly as written, then stop. Do not invent a grade or claim a new score was recorded."}
+        for key in ("score", "verdict", "_study_material_binding"):
+            result.pop(key, None)
+        return result
+
     @llm_tool(
         name="study_answer",
         description=(
@@ -1179,7 +1209,9 @@ class _StudyAvatarToolsMixin:
             "of a previously wrong or partial answer, read study_session status and pass "
             "its current question_id and attempt_id in correction_of. This creates one "
             "new attempt at the same question while keeping the original wrong answer. "
-            "Omit correction_of for an ordinary answer; do not generate a different question."
+            "Omit correction_of for an ordinary first answer; a matching pin on an ungraded "
+            "question submits that current attempt without creating a retry. Never guess the ids "
+            "or generate a different question."
         ),
         parameters={
             "type": "object",
@@ -1201,12 +1233,12 @@ class _StudyAvatarToolsMixin:
         target = material_output_target(self, _)
         snapshot = await self._study_native_material_snapshot()
         if snapshot is None:
-            return self._study_changed_native_material_result()
+            return self._study_answer_failure(self._study_changed_native_material_result())
         context = snapshot["context"]
         # The persisted current-course question survives restart; an avatar-only cache does not.
         async with self._lock:
             if not material_context_current(self, context):
-                return self._study_changed_native_material_result()
+                return self._study_answer_failure(self._study_changed_native_material_result())
             held = dict(self._state.current_question)
             # A routed ASR answer must not adopt the question installed after its snapshot.
             if _expected_question is not None:
@@ -1216,30 +1248,36 @@ class _StudyAvatarToolsMixin:
                 if (not isinstance(_expected_question, dict) or set(_expected_question) != set(actual)
                         or not all(isinstance(value, str) and value for value in _expected_question.values())
                         or _expected_question != actual):
-                    return {"ok": False, "code": "QUESTION_CONTEXT_CHANGED",
-                            "error": "题目或课程已变化，这次答案没有评分。 The question or course changed; this answer was not graded."}
+                    return self._study_answer_failure({"ok": False, "code": "QUESTION_CONTEXT_CHANGED",
+                            "error": "题目或课程已变化，这次答案没有评分。 The question or course changed; this answer was not graded."})
         origin = (held.get("internal_private_payload") or {}).get("source_material_context")
         if isinstance(origin, dict) and origin.get("course_id") and origin["course_id"] != context["course_id"]:
-            return self._study_changed_native_material_result()
+            return self._study_answer_failure(self._study_changed_native_material_result())
         if correction_of is not None:
             previous = {key: str(held.get(key) or "") for key in ("question_id", "attempt_id")}
             if (not isinstance(correction_of, dict) or set(correction_of) != set(previous)
                     or not all(isinstance(value, str) and value for value in correction_of.values())
                     or correction_of != previous):
-                return {"ok": False, "code": "QUESTION_CONTEXT_CHANGED",
-                        "error": "更正没有匹配原题，本次未评分。 The correction did not match the original question; not graded."}
+                return self._study_answer_failure({"ok": False, "code": "QUESTION_CONTEXT_CHANGED",
+                        "error": "更正没有匹配原题，本次未评分。 The correction did not match the original question; not graded."})
+            # Native sometimes supplies a valid correction pin on the first answer.
+            # No prior grade exists to revise; submit this exact pending attempt once.
+            if (held.get("attempt_evaluated") is False and not held.get("attempt_evaluation_pending")
+                    and not held.get("attempt_evaluation_owner")):
+                correction_of = None
+        if correction_of is not None:
             retry = _envelope(await self.study_retry_question(**previous, course_id=context["course_id"], session_id=context["session_id"]))
             retried = retry.get("current_question") or {}
             if (retry.get("retried") is not True or retry.get("previous_attempt_id") != previous["attempt_id"]
                     or retried.get("question_id") != previous["question_id"] or not retried.get("attempt_id")
                     or retried["attempt_id"] == previous["attempt_id"]):
-                return retry
+                return self._study_answer_failure(retry)
             async with self._lock:
                 if not material_context_current(self, context):
-                    return self._study_changed_native_material_result()
+                    return self._study_answer_failure(self._study_changed_native_material_result())
                 held = dict(self._state.current_question)
                 if any(str(held.get(key) or "") != str(retried.get(key) or "") for key in previous):
-                    return self._study_changed_native_material_result()
+                    return self._study_answer_failure(self._study_changed_native_material_result())
         # A generated question carries an identity, and the entry refuses to grade
         # it without both ids echoed back - so the tool has to hold on to them.
         kwargs: dict[str, Any] = {"answer": str(answer or ""), "_material_context": context}
@@ -1249,8 +1287,8 @@ class _StudyAvatarToolsMixin:
             kwargs["attempt_id"] = held["attempt_id"]
         payload = _envelope(await self.study_evaluate_answer(**kwargs))
         feedback = _first_text(payload, "feedback", "reply", "summary", "explanation")
-        if not feedback:
-            return payload
+        if not payload.get("ok", True) or not feedback:
+            return self._study_answer_failure(payload, code="EMPTY_GRADE_FEEDBACK" if payload.get("ok", True) else "")
         result = json.loads(_teaching(
             tool="study_answer",
             reply=feedback,
