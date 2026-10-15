@@ -1,26 +1,22 @@
 # Codex 第二次验收修复状态
 
-## 当前状态（2026-10-16）
-- 用户已批准开始；完整任务及最新授权见 [contract](codex-overnight-contract-2026-10-16.md)。
-- 第 0 步完成：`audio_allowed=false`；不使用麦克风、采集设备或 loopback，不改系统音量。
-- 账本起点：DeepSeek 1201/2000，本轮 +200，累计停止线 1401；Lanlan.app 105，本轮不限；原轮次不变。
-- Codex Goal 不设 token 上限。
-- W-A：说明已部署、离线 2+14 通过；实际中文 explain 路由成功，但完整语义 PARTIAL；停顿追问两场空回合，停止重试。[报告](evidence/codex-wa-source-routing-2026-10-16.md)
-- W-B：真实 SDK 和普通 Native 错答 0→纠正 100 均落库；首答误带 correction_of 的窄修已通过 7 项新增离线与 Native 复核。[报告](evidence/codex-wb-grading-2026-10-16.md)
-- W-C：验收说明已更新，新课程/提交图片/环境准备已写清。[报告](evidence/codex-wc-acceptance-guide-2026-10-16.md)
-- W-D：只读诊断完成，9 秒在结果发送后到首包接收之间；重启泛问走 recall_memory，没有读 Study summary。[报告](evidence/codex-wd-latency-resume-2026-10-16.md)
-- 发布：ea0d89e（W-A）、37b5bda（W-C/W-D）、fe03e38（W-B），均已扫描并 push；未合并主分支。
-- 最终回归：105 模块独立进程，98 通过；7 个历史失败逐测试签名与原因均未变，无新增失败。
-- 最终部署：产品 source/manifest/deployment 32/32 一致；SourceGate PASS、语音补丁全部 patched、宿主 manifest 31/31 一致。
-- 验收：评分闭环具备真实文字模型与普通 Native 证据；第 4 步源码停顿追问仍 PARTIAL，暂不宣布完整第二次验收就绪。可听性与真人均待用户。
+## 当前状态（第二轮，2026-10-16）
+- 用户批准的 P1～P8 正在执行；完整合同：codex-round2-contract-2026-10-16.md。
+- DeepSeek 起点1270，新增400，累计停止线1670；Lanlan.app起点110不限；Goal tokens不限。
+- audio_allowed=false；禁止采集/回环/改音量；固定WAV仅output-only。原日常数据/日志只读。
+- P1：角色指导冲突修复；新增2项测试通过、SourceGate PASS、补丁全patched。
+- P2：历史五场逐回合分析已保存；全新库扫描首场KEEP=100/HOLD=1000进行中。
+- P3～P8：待推进。第一轮评分修复与闭环证据保留。
+- 开工基线105模块：98通过，7个历史失败原始输出已保存；最终逐测试签名比较。
+- 发布仅既有codex/daily-learning-companion工作树；不合并主分支。
 
 ## 待 Opus 复核
-- 本轮不修改宿主、response arbiter、打断或语音传输；发现必要改动后在此补充证据与建议。
-- 宿主角色指导仍有“具体源码行用 study_code”，与主教学路由竞争；暂不改。停顿追问两次空回合，Native relay 未完整复述教师回复，见 W-A 报告。
-- 重启泛问应如何进入 Study 课程总结，以及是否补充延迟遥测，见 W-D 设计建议；本轮不实现。
-- W-B 在本轮普通 Native 已定位到首次未评分尝试被当作 retry；昨晚缺入参日志，历史同因尚是推断，不作为事实写入结论。
+- 需要宿主/仲裁/传输改动时记录证据并转下一项，本轮未新增此类改动。
+- 旧日志缺完整response.done.output和部分响应开始事件，空回合原因尚未确定。
 
 ## 历史（只追加）
+
+- 2026-10-16：用户批准第二轮 P1～P8 与 DeepSeek +400/Lanlan 不限/Goal tokens 不限；启动实核1270/110。第一轮段落保留为历史，第二轮以新合同和追加记录为准。
 - 2026-10-16：开工，第 0 步完成，保存完整任务和授权。根目录保持 master 与全部既有脏改动。
 - 基线：103 模块独立进程，96 通过；7 个历史失败已保存逐测试原始输出于 raw/evidence/codex-overnight-20261016-baseline。
 - W-A 场 1 前 DeepSeek 1201、Lanlan.app 105；后 1209、106，新增 +8/+1；无采集、无回环、未改音量，原日志由任务专用副本重定向保护。
@@ -46,3 +42,35 @@
 - 下一轮需要判断：W-A 的宿主指令竞争及空回合怎样处理；是否让泛问进入现有课程总结；是否添加无内容延迟遥测。不要用本轮评分通过替代这些项。
 
 若后续进行定向真人评分验收，或在上述复核后重跑完整脚本：按 [验收说明](claude-acceptance-guide.md) 新建独立课程，**在 Study 提交 Sky Scout 架构图并点 Explain**，确认不是遗留合成图；由用户检查麦克风输入音量/距离，再明确说“准备好了”。本轮到此停止，不打开麦克风，不发起真人验收，不消耗剩余额度。
+
+- R2 p2-k100-h1000-a 场前 {'api.deepseek.com': 1270, 'www.lanlan.app': 110}; KEEP=100, HOLD=1000; 新任务库、固定 WAV/output-only。
+
+
+## 第一轮顶部状态快照（第二轮启动时保存）
+# Codex 第二次验收修复状态
+
+## 当前状态（2026-10-16）
+- **第二轮已获用户批准，正在执行 P1～P8**；[第二轮完整合同](codex-round2-contract-2026-10-16.md) 优先于下述第一轮记录。
+- 第二轮起点：DeepSeek 1270，本轮 +400，停止线1670；Lanlan.app 110，本轮不限；Goal tokens 不限；audio_allowed=false。
+- 第二轮 P1：检查角色指导与补丁 hunk，先写离线测试；P2～P8 待推进。第一轮评分闭环证据保留，不无故重做。
+- 用户已批准开始；完整任务及最新授权见 [contract](codex-overnight-contract-2026-10-16.md)。
+- 第 0 步完成：`audio_allowed=false`；不使用麦克风、采集设备或 loopback，不改系统音量。
+- 账本起点：DeepSeek 1201/2000，本轮 +200，累计停止线 1401；Lanlan.app 105，本轮不限；原轮次不变。
+- Codex Goal 不设 token 上限。
+- W-A：说明已部署、离线 2+14 通过；实际中文 explain 路由成功，但完整语义 PARTIAL；停顿追问两场空回合，停止重试。[报告](evidence/codex-wa-source-routing-2026-10-16.md)
+- W-B：真实 SDK 和普通 Native 错答 0→纠正 100 均落库；首答误带 correction_of 的窄修已通过 7 项新增离线与 Native 复核。[报告](evidence/codex-wb-grading-2026-10-16.md)
+- W-C：验收说明已更新，新课程/提交图片/环境准备已写清。[报告](evidence/codex-wc-acceptance-guide-2026-10-16.md)
+- W-D：只读诊断完成，9 秒在结果发送后到首包接收之间；重启泛问走 recall_memory，没有读 Study summary。[报告](evidence/codex-wd-latency-resume-2026-10-16.md)
+- 发布：ea0d89e（W-A）、37b5bda（W-C/W-D）、fe03e38（W-B），均已扫描并 push；未合并主分支。
+- 最终回归：105 模块独立进程，98 通过；7 个历史失败逐测试签名与原因均未变，无新增失败。
+- 最终部署：产品 source/manifest/deployment 32/32 一致；SourceGate PASS、语音补丁全部 patched、宿主 manifest 31/31 一致。
+- 验收：评分闭环具备真实文字模型与普通 Native 证据；第 4 步源码停顿追问仍 PARTIAL，暂不宣布完整第二次验收就绪。可听性与真人均待用户。
+
+## 待 Opus 复核
+- 本轮不修改宿主、response arbiter、打断或语音传输；发现必要改动后在此补充证据与建议。
+- 宿主角色指导仍有“具体源码行用 study_code”，与主教学路由竞争；暂不改。停顿追问两次空回合，Native relay 未完整复述教师回复，见 W-A 报告。
+- 重启泛问应如何进入 Study 课程总结，以及是否补充延迟遥测，见 W-D 设计建议；本轮不实现。
+- W-B 在本轮普通 Native 已定位到首次未评分尝试被当作 retry；昨晚缺入参日志，历史同因尚是推断，不作为事实写入结论。
+
+
+- R2 p2-k100-h1000-a 场后 {'api.deepseek.com': 1276, 'www.lanlan.app': 111}; probe exit=1。详见 raw/evidence/codex-r2-p2-k100-h1000-a.json。
