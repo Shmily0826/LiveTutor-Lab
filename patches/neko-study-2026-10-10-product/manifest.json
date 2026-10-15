@@ -238,7 +238,7 @@
     },
     {
       "path": "payload/study_companion/study_code_teaching.py",
-      "sha256": "8339c2c93a37a30be19c7463f3a87ba9c9c0cf0503ea0d9550b6401e0c4795f3",
+      "sha256": "2a54bfbd596816427b5a1b82a795ede4b00161ee0661a16d96bacf50d617c72c",
       "deployed_matches": true,
       "phase56_verification": "Source/offline adapter8 + related material26/language6/native teaching binding5; cold card initialization existing3+new text1. Real role text68 teacher correct but filler/redundant reads PARTIAL;69 automatic study_explain project_code delegated actual CodeGraph file21-28@7aae20f, exact two-sentence teacher reply relayed and saved in existing SQLite. Cold text guidance actually present. Native free voice/device/human pending; extra preliminary source read and19.44s remain.",
       "phase59_prior_sha256": "05e1de9d45cee9e5a9301c226c4257e02e4d5c37d47f7c8650490674dea0c815",
@@ -251,7 +251,8 @@
       "claude_w5_prior_sha256": "b8ab5acbacb504ab505b910c6f80ebc580250105b6b99d7af784658366cd2437",
       "claude_w5_note": "W5: an empty/null/[{}] code_requests means the code just read; refused requests log their shape (types and keys only)",
       "claude_w5b_prior_sha256": "6f9966d45dc5d93b7a0463063cfd1a2b58af79bd439470fb598d5e9a314235e0",
-      "claude_w5b_note": "W5: string items in code_requests are read as file windows (provider shape seen on the Native voice route); free text names no source"
+      "claude_w5b_note": "W5: string items in code_requests are read as file windows (provider shape seen on the Native voice route); free text names no source",
+      "claude_step4_prior_sha256": "8339c2c93a37a30be19c7463f3a87ba9c9c0cf0503ea0d9550b6401e0c4795f3"
     },
     {
       "path": "payload/study_companion/study_call_trace.py",
@@ -484,5 +485,10 @@
     "scope": "A follow-up without code_requests falls back from this session to the same course's earlier sessions (same authorized project, re-read at the current revision, teacher told it is from an earlier session); other courses never inherit.",
     "real_scene": "benchmarks/raw/evidence/claude-m5-continuity-1.json",
     "backup": "benchmarks/raw/evidence/claude-m5-payload-before"
+  },
+  "claude_step4_hypothetical_edit": {
+    "scope": "Teacher instruction: a \"what if it were changed to X\" question is a proposed edit to the shown code; reason about its effect instead of reporting X as missing.",
+    "evidence": "voice benchmarks/raw/evidence/claude-step4-verify-1.json (fix of string code_requests works; answer wrong before this change); text claude-step4-hypo-text-1.json (correct after); voice claude-step4-verify-2.json hit a provider empty turn (hint shown)",
+    "backup": "benchmarks/raw/evidence/claude-step4-payload-before"
   }
 }

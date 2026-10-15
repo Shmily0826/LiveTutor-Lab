@@ -75,6 +75,12 @@ SCENES = {
         explain('如果把这个判断改成只在状态码大于等于500时才抛异常，404会怎样？两句中文，不确定的说明是推断。',
                 ['weather_service.dart'], kind='string-request'),
     ],
+    # Step 4 as the learner actually says it: no answer-shape hints, a hypothetical edit, and
+    # the string-shaped request the voice route sends. The teacher must reason about the edit.
+    'step4hypo': [
+        start(),
+        explain('那如果把这个判断改成只在500以上才抛，404会怎样？', ['weather_service.dart'], kind='hypothetical-edit'),
+    ],
     'w2structure': [
         start(),
         explain('这个项目大概分成哪几个部分？各部分是做什么的？三句中文以内。', [{'mode': 'structure'}], kind='structure'),

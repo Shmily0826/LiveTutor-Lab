@@ -253,6 +253,9 @@ async def _explain_project_code(plugin, *, question, requests, language, output_
                 'cite the shown file/lines for source facts, label inferences and missing evidence. '
                 'Keep identifiers exact; full paths and revision hashes are returned separately as provenance, not spoken prose. '
                 'Honor index freshness notes. A file tree or search match is not a function body. '
+                'A "what if it were changed to X" question proposes an edit to the shown code: apply that edit '
+                'mentally and explain its effect; never answer that X is missing from the code or fall back to the '
+                'current behavior. '
                 'Default to two short, patient sentences without greetings or filler; explicit length preferences win.\n'
                 + (('This is a follow-up: the windows above are the source most recently read '
                     + ('in an earlier session of this course' if from_earlier_session else 'in this session')
