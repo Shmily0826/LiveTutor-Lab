@@ -40,7 +40,7 @@
     {
       "path": "main_logic/omni_realtime_client/_transport.py",
       "base_sha256": "2d6c058206c1beafc3e1d35a8f5111042ff509a31f398053ce7b97a825242423",
-      "patched_sha256": "3f15318310c75880a27f4fc1ef2ec961b5472204f36056068df30ea8043bdae8",
+      "patched_sha256": "7aad306d1bea1def77709f0c2b9577f0102e9a4077527fb2f794c770e9a2675d",
       "resealed_utc": "2026-10-13T14:38:47.980810+00:00",
       "resealed_reason": "Bounded free-route late-ASR raw tool dispatch, pinned original connection/session, one expected scope advance, foreign retirement rejects; onset, PCM, response lifecycle unchanged; 6 candidate, 5 existing tool lifecycle and 19 barge guards passed; actual role/voice not yet verified.",
       "verified_by": {
@@ -67,7 +67,8 @@
       "phase33_resealed_utc": "2026-10-14T18:17:33.626769+00:00",
       "phase33_verified_by": "Main+independent Native route36; intent19 pass+1 Windows symlink skip; guarded healthy-empty rearm, explicit submission refusal, claim-required provider grading. SOURCE/OFFLINE only; actual continuous Native pending; daily AUTO_GRADE OFF.",
       "phase38_prior_sha256": "634ec3f9a681bf0a4fc1e63a554fcae6a87ca3b5dafd7e914ec234a36ffed853",
-      "phase43_prior_sha256": "78df4190470f8d6ec43ae94c2995fa1eef9b3e30a59b3673418b32c6ddacdd65"
+      "phase43_prior_sha256": "78df4190470f8d6ec43ae94c2995fa1eef9b3e30a59b3673418b32c6ddacdd65",
+      "claude_goal_prior_sha256": "3f15318310c75880a27f4fc1ef2ec961b5472204f36056068df30ea8043bdae8"
     },
     {
       "path": "app/agent_server/capabilities.py",
@@ -247,7 +248,7 @@
     {
       "path": "main_logic/core/tool_calling.py",
       "base_sha256": "f33ce8396ba6a1dbc8d39cd8db34e312fea2a7e1ec6cf62395b040ee275b5faa",
-      "patched_sha256": "f4c0eaed424284215a47c34dc0dc3b8d4a47828daa04d80994ad05fa5911f56b",
+      "patched_sha256": "6f787ead547299ea7959f3a921e410d3293137d94c859d11c77f9d160747cbaf",
       "material_audio_update": {
         "proof": "SOURCE/OFFLINE and fixed-input replacement14 cross-process/native-token/loopback/fresh reverse-picture reply passed; human, long-quiet recovery, other teaching output provenance pending",
         "offline": "28 host/event/owner/delivery tests including current role independent of native capture and host-private stripping without capture; 11 producer SQLite/push tests; 14 UI checks; 4 host fresh-LF replay/deployed/idempotence/AST matched, unknown edits refused; real Core registry/remote dispatcher plus SDK local-model-stub probe passed; current-picture native13 preserves literal image identifiers/negative-picture requests",
@@ -266,7 +267,8 @@
       "phase33_prior_sha256": "7d91949b61449679916a4489bca09bf68788d6475078d5ba6105cff96a3ec07d",
       "phase33_resealed_utc": "2026-10-14T18:17:33.626769+00:00",
       "phase33_verified_by": "Main+independent Native route36; intent19 pass+1 Windows symlink skip; guarded healthy-empty rearm, explicit submission refusal, claim-required provider grading. SOURCE/OFFLINE only; actual continuous Native pending; daily AUTO_GRADE OFF.",
-      "phase38_prior_sha256": "fd5160b4d8c7836c9d1167c346163ef6aeed3076d9fa0326843c522c1f3cab86"
+      "phase38_prior_sha256": "fd5160b4d8c7836c9d1167c346163ef6aeed3076d9fa0326843c522c1f3cab86",
+      "claude_goal_prior_sha256": "f4c0eaed424284215a47c34dc0dc3b8d4a47828daa04d80994ad05fa5911f56b"
     },
     {
       "path": "app/main_server/character_runtime.py",
@@ -519,5 +521,14 @@
     "proof": "SOURCE/OFFLINE only; phase42 independent26 and Main52; phase43 canonical migration/AST/idempotence and SourceGate preflight; real runtime pending",
     "report": "docs/evidence/daily-companion-phase43-native-tool-integration-2026-10-15.md",
     "limits": "single outstanding input, pre-content tool ingress; actual wire call ID required; no provider causal ACK; missing cancel terminal fails closed; multi-ASR/second round unsupported"
+  },
+  "claude_goal_voice_patches": {
+    "pause_hold": "scripts/neko_pause_hold_patch.py: NEKO_PAUSE_HOLD=1 (default off) on the free proxy uplink keeps 300 ms of a quiet stretch, holds the next 1000 ms locally, drops it when speech resumes and releases it otherwise; speech frames, replays, activation receipts, phrase mode and other providers unchanged.",
+    "wait_notice": "scripts/neko_study_wait_notice_patch.py: status toast (正在查看源码……/学习材料/出题/学习记录) 1.5 s after a Study tool starts and every 4 s until it returns; NEKO_STUDY_WAIT_NOTICE=0 disables.",
+    "replayed_by": "neko_desktop_tutor_host.apply_voice_host_patch on every --source launch",
+    "backups": [
+      "benchmarks/raw/evidence/claude-m3-before",
+      "benchmarks/raw/evidence/claude-m2-before"
+    ]
   }
 }

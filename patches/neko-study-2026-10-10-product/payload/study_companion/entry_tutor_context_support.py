@@ -493,10 +493,21 @@ class _TutorContextSupportMixin:
                     status=status, guidance=guidance, source="query_match"
                 )
 
+            # Source teaching may have started this exact classification while the
+            # source was being read; only a byte-identical query may reuse it.
+            prefetch = seed.get("_semantic_route_prefetch")
             with phase('semantic_route'):
-                semantics, route_status, route_reason = await self._route_study_input_semantics(
-                    query, context=seed
-                )
+                if isinstance(prefetch, dict) and prefetch.get("text") == query:
+                    semantics, route_status, route_reason = await prefetch["task"]
+                    reservation = prefetch["context"].get("_agent_quota_reservation")
+                    if reservation is not None:
+                        seed["_agent_quota_reservation"] = reservation
+                else:
+                    if isinstance(prefetch, dict):
+                        prefetch["task"].cancel()
+                    semantics, route_status, route_reason = await self._route_study_input_semantics(
+                        query, context=seed
+                    )
             if "_agent_quota_reservation" in seed and context is not None:
                 context["_agent_quota_reservation"] = seed[
                     "_agent_quota_reservation"
@@ -575,8 +586,23 @@ class _TutorContextSupportMixin:
                 semantic_reason="call_failed",
             )
 
+    def _start_semantic_route_prefetch(self, text: str, language: str) -> dict[str, Any] | None:
+        """Classify a source question while its source is still being read.
+
+        The caller owns the returned task: it is either consumed by
+        _build_knowledge_guidance_context for the identical query, or cancelled.
+        """
+        text = str(text or "").strip()
+        if not text:
+            return None
+        context: dict[str, Any] = {}
+        task = asyncio.create_task(
+            self._route_study_input_semantics(text, context=context, language=language)
+        )
+        return {"text": text, "task": task, "context": context}
+
     async def _route_study_input_semantics(
-        self, input_text: str, *, context: dict[str, Any]
+        self, input_text: str, *, context: dict[str, Any], language: str = ""
     ) -> tuple[StudyInputSemantics | None, str, str]:
         agent = getattr(self, "_agent", None)
         call_model = getattr(agent, "_call_model", None)
@@ -584,7 +610,7 @@ class _TutorContextSupportMixin:
             return None, "routing_unavailable", "model_unavailable"
         messages: list[dict[str, Any]] = build_semantic_routing_messages(
             text=input_text,
-            language=self._cfg.language,
+            language=language or self._cfg.language,
             has_images=bool(str(context.get("vision_image_base64") or "").strip()),
         )
         image = str(context.get("vision_image_base64") or "").strip()

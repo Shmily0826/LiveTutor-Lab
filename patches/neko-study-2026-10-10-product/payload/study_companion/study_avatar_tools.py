@@ -978,7 +978,7 @@ class _StudyAvatarToolsMixin:
 
     async def _study_explain_for_turn(self, *, question: str, text: str, requested: str,
                                     context: dict, image: str, captured_text: str, output_target: str = "",
-                                    route_text: str = "", history_text: str = ""):
+                                    route_text: str = "", history_text: str = "", route_prefetch=None):
         # previous first: the directive below writes the remembered course preference
         # into cfg.language, and that is the value a one-off request has to go back to.
         previous = str(getattr(self._cfg, "language", "") or "")
@@ -996,7 +996,8 @@ class _StudyAvatarToolsMixin:
             # Source teaching routes on the question alone and stores the question plus its
             # provenance; the evidence body still goes to the teacher in text.
             extra = {key: value for key, value in (("_semantic_route_text", route_text),
-                                                   ("_history_input_text", history_text)) if value}
+                                                   ("_history_input_text", history_text),
+                                                   ("_semantic_route_prefetch", route_prefetch)) if value}
             payload = _envelope(await self.study_explain_text(text=body, vision_image_base64=image,
                                                             _material_context=context, **extra))
             reply = _first_text(payload, "reply", "summary", "answer", "explanation")

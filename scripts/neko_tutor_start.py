@@ -644,7 +644,16 @@ def main() -> int:
     if args.text_only and (args.voice or args.audio_input is not None):
         parser.error('文字模式不能同时启用语音或真实/模拟音频输入。')
     if not args.text_only:
-        host.require_task_audio_allowed("avatar/product UI startup")
+        try:
+            host.require_task_audio_allowed("avatar/product UI startup")
+        except RuntimeError as error:
+            # The learner double-clicked the voice entry; a traceback is not an answer.
+            print(f"语音入口暂未开放：{error}\n"
+                  f"原因：{ROOT / 'benchmarks/raw/daily-companion-audio-policy.json'} 里 audio_allowed=false，"
+                  "这是无人值守开发期间不开麦克风的约定，不是故障。\n"
+                  "现在可以双击 Start-Daily-Tutor.cmd 用文字模式学习；"
+                  "语音在集中验收时按验收说明打开。")
+            return 1
     if not (args.voice_connects.isdigit() or args.voice_connects == "unlimited"):
         parser.error("voice-connects must be a nonnegative number or unlimited")
     if args.minutes <= 0 or args.api_budget < 0 or args.egress_budget < 0:

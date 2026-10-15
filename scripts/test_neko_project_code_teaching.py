@@ -222,6 +222,31 @@ class ProjectCodeTeaching(unittest.IsolatedAsyncioTestCase):
         self.assertIn('Project@revision-A main.py:17-18', stored)
         self.assertNotIn('if allowed', stored)
 
+    async def test_routing_runs_during_the_read_and_is_cancelled_when_the_read_is_refused(self):
+        routed, release = [], asyncio.Event()
+        async def route(text, *, context, language=''):
+            routed.append((text, language))
+            await release.wait()
+            return None, 'routing_unavailable', 'timeout'
+        self.h._route_study_input_semantics = route
+        async def read(**request):
+            await asyncio.sleep(0.05)
+            self.assertEqual(len(routed), 1)  # Classification already started while reading.
+            return self.source(request)
+        self.h.study_code_tool = AsyncMock(side_effect=read)
+        await self.explain()
+        prefetch = self.h.study_explain_text.call_args.kwargs['_semantic_route_prefetch']
+        self.assertEqual(prefetch['text'], self.h.study_explain_text.call_args.kwargs['_semantic_route_text'])
+        self.assertEqual(routed[0][1], 'zh-CN')
+        self.assertTrue(prefetch['task'].cancelled())  # The fake teacher never consumed it.
+        routed.clear()
+        self.h.study_code_tool = AsyncMock(return_value={'ok': False, 'error': 'CODEGRAPH_NOT_FOUND'})
+        self.h.study_explain_text.reset_mock()
+        self.assertEqual((await self.explain())['error'], 'project_code_unavailable')
+        self.assertLessEqual(len(routed), 1)  # Cancelled before or while classifying.
+        self.assertEqual([task for task in asyncio.all_tasks() if task is not asyncio.current_task()], [])
+        self.h.study_explain_text.assert_not_awaited()
+
     def remember_read(self, project='Project', commit='revision-A', file='project/main.py', lines=(17, 18)):
         self.store.append_interaction(kind='code_question', input_text=f'[{project}@{commit}] {file}',
             output_text=f'Returned authorized source evidence: {file}:{lines[0]}-{lines[-1]}',

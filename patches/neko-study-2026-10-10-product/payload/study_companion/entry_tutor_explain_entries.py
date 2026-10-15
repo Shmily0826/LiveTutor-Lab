@@ -200,6 +200,7 @@ class _TutorExplainEntriesMixin:
         material_context = kwargs.pop("_material_context", None)
         semantic_route_text = str(kwargs.pop("_semantic_route_text", "") or "").strip()
         history_input_text = str(kwargs.pop("_history_input_text", "") or "").strip()
+        semantic_route_prefetch = kwargs.pop("_semantic_route_prefetch", None)
         async def material_is_current():
             if not material_context:
                 return True
@@ -308,6 +309,8 @@ class _TutorExplainEntriesMixin:
                 extra_context["semantic_route_text"] = semantic_route_text
             if history_input_text:
                 extra_context["history_input_text"] = history_input_text
+            if isinstance(semantic_route_prefetch, dict):
+                extra_context["_semantic_route_prefetch"] = semantic_route_prefetch
             if vision_image_payload:
                 extra_context["vision_enabled"] = True
                 extra_context["vision_image_base64"] = vision_image_payload

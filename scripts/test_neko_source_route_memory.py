@@ -1,4 +1,5 @@
 """Source teaching: routing input, stored history text and teacher provenance (offline, fresh DB)."""
+import asyncio
 import json
 import logging
 from pathlib import Path
@@ -24,6 +25,32 @@ class SourceRouteMemory(unittest.IsolatedAsyncioTestCase):
         await build(host, EXPLAIN, input_text=CODE, context={'source_text': CODE})
         # Without the internal route key every other caller keeps its original query.
         self.assertEqual(seen, ['why guard?', CODE])
+
+    async def test_prefetched_route_is_reused_only_for_the_identical_query(self):
+        inline = []
+        async def route(query, *, context):
+            inline.append(query)
+            return None, 'routing_unavailable', 'timeout'
+        host = SimpleNamespace(_knowledge_guidance_topics_cache={'all:5000': []}, _route_study_input_semantics=route)
+        build = context_module._TutorContextSupportMixin._build_knowledge_guidance_context
+        async def prefetched():
+            return None, 'routing_unavailable', 'model_unavailable'
+        task = asyncio.ensure_future(prefetched())
+        reservation = object()
+        context = {'source_text': CODE, 'semantic_route_text': 'why guard?',
+                   '_semantic_route_prefetch': {'text': 'why guard?', 'task': task,
+                                                '_unused': None, 'context': {'_agent_quota_reservation': reservation}}}
+        _, outcome = await build(host, EXPLAIN, input_text=CODE, context=context)
+        self.assertEqual(inline, [])
+        self.assertEqual(outcome['study_semantic_reason'], 'model_unavailable')
+        self.assertIs(context['_agent_quota_reservation'], reservation)
+        pending = asyncio.ensure_future(asyncio.sleep(30))
+        other = {'source_text': CODE, 'semantic_route_text': 'different',
+                 '_semantic_route_prefetch': {'text': 'why guard?', 'task': pending, 'context': {}}}
+        await build(host, EXPLAIN, input_text=CODE, context=other)
+        await asyncio.sleep(0)
+        self.assertEqual(inline, ['different'])
+        self.assertTrue(pending.cancelled())
 
     async def test_explanation_row_and_event_store_question_with_provenance_not_code(self):
         with tempfile.TemporaryDirectory() as temp:

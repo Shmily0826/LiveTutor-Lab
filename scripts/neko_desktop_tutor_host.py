@@ -165,7 +165,7 @@ def prepare_store(key: str, store: Path, core_provider: str = "deepseek") -> Pat
     return store
 
 
-def apply_voice_host_patch() -> str:
+def apply_voice_host_patch(hosts=None, source_app=None) -> str:
     """Replay the reliability patches onto the vendored host trees before anything imports them.
 
     N.E.K.O's own source lives in `benchmarks/`, which this repository ignores, so the fix for
@@ -178,7 +178,10 @@ def apply_voice_host_patch() -> str:
     from neko_runtime_helpers import deploy_runtime_helpers
     manifest = json.loads((ROOT / 'patches/neko-study-2026-10-10-host/manifest.json').read_text(encoding='utf-8'))
     results = []
-    for host_root in voice_patch.HOSTS:
+    # A clean-rebuild check passes its own temporary trees; launches use the real ones.
+    hosts = voice_patch.HOSTS if hosts is None else hosts
+    source_app = SOURCE_APP if source_app is None else source_app
+    for host_root in hosts:
         deployed_helpers = deploy_runtime_helpers(ROOT, host_root, manifest)
         results.append(f"{host_root.name}/phrase-helpers={','.join(deployed_helpers)}")
         for relative, _ in voice_patch.TARGETS:
@@ -194,10 +197,14 @@ def apply_voice_host_patch() -> str:
         results.append(f"{host_root.name}/capture-bootstrap={capture_patch.apply_to(host_root)}")
         import neko_dsml_output_patch as dsml_patch
         results.append(f"{host_root.name}/dsml-output={dsml_patch.apply_to(host_root)}")
+        import neko_pause_hold_patch as pause_hold_patch
+        import neko_study_wait_notice_patch as wait_notice_patch
+        results.append(f"{host_root.name}/pause-hold={pause_hold_patch.apply_to(host_root / pause_hold_patch.TARGET)}")
+        results.append(f"{host_root.name}/wait-notice={wait_notice_patch.apply_to(host_root / wait_notice_patch.TARGET)}")
     import neko_pipe_output_patch as pipe_patch
-    results.append(f"source/pipe-output={pipe_patch.apply_to(SOURCE_APP)}")
+    results.append(f"source/pipe-output={pipe_patch.apply_to(source_app)}")
     import neko_source_focus_patch as source_focus_patch
-    results.append(f"source/source-focus={source_focus_patch.apply_to(SOURCE_APP)}")
+    results.append(f"source/source-focus={source_focus_patch.apply_to(source_app)}")
     return ",".join(results)
 
 

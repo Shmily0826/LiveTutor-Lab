@@ -468,6 +468,32 @@ class _StudyCodeToolsMixin:
             self._remember_synced_fingerprint(root, fingerprint)
         return "synced"
 
+    async def _code_inventory(self, cli: list[str], authorized: dict[str, Any]) -> str | int:
+        """The indexed file list (stdout), or the CLI exit code on failure.
+
+        Resolving a bare file name cost ~0.7 s per question. The listing is reused only while
+        the authorized tree is byte-identical to when it was read and that tree has been
+        synced, so a new same-name file still makes the next lookup ambiguous.
+        """
+        import asyncio
+
+        root = authorized["root"]
+        try:
+            fingerprint = await asyncio.to_thread(_code_tree_fingerprint, root)
+        except Exception:
+            fingerprint = ""
+        cached = (getattr(self, "_code_inventory_cache", None) or {}).get(root)
+        if (fingerprint and cached and cached[0] == fingerprint
+                and self._code_synced_fingerprint(root) == fingerprint):
+            return cached[1]
+        done = await _run([*cli, "files", "--path", root, "-j"])
+        if done.returncode != 0:
+            return done.returncode
+        if fingerprint and self._code_synced_fingerprint(root) == fingerprint:
+            self._code_inventory_cache = {**(getattr(self, "_code_inventory_cache", None) or {}),
+                                          root: (fingerprint, done.stdout)}
+        return done.stdout
+
     def _code_sync_state_path(self) -> Path | None:
         try:
             return Path(self.data_path("code_sync_state.json"))
@@ -596,10 +622,10 @@ class _StudyCodeToolsMixin:
         if resolve_file:
             try:
                 with phase('file_inventory'):
-                    inventory = await _run([*cli, "files", "--path", authorized["root"], "-j"])
-                if inventory.returncode != 0:
-                    return {"ok": False, "error": f"CODEGRAPH_EXIT_{inventory.returncode}"}
-                candidates = _indexed_file_candidates(inventory.stdout, authorized, file or text, offset, limit)
+                    inventory_stdout = await self._code_inventory(cli, authorized)
+                if not isinstance(inventory_stdout, str):
+                    return {"ok": False, "error": f"CODEGRAPH_EXIT_{inventory_stdout}"}
+                candidates = _indexed_file_candidates(inventory_stdout, authorized, file or text, offset, limit)
             except Exception as error:
                 return {"ok": False, "error": "SOURCE_FILE_LOOKUP_FAILED", "detail": str(error)[:200]}
             if len(candidates) != 1:

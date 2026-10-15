@@ -75,6 +75,25 @@ class SyncFingerprint(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await self.sync(h, force=True), 'synced')
         self.assertEqual(len(self.syncs), 6)
 
+    async def test_file_listing_is_reused_only_for_an_unchanged_synced_tree(self):
+        listings = []
+        async def run(command, **kwargs):
+            if command[1] == 'files':
+                listings.append(command)
+                return types.SimpleNamespace(returncode=0, stdout=f'listing-{len(listings)}')
+            self.syncs.append(command)
+            return types.SimpleNamespace(returncode=0)
+        scope['_run'] = run
+        h = Harness(self.data)
+        self.assertEqual(await h._code_inventory(['codegraph'], self.grant), 'listing-1')  # never synced: no reuse
+        self.assertEqual(await h._code_inventory(['codegraph'], self.grant), 'listing-2')
+        await self.sync(h)
+        self.assertEqual(await h._code_inventory(['codegraph'], self.grant), 'listing-3')
+        self.assertEqual(await h._code_inventory(['codegraph'], self.grant), 'listing-3')  # reused
+        (self.root / 'lib/second.dart').write_text('class B {}', encoding='utf-8')
+        self.assertEqual(await h._code_inventory(['codegraph'], self.grant), 'listing-4')  # new file: fresh list
+        self.assertEqual(await h._code_inventory(['codegraph'], self.grant), 'listing-5')  # still unsynced
+
     async def test_failed_sync_is_not_remembered_and_throttle_still_wins(self):
         h = Harness(self.data)
         self.exit = 3
