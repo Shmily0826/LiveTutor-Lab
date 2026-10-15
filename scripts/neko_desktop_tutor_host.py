@@ -344,7 +344,7 @@ def prepare_session_tool_audit(store: Path) -> dict:
     if target.read_bytes()!=original:
         raise RuntimeError('unknown avatar tool source; preserve it')
     text=original.decode('utf-8')
-    anchor='        # Only an ack has nothing to teach, so only an ack gets pre-worded: a status read\n'
+    anchor='        wording = _ack_wording(language, state) if action in {"start", "set_course"} else ""\n'
     if text.count(anchor)!=1:raise RuntimeError('session audit anchor changed')
     audit_path=str(store/'session-tool-audit.jsonl')
     addition=(f'        with __import__("pathlib").Path({audit_path!r}).open("a", encoding="utf-8") as receipt:\n'

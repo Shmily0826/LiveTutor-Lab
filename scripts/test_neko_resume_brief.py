@@ -91,6 +91,10 @@ class ResumeBrief(unittest.IsolatedAsyncioTestCase):
         spoken=status['resume_brief']['spoken_recap']
         for fact in ('course-A','weather_service.dart','十八','二十九','Will parsing run?','0分','复习'):
             self.assertIn(fact,spoken)
+        self.source(plugin._study_session_id,'large.dart',[10000,10002])
+        spoken=(await plugin.study_session_tool())['resume_brief']['spoken_recap']
+        self.assertIn('10000',spoken)
+        self.assertIn('10002',spoken)
 
 
 if __name__=='__main__':unittest.main(verbosity=2)

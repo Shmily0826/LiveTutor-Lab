@@ -1,24 +1,26 @@
 # Codex 第二次验收修复状态
 
 ## 当前状态（第二轮，2026-10-16）
-- 用户批准的 P1～P8 正在执行；完整合同：codex-round2-contract-2026-10-16.md。
-- DeepSeek 起点1270，新增400，累计停止线1670；Lanlan.app起点110不限；Goal tokens不限。
-- audio_allowed=false；禁止采集/回环/改音量；固定WAV仅output-only。原日常数据/日志只读。
-- P1：角色指导冲突修复；新增2项测试通过、SourceGate PASS、补丁全patched。
-- P2：6个固定WAV场完成；KEEP=100/HOLD=1500连续2场1条ASR+教师+音频，普通句最大增加0.426s识别/0.299s首包；已设默认。
-- P3：无预读新库修后Native完整两句成功，已发布beb9014/bf94cea；P4三场均无accepted指示，停止该线并待复核。
-- P5：无模型摘要/本地事实措辞已部署，新增7项通过；真实文字重启链和Native完整泛问通过；一次404复述行号有误，听感/真人待验。
-- P6：只读诊断完成，2KB结果体未见明显膨胀；不做无根据A/B，9秒根因仍未确定。
-- P7：一键新课程准备成功，Sky Scout原始PNG与Study保存SHA一致；P8准备完整彩排。
-- 开工基线105模块：98通过，7个历史失败原始输出已保存；最终逐测试签名比较。
-- 已发布P1 8a28e98、P2 4d5f242、P3 beb9014/bf94cea、P4 18789b0、P5 0812e68；P6/P7发布中。仅既有发布工作树，不合并主分支。
-- P5末账本1441/123，第二轮已用171/400；P7一键准备新课程运行中；各场前后追加于历史末尾。
-- 打断/Realtime/暂扣离线12+19+7通过；可听性/真人未验收。
+- P1～P8均已执行、验证或有具体受阻记录；正在最终发布。产品整体 **PARTIAL**，建议定向复测，完整真人验收未就绪。
+- 完整合同：codex-round2-contract-2026-10-16.md；结果：[P8彩排](evidence/codex-r2-p8-rehearsal-2026-10-16.md) / [最终验证](evidence/codex-r2-final-validation-2026-10-16.md) / [验收v2](claude-acceptance-guide.md)。
+- 账本1270/110→1541/130：DeepSeek271/400、Lanlan.app20；停止线1670未触及，原全局2000/轮次不变，tech0、Goal tokens不限。
+- P1：源码教学角色指导一致；P3：JSON对象字符串请求窄修、教师后续控制流与完整relay；新库源码两句有Native成功证据。
+- P2：6场，默认KEEP100/HOLD1500，连续2场单ASR+工具+音频，普通句对照未增加超过1s；P8停顿追问也单ASR。
+- P4：3场均无accepted指示；HTML曾无依据说标好了，已停止，不做第4场。
+- P5：现有SQLite派生无模型resume_brief/本地事实措辞；7项新增测试、真实文字重启和Native完整事实复述通过。
+- P6：只读诊断完成，9秒区间根因未确定；未发现约2KB结果体明显膨胀，未做性能压缩A/B。
+- P7：新任务库一键准备、Study图片SHA确认通过；不作用于日常学习库。
+- P8：源码/软件取消/特定停顿/新图/重启取得证据；自然错答Native两场未评分，SDK另层0→100且保留历史。最后教师仍误称map文件。
+- 回归110模块：103通过，原7失败名称/异常原因逐项一致。任务审计锚点修复；末尾大行号摘要补测7/审计2/语言6通过。
+- 产品三方32/32、SourceGate PASS、补丁全patched；宿主真实重建31/31。18场Native均output-only并清理完成。
+- audio_allowed=false；无麦克风/采集/回环/改音量。日常原DB SHA、原日志行数/mtime保持；最终session guard无进程。
+- 已推送P1 8a28e98、P2 4d5f242、P3 beb9014/bf94cea、P4 18789b0、P5 0812e68、P6 be1e008、P7 8b3694a；P8最终发布中。不合并/强推。
 
 ## 待 Opus 复核
-- 需要宿主/仲裁/传输改动时记录证据并转下一项，本轮未新增此类改动。
-- 旧日志缺完整response.done.output和部分响应开始事件，空回合原因尚未确定。
-- P4：PNG错误身份被拒；HTML说标好了却没有guide command。三场上限已到，不能将语音宣称当高亮成功。
+- Native待答题×自然陈述意图：两场错答均走讲解，措辞复核无效已撤回；应关联待答题IDs、ASR与函数选择，不能盲开实验自动评分或动仲裁。
+- 指示：核对实际参数与status返回身份、避免无命令却宣称成功；PNG缺可信区域定位。P4三场上限已到，恢复需新一轮有界验证。
+- 教学准确性/切题性：一次插话答偏文件位置；重启追问教师新读weather_service.dart仍称map文件；不得硬替换答案伪装通过。
+- “正在查看源码”提示、原9秒进一步遥测需要宿主方案时遵守停止规则；本轮未新增宿主补丁、自动补发或真人验收。
 
 ## 历史（只追加）
 
@@ -154,3 +156,40 @@
 - R2 Native p5-native-b 场后 {'api.deepseek.com': 1441, 'www.lanlan.app': 123}；exit=0。
 
 - R2 P7一键准备：脚本前1441/123，后1443/123；新任务库neko-acceptance-r2-rehearsal、真实Study提交Sky Scout，像素SHA一致，无音频。
+
+- R2 Native p8-source-overlap 场前 {'api.deepseek.com': 1443, 'www.lanlan.app': 123}；任务库neko-acceptance-r2-rehearsal，固定WAV/output-only。
+
+- R2 Native p8-source-overlap 场后 {'api.deepseek.com': 1472, 'www.lanlan.app': 125}；exit=0。
+
+- R2 Native p8-grade 场前 {'api.deepseek.com': 1472, 'www.lanlan.app': 125}；任务库neko-acceptance-r2-rehearsal，固定WAV/output-only。
+
+- R2 Native p8-grade 场后 {'api.deepseek.com': 1495, 'www.lanlan.app': 126}；exit=0。
+
+- R2 Native p8-grade-retry 场前 {'api.deepseek.com': 1495, 'www.lanlan.app': 126}；任务库neko-acceptance-r2-rehearsal，固定WAV/output-only。
+
+- R2 Native p8-grade-retry 场后 {'api.deepseek.com': 1508, 'www.lanlan.app': 127}；exit=1。
+
+- R2 SDK codex-r2-p8-grade-sdk 场前 {'api.deepseek.com': 1508, 'www.lanlan.app': 127}；任务库 neko-acceptance-r2-rehearsal、文字模式。
+
+- P8 grading：Native首场1472/125→1495/126，无错答评分，参考纠正仅成首次95分；唯一措辞复核1495/126→1508/127仍无错答评分，停止后续参考作答。保留全部历史，恢复P5已验证措辞，SDK另层补核。
+- 全量首跑110模块发现新增summary_audit锚点失败；已修启动器任务审计锚点，窄测2通过；完整修复复跑目录codex-r2-final-repair-20261016进行中。
+
+- R2 SDK codex-r2-p8-grade-sdk 场后 {'api.deepseek.com': 1510, 'www.lanlan.app': 127}。
+
+- R2 Native p8-picture 场前 {'api.deepseek.com': 1510, 'www.lanlan.app': 127}；任务库neko-acceptance-r2-rehearsal，固定WAV/output-only。
+
+- R2 Native p8-picture 场后 {'api.deepseek.com': 1526, 'www.lanlan.app': 129}；exit=0。
+
+- R2 Native p8-resume 场前 {'api.deepseek.com': 1526, 'www.lanlan.app': 129}；任务库neko-acceptance-r2-rehearsal，固定WAV/output-only。
+
+- R2 Native p8-resume 场后 {'api.deepseek.com': 1541, 'www.lanlan.app': 130}；exit=0。
+
+## 第二轮最终结论与用户准备（2026-10-16）
+
+本轮P1～P8的可自主工作已完成；P4自主指示和P8自然答错意图达到有界尝试上限，保留具体失败/恢复条件，不越界改宿主。源码路由、序列化请求、暂停参数、接续摘要和新课准备已开发并发布；产品仍PARTIAL，不能宣布完整第二次真人验收就绪。
+
+用户可以做定向复测：新建课程，在Study提交正确Sky Scout图片并点Explain；自行检查麦克风输入音量/距离，关闭其它48911/48916实例；只有你明确准备真人复测后再另行允许开麦。需要你判断实际旧声是否停止、新答是否切题、行号/英文读法、成绩是否确实落库、指示是否真的出现。本Goal保持audio_allowed=false，不进入真人验收。
+
+最后验证：110模块103通过/7历史失败逐测试签名或导入异常原因不变；之后摘要大行号守卫7/审计2/语言6通过。产品32/32、宿主重建31/31，日常原DB SHA与原日志观测保持。账本1541/130，本轮271/400+20连接；18个Native场政策与清理全部核对，结束无本任务进程。原始证明codex-r2-final-proof.json。
+
+P8额外原始场：source-overlap1443/123→1472/125；grade1495/126、唯一retry1508/127均未完成错答评分；SDK0→100后1510/127；换图1526/129；重启1541/130。参考答案是合成测试输入，不是学生或真人证明。失败的评分措辞已撤回，旧95分和新0/100记录均保留。

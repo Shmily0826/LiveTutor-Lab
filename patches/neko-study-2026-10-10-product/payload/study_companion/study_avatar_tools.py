@@ -176,8 +176,12 @@ def _resume_wording(language: str, brief: dict[str, Any]) -> str:
     for window in brief.get('source_windows', [])[:3]:
         name = str(window['file']).replace('\\', '/').rsplit('/', 1)[-1]
         start, end = str(window['start_line']), str(window['end_line'])
+        if not english:
+            # shortcut: lines above 9999 stay as digits; extend shared speech rendering if needed.
+            start = _zh_number(start) if int(start) < 10000 else start
+            end = _zh_number(end) if int(end) < 10000 else end
         sources.append(f'{name} lines {start} to {end}' if english else
-                       f'{name}第{_zh_number(start)}至{_zh_number(end)}行')
+                       f'{name}第{start}至{end}行')
     source = '; '.join(sources) if sources else ('no saved source window' if english else '尚无源码范围记录')
     quiz = brief.get('last_quiz') or {}
     question = str(quiz.get('question') or ('no saved quiz' if english else '尚无出题记录'))[:300]
