@@ -90,7 +90,7 @@ class TeachingFailureTest(unittest.TestCase):
 
     def test_diagram_without_observed_relations_never_calls_text_model(self):
         names = {"RELAY_NOTE", "_FENCE_LINE", "_FENCE_MARK", "_CODE_SPAN", "_SPEAKABLE_FIELDS",
-                 "_speakable", "_teaching_failure_wording", "_teaching"}
+                 "_speakable", "_teaching_failure_wording", "_teaching", "_RANGE_MARK", "_ZH_LINE_RANGE", "_ZH_LINE_ONE", "_FILE_LINE", "_EN_LINE_RANGE", "_CJK", "_zh_number", "_spoken_line_refs"}
         ns = definitions(PAYLOAD / "study_avatar_tools.py", names,
                          {"json": json, "re": re, "_turn_language_request": lambda *_: "",
                           "__name__": "failure_product.avatar", "__package__": "failure_product"},
@@ -135,7 +135,7 @@ class TeachingFailureTest(unittest.TestCase):
 
     def test_restarted_avatar_uses_persisted_current_course_question(self):
         names = {"RELAY_NOTE", "_FENCE_LINE", "_FENCE_MARK", "_CODE_SPAN", "_SPEAKABLE_FIELDS",
-                 "_speakable", "_teaching_failure_wording", "_teaching", "_envelope", "_first_text", "_relay_for",
+                 "_speakable", "_teaching_failure_wording", "_teaching", "_envelope", "_first_text", "_relay_for", "_RANGE_MARK", "_ZH_LINE_RANGE", "_ZH_LINE_ONE", "_FILE_LINE", "_EN_LINE_RANGE", "_CJK", "_zh_number", "_spoken_line_refs",
                  "_study_native_material_snapshot", "_study_changed_native_material_result", "_study_bind_native_teaching_result"}
         ns = definitions(PAYLOAD / "study_avatar_tools.py", names,
                          {"json": json, "re": re, "asyncio": asyncio, "__name__":"failure_product.avatar", "__package__":"failure_product"},

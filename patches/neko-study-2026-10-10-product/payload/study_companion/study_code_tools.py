@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from plugin.sdk.plugin import llm_tool
-from .study_call_trace import phase
+from .study_call_trace import current_call_id, phase
 
 # A path is dropped if it names a credential store, or if it does not live under the
 # authorized prefix. Sibling copies of the same repository fail the second test.
@@ -239,6 +239,7 @@ def _structure_lines(payload: str, prefix: str) -> str:
     if not isinstance(rows, list):
         return ""
     folders: dict[str, dict[str, int]] = {}
+    tops: dict[str, int] = {}
     entries: list[str] = []
     for row in rows:
         if not isinstance(row, dict):
@@ -253,13 +254,24 @@ def _structure_lines(payload: str, prefix: str) -> str:
         tally = folders.setdefault(folder, {"files": 0, "symbols": 0})
         tally["files"] += 1
         tally["symbols"] += int(row.get("nodeCount") or 0)
+        rest = path[len(prefix):]
+        top = prefix + rest.split("/", 1)[0] if "/" in rest else prefix.rstrip("/")
+        tops[top] = tops.get(top, 0) + 1
     if not folders:
         return ""
-    lines = [f"{folder} - {tally['files']} files, {tally['symbols']} indexed symbols"
-             for folder, tally in sorted(folders.items())][:40]
+    # The cap used to cut alphabetically, so a late top-level folder (here: server/) could vanish
+    # while ten deep Flutter folders stayed, and the model then nested what it could not see.
+    # Keep the shallowest folders, and say outright which folders sit directly under the project.
+    shown = sorted(sorted(folders), key=lambda folder: folder.count("/"))[:40]
+    lines = [f"{folder} - {folders[folder]['files']} files, {folders[folder]['symbols']} indexed symbols"
+             for folder in sorted(shown)]
+    lines.insert(0, "top-level entries of the project (siblings, none inside another): "
+                 + ", ".join(f"{top} ({count} files)" for top, count in sorted(tops.items())))
     if entries:
         lines.insert(0, "entry points in the index: " + ", ".join(sorted(set(entries))[:5]))
-    lines.append(f"({len(folders)} folders of {sum(t['files'] for t in folders.values())} files)")
+    omitted = len(folders) - len(shown)
+    lines.append(f"({len(folders)} folders of {sum(t['files'] for t in folders.values())} files"
+                 + (f"; {omitted} deeper folders not listed" if omitted else "") + ")")
     return "\n".join(lines)
 
 
@@ -407,7 +419,8 @@ class _StudyCodeToolsMixin:
                 output_text=f"Returned authorized source evidence: {citations}",
                 metadata={"mode": sub, "project": authorized["name"],
                           "commit": evidence_commit, "authorized_commit": authorized["commit"], "shown": shown,
-                          "evidence_chars": stats.get("chars", 0), "filtered": stats},
+                          "evidence_chars": stats.get("chars", 0), "filtered": stats,
+                          **({"call": current_call_id()} if current_call_id() else {})},
                 session_id=session_id,
                 history_limit=int(getattr(getattr(self, "_cfg", None), "history_limit", 50) or 50),
             )
@@ -738,7 +751,9 @@ class _StudyCodeToolsMixin:
                       "hold. Then take the learner into the material: pick one thread that runs "
                       "between two of these modules (for a Flutter app, how one feature feeds "
                       "another), say which files you would read to explain it, and offer that as "
-                      "the next step. Listing names and stopping is not teaching.")
+                      "the next step. The tree shows folders, not calls: never state which module "
+                      "calls or feeds which as a fact, only as something to read together. "
+                      "Listing names and stopping is not teaching.")
         elif shown:
             barren = ""
         elif synced == "synced-after-empty":

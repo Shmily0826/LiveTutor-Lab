@@ -25,6 +25,12 @@ def trace_call(logger):
                 pass  # Timing must not replace a teaching result or cancellation.
 
 
+def current_call_id():
+    """The id of the call being traced, or '' outside one; rows written by the same call share it."""
+    trace = _current.get()
+    return trace['id'] if trace else ''
+
+
 @contextmanager
 def phase(name):
     trace = _current.get()

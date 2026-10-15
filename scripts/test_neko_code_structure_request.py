@@ -42,6 +42,9 @@ class StructureRequest(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn('sibling_copy',result['evidence'])
             self.assertEqual(result['shown'],[])
             self.assertEqual(h.recorded['repo_commit'],'current-B')
+            self.assertIn('top-level entries of the project',result['evidence'])
+            # A tree carries no calls: the teacher must offer a thread, not assert a data flow.
+            self.assertIn('never state which module calls or feeds which as a fact',result['note'])
 
 
 if __name__=='__main__':unittest.main(verbosity=2)

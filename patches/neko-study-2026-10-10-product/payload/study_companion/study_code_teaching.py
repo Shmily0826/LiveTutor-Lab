@@ -65,24 +65,40 @@ async def last_source_requests(plugin, authorization, session_id, course_id=''):
     scopes = [(dict(session_id=session_id), False)]
     if str(course_id or '').strip():
         scopes.append((dict(course_id=str(course_id).strip()), True))
+    def windows(metadata):
+        found = []
+        for item in metadata.get('shown') or []:
+            lines = [line for line in (item.get('lines') or []) if type(line) is int and line > 0] if isinstance(item, dict) else []
+            if not lines or not isinstance(item.get('file'), str) or not item['file'].strip():
+                continue
+            start = min(lines)
+            found.append({'mode': 'file', 'file': item['file'], 'offset': start,
+                          'limit': max(1, min(120, max(lines) - start + 1))})
+        return found
+
     for scope, earlier in scopes:
         rows = await asyncio.to_thread(store.list_interactions, 30, **scope)
-        for row in rows:  # newest first
+        for position, row in enumerate(rows):  # newest first
             metadata = row.get('metadata') or {}
             if row.get('kind') != 'code_question' or metadata.get('project') != authorization.get('name'):
                 continue
-            requests = []
-            for item in metadata.get('shown') or []:
-                lines = [line for line in (item.get('lines') or []) if type(line) is int and line > 0] if isinstance(item, dict) else []
-                if not lines or not isinstance(item.get('file'), str) or not item['file'].strip():
-                    continue
-                start = min(lines)
-                requests.append({'mode': 'file', 'file': item['file'], 'offset': start,
-                                 'limit': max(1, min(120, max(lines) - start + 1))})
-                if len(requests) == 3:
-                    break
-            if requests:
-                return requests, str(metadata.get('commit') or ''), earlier and row.get('session_id') != session_id
+            requests = windows(metadata)
+            if not requests:
+                continue
+            # One explanation reads up to three windows, each written as its own row. "That
+            # code" means all of them, so the rows of the same call come back in reading order.
+            call = metadata.get('call')
+            if call:
+                for older in rows[position + 1:]:
+                    other = older.get('metadata') or {}
+                    if older.get('kind') == 'code_question' and other.get('call') == call \
+                            and other.get('project') == metadata.get('project'):
+                        requests = windows(other) + requests
+            unique = []
+            for request in requests:
+                if request not in unique:
+                    unique.append(request)
+            return unique[:3], str(metadata.get('commit') or ''), earlier and row.get('session_id') != session_id
     return [], '', False
 
 

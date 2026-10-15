@@ -39,6 +39,47 @@ _CODE_SPAN = re.compile(r"`{1,3}([^`\n]+)`{1,3}")
 # highlighted, so the markup comes out and the code keeps its own lines.
 _SPEAKABLE_FIELDS = ("reply", "question", "hint", "summary")
 
+# "第22–24行" reaches the speech engine as digits and a dash, which it may read as a minus or
+# digit by digit. Only line references are respelled; ids, status codes and identifiers keep
+# their characters, and the stored reply shown in the Study panel is never rewritten.
+_RANGE_MARK = r"\s*(?:[-–—~～]|到|至)\s*"
+# \w also matches Chinese characters, so the look-arounds below spell out the ASCII set.
+_ZH_LINE_RANGE = re.compile(rf"(?<![A-Za-z0-9_.])(第\s*)?(\d{{1,4}}){_RANGE_MARK}(?:第\s*)?(\d{{1,4}})\s*行")
+_ZH_LINE_ONE = re.compile(r"(?<![A-Za-z0-9_.:/-])(第\s*)?(\d{1,4})\s*行(?![为动业情李星政家])")
+_FILE_LINE = re.compile(
+    r"((?<![A-Za-z0-9_])[A-Za-z0-9_./\\-]+\.(?:dart|js|jsx|ts|tsx|py|java|kt|swift|c|cc|cpp|h|cs|go|rs|rb|php|json|ya?ml|md|html|css|xml))"
+    rf"\s*[:：]\s*(\d{{1,4}})(?:{_RANGE_MARK}(\d{{1,4}}))?(?![\d.])")
+_EN_LINE_RANGE = re.compile(rf"(?<![A-Za-z])([Ll]ines)\s+(\d{{1,4}}){_RANGE_MARK}(\d{{1,4}})(?!\d)")
+_CJK = re.compile(r"[一-鿿]")
+
+
+def _zh_number(value: str) -> str:
+    number = int(value)
+    digits = "零一二三四五六七八九"
+    if number < 10:
+        return digits[number]
+    if number < 20:
+        return "十" + (digits[number - 10] if number > 10 else "")
+    spoken, rest, zero = "", number, False
+    for unit, name in ((1000, "千"), (100, "百"), (10, "十")):
+        place, rest = divmod(rest, unit)
+        if place:
+            spoken += ("零" if zero else "") + digits[place] + name
+            zero = False
+        elif spoken:
+            zero = True
+    if rest:
+        spoken += ("零" if zero else "") + digits[rest]
+    return spoken
+
+
+def _spoken_line_refs(text: str) -> str:
+    if not _CJK.search(text):
+        return _EN_LINE_RANGE.sub(r"\1 \2 to \3", text)
+    text = _FILE_LINE.sub(lambda m: f"{m[1]} 的第{m[2]}" + (f"到{m[3]}" if m[3] else "") + "行", text)
+    text = _ZH_LINE_RANGE.sub(lambda m: f"{m[1] and '第' or ''}{_zh_number(m[2])}到{_zh_number(m[3])}行", text)
+    return _ZH_LINE_ONE.sub(lambda m: f"{m[1] and '第' or ''}{_zh_number(m[2])}行", text)
+
 
 def _speakable(text: Any) -> str:
     out: list[str] = []
@@ -50,7 +91,7 @@ def _speakable(text: Any) -> str:
                 out.append("")
             continue
         out.append(_FENCE_MARK.sub("", _CODE_SPAN.sub(r"\1", line)).rstrip())
-    return "\n".join(out).strip()
+    return _spoken_line_refs("\n".join(out).strip())
 
 
 def _envelope(result: Any) -> dict[str, Any]:

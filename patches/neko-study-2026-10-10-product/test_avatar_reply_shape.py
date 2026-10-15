@@ -16,7 +16,8 @@ from types import SimpleNamespace
 SOURCE = Path(__file__).parent / 'payload/study_companion/study_avatar_tools.py'
 KEEP_NAMES = {'RELAY_NOTE', '_FENCE_LINE', '_FENCE_MARK', '_CODE_SPAN', '_SPEAKABLE_FIELDS',
               '_speakable', '_teaching', '_first_text', '_relay_for', '_relay_for_data',
-              '_ack_wording', '_teaching_failure_wording'}
+              '_ack_wording', '_teaching_failure_wording', '_RANGE_MARK', '_ZH_LINE_RANGE', '_ZH_LINE_ONE',
+              '_FILE_LINE', '_EN_LINE_RANGE', '_CJK', '_zh_number', '_spoken_line_refs'}
 
 
 def load_shape_helpers():
@@ -34,7 +35,7 @@ def load_shape_helpers():
                 body.append(node)
         elif isinstance(node, ast.FunctionDef) and node.name in KEEP_NAMES:
             body.append(node)
-    assert len(body) >= 9, f'missing reply-shaping code in {SOURCE}: {[getattr(n, "name", None) for n in body]}'
+    assert len(body) >= 17, f'missing reply-shaping code in {SOURCE}: {[getattr(n, "name", None) for n in body]}'
     module = ast.Module(body=body, type_ignores=[])
     namespace: dict[str, Any] = {'json': json, 're': re, 'Any': Any}
     exec(compile(module, str(SOURCE), 'exec'), namespace)
