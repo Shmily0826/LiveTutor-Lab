@@ -1,5 +1,7 @@
 # Claude Goal 状态
 
+> 2026-10-16：第二次验收修复由 Codex 承接，最新状态见 [codex-overnight-status](codex-overnight-status.md)，完整授权见 [contract](codex-overnight-contract-2026-10-16.md)。下文保留为历史。
+
 Goal：[claude-goal-2026-10-15](claude-goal-2026-10-15.md)（用户 2026-10-15 确认，无人值守）。旧 plan/status/blockers 不再逐阶段同步。
 
 ## 当前状态（2026-10-15，M1–M5 完成后的 W1–W5 续作，由 Sonnet 5.5 会话完成）
