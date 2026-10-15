@@ -47,3 +47,15 @@
 ## 验收后
 
 - 把每一步的"是/否"和你的感受告诉协助验收的开发者。验收结束后把 `audio_allowed` 改回 `false`。
+
+## 开发者的一键新课准备（无需开麦）
+
+在项目根目录运行一条命令，给store和课程使用未用过的名称；1670是本轮获批的累计停止线，不能擅自提高或重置账本：
+
+```powershell
+& .\benchmarks\raw\neko-product-host\.venv\Scripts\python.exe -B .\scripts\neko_prepare_acceptance_course.py --store neko-acceptance-round2-demo --course-id sky-scout-round2-demo --deepseek-stop 1670
+```
+
+脚本只准备新的任务库，提交现成的Sky Scout图并确认像素身份，完成后退出宿主。已有目录会被拒绝，不能指定日常库。实际成功证据见 [P7报告](evidence/codex-r2-p7-preparation-2026-10-16.md)。
+
+用户自己操作日常Study时，仍按前面的第4–5项：填写新课程ID→点「选择 / 返回课程」→「选择学习图片」或粘贴→核对预览→点「Explain／讲解」→等结果返回。材料窗口的选中项不等于Study提交。
