@@ -1,18 +1,19 @@
 # Claude Goal 状态
 
-## 当前状态（第三轮，2026-10-16，Claude Sonnet 5.5，**仅离线**）
-- **额度栏位启动时留空 → 整轮没有任何真实模型调用或 Native 连接**；账本仍 DeepSeek 1541、Lanlan.app 130，`audio_allowed=false`，无麦克风/采集/回环/改音量。R1–R4 的修复只有离线证据，Native 与真人层都没验。
-- 修了什么：R1 出题后的自然作答（否定/含糊/错答）转交 `study_answer`，材料纠错与提问不评分；R2 教师回复事实检查（行号窗口、throw/catch 位置、未见标识符）+ 重试一次 + 剥离，并建 13 题评测集与计分器；R3 “先说结论”走已存讲解首句、角色指导加 Interruptions 规则；R4 `study_point` 失败/仅查看一律 `highlighted=false` 并给如实措辞，HTML 边高亮工具链离线可行；R5 解出首声各段耗时、观测器补记 status 文字；R6 验收说明 v3。
-- 证据：全量 116 模块，109 通过，仅原 7 个历史失败（名称与原因一致）；新增 6 模块（pending_answer_routing 13、citation_check 20、teacher_citation_gate 11、interrupt_summary 11、teacher_eval_set 6、point_honesty 8）。已记录的真实错误“第二十二行的 throw”被新检查在真实证据上抓到。产品 manifest 32 个 payload 三方 SHA 一致，SourceGate PASS，宿主补丁全 patched（未改宿主）。
-- 报告：[R1](evidence/claude-r3-r1-natural-answer-routing-2026-10-16.md) / [R2](evidence/claude-r3-r2-teacher-citation-check-2026-10-16.md) / [R3](evidence/claude-r3-r3-interruption-2026-10-16.md) / [R4](evidence/claude-r3-r4-pointing-honesty-2026-10-16.md) / [R5](evidence/claude-r3-r5-wait-hint-and-first-voice-2026-10-16.md) / [R6](evidence/claude-r3-r6-rehearsal-v3-2026-10-16.md) / [验收v3](claude-acceptance-guide.md)。
-- **没法验证的**：R1 Native 每类场、≥80% 落库；R2 评测集真实复跑与违规率/人工错误前后对比；R3 Native 插话 3 场；R4 HTML 自主高亮 3 场；R5 A/B 与 status 文字；R6 完整 1–7 步彩排。
-- **是否可请用户做完整验收：不建议。** 可做定向复测（先第 5 步自然作答、第 3 步插话、第 2 步行号），建议先由有额度的一轮把上面“没法验证的”补成 Native 证据。需要你判断：是否给下一轮填额度（建议 DeepSeek 320、停止线 1861、Lanlan.app 45）；教师检查违规时多一次调用换准确性可否接受。
+## 当前状态（第三轮，2026-10-16，Claude Sonnet 5.5；离线 + 补验）
+- 额度：用户后补 DeepSeek 320（停止线 1861）、Lanlan.app 45。账本 DeepSeek 1541→**1825**（+284）、Lanlan.app 130→**146**（+16）；全局 2000 未动。`audio_allowed=false`，Native 场全部 output-only：无麦克风/采集/回环/改音量，cleanup 无错误，结束无本任务进程。
+- 补验总表：[claude-r3-native-verification](evidence/claude-r3-native-verification-2026-10-16.md)；分项 [R1](evidence/claude-r3-r1-natural-answer-routing-2026-10-16.md) / [R2](evidence/claude-r3-r2-teacher-citation-check-2026-10-16.md) / [R3](evidence/claude-r3-r3-interruption-2026-10-16.md) / [R4](evidence/claude-r3-r4-pointing-honesty-2026-10-16.md) / [R5](evidence/claude-r3-r5-wait-hint-and-first-voice-2026-10-16.md) / [R6](evidence/claude-r3-r6-rehearsal-v3-2026-10-16.md) / [验收v3](claude-acceptance-guide.md)。
+- **R1**：Native 8 场，按类 6/6 通过、按场 6/8（75%）。否定类“这张图根本没有箭头…”由本轮的 explain→评分转交首次在 Native 通过（QA+1）；其余 5 类模型自己就调 study_answer。两场失败：“我觉得不是这样”被当成重新出题（原待答题被替换）、“好像是吧，不太确定”识别空。负例 4 句（文字场真实路径）全部不评分。
+- **R2**：评测集 13 题×2 次真实复跑，确定性发现 0、人工事实错误 0/13（两次），要点遗漏 2–3 题；基线无违规，**无法证明检查改善了准确性**，也无回归。已记录的“第22行 throw”错误在真实证据上被离线检查抓到。
+- **R3**：2 个有效 Native 场通过（旧声软件取消 522/563 ms，新回答一句、行号正确、与刚才讲解同一结论，无文件概览）；第 3 场提供方空回合作废。**R4**：HTML 3 场 0 accepted，模型从不先 status、编造定位器；诚实化 3/3 场通过（如实说没标出来）。**R5**：“正在查看源码……”Native 文字证据已拿到；首声拆解 转写 1.4 s + 工具 4–5 s + 返回→首包 ≈2 s；A/B 未做（余额不够）。**R6**：完整 1–7 步 Native 彩排未做。
+- 回归：116 模块 109 通过，仅原 7 个历史失败；产品 manifest 32 个 payload 三方一致、SourceGate PASS、宿主补丁全 patched，未改宿主。
+- **是否可请用户做完整验收：可以做定向复测（第 5、3、2 步），不建议完整验收。** 需要你判断：否定类短句被当重新出题的问题是否值得在 study_quiz 层处理；R4 自主高亮是否继续投入；教师检查违规时多一次调用换准确性可否接受。
 - 验收前用户要做：新建课程 ID；在 Study 提交 Sky Scout 架构图并点 Explain；调大麦克风输入音量/离近一点；关掉占用 48911/48916 的其它实例；电脑不睡眠；告诉协助者“准备好了”后才改 audio_allowed。
 
-## 待 Opus 复核（第三轮新增）
-- 宿主层、本轮按高风险停止规则未动手：“正在查看源码……”在 Native 的文字证据（观测器已补记，需下一场）；真人场约 9 s 的工具返回→首包区间与固定 WAV 场 2.3–4 s 不一致；识别把插话拆成两条（供应商/识别层）。
-- 教师检查只覆盖三类；“map 文件”这类对象说错抓不到。违规重试时首次错误回复仍写入学习记录。
-- R1 规则与语料同一作者，需要独立语料或真人转写再估泛化。
+## 待 Opus 复核（第三轮）
+- 宿主层、按高风险停止规则未动手：真人场约 9 s 的工具返回→首包区间（固定 WAV 场仅 ≈2 s）；识别把插话拆两条与偶发提供方空回合（R1 含糊-1、R3 场 3）。
+- 模型对 “我觉得不是这样” 调 study_quiz 重新出题并替换待答题（payload 的 study_quiz 看不到学习者原话）；R4 模型不先 status 就编造定位器（本轮仅让失败结果可纠正，未经 Native 验证）。
+- 教师检查只覆盖行号窗口/throw-catch 位置/未见标识符；“map 文件”这类对象说错抓不到；违规重试时首次错误回复仍写入学习记录。R1 规则与语料同一作者。
 
 ## 第二轮顶部状态快照（第三轮启动时保存）
 - Codex P1～P8已验证/记录受阻并发布df99eed，第二轮收尾；总体PARTIAL，完整真人验收未就绪。

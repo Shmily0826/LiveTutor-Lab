@@ -112,6 +112,18 @@ def _eval_scene():
 
 SCENES['r3eval'] = _eval_scene()
 
+# R1 negatives (round 3): while a quiz question is pending, explicit material corrections must NOT be graded.
+# A refusal or ambiguity answer is the expected outcome here, so those turns may "fail" without stopping the scene.
+SCENES['r3neg'] = [
+    start(),
+    {'tool': 'study_quiz', 'arguments': {'topic': 'weather_service.dart 对非200响应的处理',
+                                         'request': '只出一道简短的概念题，不要公布答案。'}, 'kind': 'quiz'},
+    *[{'tool': 'study_explain', 'arguments': {'question': sentence}, 'kind': f'C{index}', 'allow_fail': True}
+      for index, sentence in enumerate(['你读错图了，再看一遍', '这张图换了，你重新看一下', '你刚才看错了，请重新检查当前的图片',
+                                        'I changed the picture, please look again, you misread it.'], 1)],
+    {'tool': 'study_session', 'arguments': {'action': 'status'}, 'kind': 'status-after'},
+]
+
 
 def spent():
     return json.loads(LEDGER.read_text(encoding='utf-8'))['spent']
@@ -182,7 +194,7 @@ async def main(options):
             save(options.output, report)
             if spent().get('api.deepseek.com', 0) - before['spent'].get('api.deepseek.com', 0) >= options.ceiling:
                 raise RuntimeError('Scene external-call ceiling reached; stop without retry.')
-            if not turn['ok']:
+            if not turn['ok'] and not step.get('allow_fail'):
                 raise RuntimeError(f"{step['tool']} failed: {turn['error']}")
     except Exception as error:
         report['failure'] = f'{type(error).__name__}: {error}'

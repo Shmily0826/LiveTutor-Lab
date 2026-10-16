@@ -599,6 +599,25 @@ class _StudyAvatarToolsMixin:
                                    **{key: kwargs[key] for key in ("selector", "x", "y", "width", "height", "label") if key in kwargs}}
                         response = await client.post(base + "/api/guidance", json=command, headers=headers)
                     payload = response.json()
+                    if not response.is_success and kind in {"selector", "rect"}:
+                        # Measured 2026-10-16 (three Native scenes): the model sent an invented selector and
+                        # material id straight away. Say which material is actually open and what it can
+                        # point at, so one corrected call is possible; nothing is substituted for it.
+                        try:
+                            snapshot = await client.get(base + "/api/state", headers=headers)
+                            state = snapshot.json() if snapshot.is_success else {}
+                            open_id = state.get("active_material_id")
+                            open_material = next((m for m in state.get("materials", []) if m.get("id") == open_id), None)
+                            if open_material:
+                                payload = {**payload, "current_material": {
+                                    "material_id": open_id, "kind": open_material.get("kind"),
+                                    "targets": [{"selector": t.get("selector"), "label": t.get("label")}
+                                                for t in (open_material.get("targets_for_pointing") or [])[:12]]},
+                                    "next": "Nothing was highlighted. If the learner still wants it, call study_point once more with "
+                                            "current_material.material_id and a selector copied from current_material.targets; "
+                                            "otherwise say plainly that nothing was highlighted."}
+                        except (httpx.HTTPError, ValueError):
+                            pass
                     if response.is_success:
                         active = payload.get("active_material_id")
                         payload = {"active_material_id": active,
@@ -643,7 +662,9 @@ class _StudyAvatarToolsMixin:
             result["say_this"] = (en if english else zh).get(code) or (
                 "I could not highlight that, so nothing was marked." if english else "这次没能高亮，所以什么也没标出来。")
             result["relay"] = ("Say only say_this, then stop. Nothing was highlighted: never say you marked, pointed at or "
-                               "highlighted it, and do not retry with an invented selector.")
+                               "highlighted it, and do not retry with an invented selector. "
+                               + ("A single retry is allowed only with the id and a selector copied from current_material; "
+                                  "if you do not retry, say say_this." if result.get("current_material") else ""))
         elif kind == "status":
             result["highlighted"] = False
             result["relay"] = ("This call only inspected the material; nothing is highlighted yet. Do not say you marked or "

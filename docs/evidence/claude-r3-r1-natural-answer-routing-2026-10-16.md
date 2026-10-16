@@ -1,5 +1,7 @@
 # R1：出题后的自然作答进入评分（离线完成，Native 未验）
 
+> **补验（Native/真实模型）已完成，见 [claude-r3-native-verification](claude-r3-native-verification-2026-10-16.md)：按类 6/6、按场 6/8；下面“Native 未验”“没做”的表述是补验前的状态。**
+
 **证据层级：离线（含真实 wrapper + SQLite + 假评分模型）。没有真实模型调用、没有 Native 场、没有麦克风。** 额度栏位启动时为空，按合同整轮只做离线工作。
 
 ## 改了什么

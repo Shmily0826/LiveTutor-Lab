@@ -1,5 +1,7 @@
 # R3：插话后的切题（根因读出 + 离线修复；Native 未验）
 
+> **补验已完成，见 [claude-r3-native-verification](claude-r3-native-verification-2026-10-16.md)：Native 2 个有效场通过（取消 522/563 ms，一句切题回答），第 3 场提供方空回合作废。下面“Native 3 场没跑”是补验前的状态。**
+
 **证据层级：只读分析已存盘的真实 Native 证据（codex-r2-p8-source-overlap.json）+ 离线测试。没有新的 Native 场。**
 
 ## 只读发现（两条识别到达时发生了什么）

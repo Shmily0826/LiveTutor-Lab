@@ -138,7 +138,7 @@
     },
     {
       "path": "payload/study_companion/study_avatar_tools.py",
-      "sha256": "e793cf3e9ad8d43edecbdc2eed676b8985096839acc01bbbe716d83227c643c7",
+      "sha256": "2965c6bf338ca77728d804cc0381b7f5ec5635b4d7a1a3fa4006f48b4612c1e7",
       "deployed_matches": true,
       "phase29_delta_prior_sha256": "afb52dbbc047fd3cf20eab2c536fcdde9d1cba36fe4056a489bda27fe6123af9",
       "phase29_verification": "Specific errors41 / correct100 and restart42 / Chinese then English43 observed; final reminder-negative narrowing source+6 offline only; all historical failures retained.",
@@ -173,7 +173,8 @@
       "round3_r1_prior_sha256": "1407471262ba52ce9313b277da47b12dfb7e4f9a9991e6b7410a476eb350d010",
       "round3_r3_prior_sha256": "cea57614148283445596b2b31210b7b2a306ef91c63054255306440d75f5b262",
       "round3_r4_prior_sha256": "ad089a6f84aba1a23a0238a021face4025bf3f26658e95519315a495a4408413",
-      "round3_r5lf_prior_sha256": "86d07c16dc463c66daa0f08baeb772e79794b50b55971133646cd1a8b69b4175"
+      "round3_r5lf_prior_sha256": "86d07c16dc463c66daa0f08baeb772e79794b50b55971133646cd1a8b69b4175",
+      "round3_r7_prior_sha256": "e793cf3e9ad8d43edecbdc2eed676b8985096839acc01bbbe716d83227c643c7"
     },
     {
       "path": "payload/study_companion/study_ocr_pipeline.py",

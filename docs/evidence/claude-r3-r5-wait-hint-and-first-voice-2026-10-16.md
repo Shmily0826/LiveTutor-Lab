@@ -1,5 +1,7 @@
 # R5：“正在查看源码……”提示核对 + 首声等待拆解（只读 + 观测补强；A/B 未做）
 
+> **补验已完成，见 [claude-r3-native-verification](claude-r3-native-verification-2026-10-16.md)：Native 已记录到“正在查看源码……”（转写后约 2 s）；A/B 余额不够未做。下面关于“文字内容无证据”的描述是补验前的状态。**
+
 **证据层级：只读分析已存盘的真实证据（codex-r2-p8-source-overlap.json、codex-r2-p5-sdk-b.json）+ 源码阅读。没有新的 Native 场，没有 A/B。未改宿主补丁。**
 
 ## 一、提示是否出现（事实表）

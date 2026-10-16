@@ -57,7 +57,7 @@
      "code_requests": [{"mode": "file", "file": "app_sky_scout/lib/data/services/weather_service.dart", "offset": 1, "limit": 28}],
      "expected_facts": ["没有重试：只有 10 秒 timeout，非 200 直接 throw"],
      "must_match": [["没有|并没有|不会|没"], ["重试|retry"]],
-     "forbidden": [{"id": "claims_retry", "regex": "(?:有|会)[^。]{0,4}重试(?!逻辑?[。，]?\\s*(?:没有|不))", "why": "文件里没有重试"}]},
+     "forbidden": [{"id": "claims_retry", "regex": "(?<![没无不])(?:有|会)[^。]{0,4}重试", "why": "文件里没有重试"}]},
     {"id": "Q11", "kind": "algorithm", "question": "SkyOverlayVisibility 的淡出透明度是怎么算的？三句以内中文。",
      "code_requests": [{"mode": "file", "file": "app_sky_scout/lib/features/sky_map/sky_overlay_visibility.dart", "offset": 7, "limit": 20}],
      "expected_facts": ["距离屏幕中心的归一化椭圆距离 <0.45 完全不透明，>0.90 完全透明（fadeStart/fadeEnd）", "中间用 smoothstep：1 - t*t*(3-2t)（第14-17行）", "opacityAt 先把点换算成相对中心的 x、y 再取模长（第22-24行）"],

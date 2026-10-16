@@ -1,5 +1,7 @@
 # R4：自主高亮——先诚实（已做），再尽量做成（只到可行性；Native 未验）
 
+> **补验已完成，见 [claude-r3-native-verification](claude-r3-native-verification-2026-10-16.md)：HTML 3 场 0 accepted（模型编造定位器），诚实化 3/3 场通过；补做了“被拒绝时返回当前材料与可指目标”的离线改动，未经 Native 验证。**
+
 **证据层级：离线（真实 `study_point_tool` + 真实本地学习材料服务 + 真实 forward 图 HTML）。没有 Native 场、没有 surface_guide_attempts 新数据。**
 
 ## 第一步（必做）：没有 accepted 高亮就不许说“标出来了”

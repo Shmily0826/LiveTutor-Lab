@@ -108,6 +108,24 @@ class Honesty(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["say_this"], "已请求高亮当前源码第13行。")
         self.assertIsNotNone(self.surface.command)
 
+
+    async def test_rejected_selector_returns_the_open_material_and_its_targets(self):
+        shown = self.surface.show_code_evidence({"evidence": SOURCE, "project": "fixture", "repo_commit": "sha1"})
+        self.surface.select(shown["material_id"])
+        result = await self.point(kind="selector", material_id="study_picture", selector=".arrow.invented")
+        self.assertFalse(result["ok"])
+        self.assertIs(result["highlighted"], False)
+        current = result["current_material"]
+        self.assertEqual(current["material_id"], shown["material_id"])
+        self.assertTrue(current["targets"] and all(t["selector"] for t in current["targets"]))
+        self.assertIn("Nothing was highlighted", result["next"])
+        self.assertIn("single retry", result["relay"])
+        self.assertIsNone(self.surface.command)  # nothing substituted on the learner's behalf
+
+    async def test_rejection_without_a_retry_path_has_no_retry_wording(self):
+        result = await self.point(kind="source", source_line=13)
+        self.assertNotIn("single retry", result["relay"])
+
     @unittest.skipUnless(FORWARD.is_file(), "forward diagram HTML not present")
     async def test_html_edge_can_be_found_by_status_and_accepted(self):
         forward = next(m for m in self.surface.materials.values() if m.get("source_path") == str(FORWARD)
