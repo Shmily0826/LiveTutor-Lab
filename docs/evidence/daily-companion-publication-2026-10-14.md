@@ -35,3 +35,15 @@ push后ls-remote确认d6405af；master仍f1e8f3f、教学分支1fa40f4，managed
 主线受影响检查7/14/6/5和Native9、此前language4/course4/failure5/memory6通过。固定daily产品源/部署23匹配，当前工具源双runtime指纹封存。voice9和continuity10均terminal，后一场单CONNECT、两轮英文主体→中文、各一explain/native25/27/回环75/71，细字『未命中』读成『命中』整体PARTIAL。累计458/2000 DS、47 app、0 tech，同round不重置；已核native34592不存在、48911/48916空闲。两审查Agent报告冻结，无online干扰。
 
 拟发布仅必要源码/量具/文档，不含原图、WAV、DB、配置密钥、raw日志、Sky源码或.workbuddy。提交与push成功须在下次确认后另记SHA，不把本段准备状态冒称发布完成。Goal active，继续material cancel与细字纠正，不因阶段完成终止。
+
+第四阶段提交/push已确认：`5369c904453fd6fcbbba2a0748281f012d5c76c7`，唯一parent d6405af，同codex/daily-learning-companion，22个明确allowlist文件。隔离暂存实际生产diff审查、全部Python AST/JSON/密钥模式/diff check过；依赖闭包含新singleflight generator与原host import。固定daily部署23/hash及双runtime指纹再次匹配。managed worktree提交后clean，ls-remote feature5369c90、masterf1e8f3f确认；没有合并/强推/其他分支push。主原HEAD2c541755/index空保留，原contract与隔离副本字节/hash相同。原脏文件未暂存，raw私有证据不发布。
+
+发布的是本阶段源码与分层记录；未声称密集小字/strict全英文/合并实际branch/材料替换取消或真人过。458/47/0，无活动本任务online会话，两个Agent报告已冻结；Goal复核active，下一工作材料控制通知+精确当前输出owner取消与纠正后重查。此push后确认仅当前主项目文档，后续阶段接续时同步发布。
+
+## 阶段六发布后确认（最新，覆盖上文待发布快照）
+
+38必要source/test/doc文件已commit并push `537e573f5d951b9ebc6a548072c3ce8d6a3f1f15`，parent4a33054231ce1e7487c76b32e6c9237bbf6f2fd0，现有codex/daily-learning-companion；managed clean/远端feature已核，master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb。root HEAD2c541755344eb8bcf35e310f871c513ea809e1a5/index空/.workbuddy及无关dirty保留。无merge/force/密钥/raw录音/用户学习DB发布。
+
+24产品Git index blobs实际sha与manifest全匹配，四处CRLF→LF仅格式、原bytes本地备份；固定daily plugin-code24匹配，四host fresh-LF重放/部署/AST/idempotence/未知draft拒绝过。两限定Agent审查已冻结；量具覆盖P2已source修/4checks过，new summary路由guidance仅source。正常Core/SDK/DB三tool proof与Native16 PARTIAL明确分层，未冒称quiz/summary设备或真人通过。
+
+最新ledger552/2000 DS、55/null app、tech0/0，same round不重置；无活动online/host/native，48911/48916 free。现有Goal再次核active，不重建/暂停/完成。下一优先16同条语音ASR/工具epoch源时序离线复现，再修summary实际工具/历史依据；不提升过期owner、不伪onset、不重放旧PCM，继续queue/细字/源码/其他A–F。压缩/自动续跑先完整读contract/plan/status/blockers，后续明确指令优先。

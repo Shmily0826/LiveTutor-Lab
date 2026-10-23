@@ -29,3 +29,6 @@ SealedPhrase追加源样本坐标压缩区间，最多32段并明确truncated；
 本轮无外部调用、服务/Native/浏览器/设备/扬声器/麦克风启动；账本原890/2000、app79/null、tech0保持。原WAV/51 raw SHA仍原值；未修改学习DB、Sky源码/索引或原图。SOURCE/OFFLINE通过，provider自然停顿、实际发音及真人体验未通过。
 
 下一62优先推进A/E/F：受控材料窗/指示的实际UI操作、材料切换及恢复，不因模型线路暂时失败停Goal。B新诊断可供以后有必要的有界场使用，不为补日志立刻重复51或放松验收；完整A–F/Goal active。
+
+61发布确认：14文件487508adfb3d3c01885ffd80f923ee67e9c009b5已push并核remote exact；master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb，publisher clean/Root index空，原890/79/0、无live。只发布诊断源码/相关测试/文档，未发布WAV、raw、DB、备份或密钥。
+下一62先四记录、61报告，再按47/55已有入口推进受控材料窗的实际UI操作与位置/材料恢复边界；复用neko_learning_surface与material_windows，localhost经共享web-inspector，不安装浏览器库。65/67已通过Ready/裁切不无故重跑，重点补实际点击/材料切换/指示失效或恢复，优先离线/拒外呼，不用真人麦克风。完整A–F/Goal active，B留待有界必要观察、不再猜provider端点。

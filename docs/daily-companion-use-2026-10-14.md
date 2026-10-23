@@ -24,6 +24,8 @@
 
 启动报错查看 `benchmarks/raw/neko-daily-companion/launcher.log`；运行报错查看 `benchmarks/raw/neko-desktop-host.log`。Study 断网/未就绪时保留当前图片，恢复后点击刷新，再主动提交；不会无限重试模型。Enter 或 Ctrl+C 结束本次窗口与宿主。不要关闭其他 Chrome 或运行全局进程清理。
 
+材料页操作：在 Study 点“显示学习材料”，选择参考图或 HTML。HTML 用目标列表和指示按钮；图片可点击位置、缩放、滚动，清除按钮或 Escape 取消箭头。换材料会清除旧指示；只关闭材料页后，可从同一 Study 入口重开。这里支持受控材料页，不承诺给任意桌面窗口定位。
+
 ## 当前支持范围
 
 | 能力 | 实际证据 |

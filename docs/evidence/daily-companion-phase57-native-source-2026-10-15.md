@@ -17,3 +17,4 @@
 原raw70 SHA09593b559a0b5cc7d8213421f926dd0315eebe8b4acf4feea4a00872f08d941e完整保留；另件native-source70-review.json只读判7项及时间。原legacy终端摘要只取reply/socket_audio_bytes，导致输出空而真实Native成功；仅修摘要优先native_reply和output-only binaryBytes，实际冻结70通过AST投影验证，无重开会话/新增模型/改原raw。不为两行摘要修复新建镜像测试或重跑已通过语音。
 
 下一58：据本例测量核4.69秒源码/上下文窗口与2.915秒语义路由是否有重复工作，先查原调用/课程历史概念保护再优化，不直接删必要路由；Native转写空格仅先查累加路径。C/材料换课恢复/E指示等余项继续，不因单项受阻停。完整A–F/Goal active，暂无live，仍不mic/loopback，必要扬声器仅4%。
+57七文件已审后commit/push 94a1f02abb8e4556ffb137fcd0b8f1885a3e9e5b；remote exact，master仍f1e8f3f5605659f0526e43bc3b85c60ae46c85fb/publisher clean/Root index空/contract原SHA。未发布raw、DB、WAV/录音、截图、备份、密钥。当前原888/79/0，无live。下一自动续跑先contract/plan/status/blockers与本报告，再推进58时延与转写路径，不无效重跑70，不把Native renderer当真人/物理声音通过。发布后metadata在本地交接，随下一相关阶段发布。

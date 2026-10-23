@@ -90,3 +90,38 @@ support3确实发出 `turn_detection:null`，三个completed都在显式end之�
 最有意义的离线覆盖是：pause<1.2期间新speech推迟准入；quiet已足但最新ASR早于最后speech仍不得出站；末ASR新scope取消首call并只放行新call；旧conn/timeout/handoff不付费且不continuation；parallel sibling正常按原batch返回。主线再安排一个已授权受控固定刺激，核完整问题与末尾约束、付费请求数、末speech→首播放。没有必要重复MANUAL scene或已经通过的旧教学验收。
 
 本节外部请求0、生产修改0、宿主/音频进程0。当前只读设计完成，实施与真实场景验证由主Agent决定。
+
+## opt-in Study speech gate 候选只读审查
+
+对象：`scripts/neko_study_speech_gate_patch.py`、late-ASR生成/迁移及新speech-gate检查。主线尚未部署、在线或发布；本审查只运行内存actual-method探针，没有HTTP、音频或付费调用，没有修改生产文件。
+
+候选默认关闭（`NEKO_STUDY_SPEECH_GATE=1`才启用），只针对exact native free/no server-VAD的explain/quiz/answer及point。固定一次effective scope/原connection/session，要求quiet1.2、received wall覆盖lastspeech和scope绑定的callback ready；原onset、PCM、cancel不变。missingASR/queuefull/deadline的gated路径使用no-continuation abandonment，不回退付费；quiet等待20秒有界。received在begin同步记录，finish不会改时间，前述callback伪新完成条件已避免。
+
+初版探针发现两项，主线已增量修复并报告8项speech gate/6项ordering通过（未重跑旧批次）：
+
+1. 原2秒近期speech判断使call在lastspeech+2.1秒且缺ASR时绕gate；探针原版 `started=True,pending=0,outputs=1`。最新版对 `loud_at>transcript_at` 的已知未覆盖speech不再受2秒eligibility截止影响，缺ASR有界拒绝。已ready覆盖的旧speech仍保留低影响绕过，这是明确范围。
+2. 按call各自50ms检查时，已queued同response四类gated sibling可能不同tick进入now，unannounced collector先封口。原探针quiet缩.12s、两call实际t0/.094s（都在quiet前queued），工具b在.157s单批返回，工具a在.188s单批返回。最新版ready时对已经固定相同scope/connection/session/foreign_scope、同确切response ID的已queued gated cohort同步调用原now，admitted防二次派发；没有扩大terminal/future response匹配。源码确认该增量覆盖原复现。
+
+### [P2] 已知同response的混合gated/只读sibling仍可拆批
+
+新cohort只收 `r['gated']`，入口 `not ordered and not gated` 直接执行now，没有检查当前同response的已知pending。实际内存探针使用原candidate Harness、原工具lifecycle、快速外部结果（只mock provider sender）；先queue gated study_explain等待quiet .2s，.01s后同response study_material到达并立即执行。真实collector结果为 `[['read-only-material'], ['gated-study']]`，对应原sender两次continuation，而不是同response一个批次。
+
+这不是未来未知sibling或terminal ID alias问题：第二call到达时同response的第一call已经确定存在并在pending。建议让后到的非gated sibling参与这个已知pending response的admission/cohort，或以保持注册/结果完整的原batch方式等待已知gated sibling；它不应在已知call还未准入时独自封口。只读单call仍可不延迟，未知future仍按原fallback。现8个检查中的parallel场景仅含四个全部gated工具，不覆盖此混合条件。该P2已传主线，待修复或明确支持范围。
+
+### provider侧剩余验证条件
+
+abandoned路径源码能证明本地只发送带原call_id的abandoned function_call_output而不发送response.create；不能据此证明free proxy不会自行产生旧call的unannounced audio。缺输入/response一致标识仍可能让其归属未知。受控同WAV验证应同时核first call被弃、无DeepSeek出站、是否出现旧unannounced delta/音频、final call参数是否包含前段和末尾约束、最后speech→首实际播放。若proxy自行续答，不能用广泛alias/mute把新正确回答也屏蔽，也不能把本地no-continuation直接写成设备无旧声通过。
+
+尚未真实模型验证的opt-in候选不自动进入日常默认。以上发现仅此线路的候选边界，不代表整个Goal全局阻塞。
+
+### 最新混合批次增量核对
+
+主线入口现在检查已有同response ID、原connection/provider session/foreign scope、相同固定effective scope或唯一released scope+1的未admitted gated pending。后到只读sibling继承该已知barrier，仍不等待未知future。`r.get('current',r['owner'])` 只用于匹配已有record，不写scope、不重认领；`not admitted`筛选加同步cohort标记避免同record二次派发。主线新增mixed场景并报告9项检查通过。该混合batch P2标为**源码/离线已解决**，没有部署/设备通过含义。
+
+### [P2] handoff已开始时新到达call仍可能绕过gate
+
+现测试覆盖“先入queue，再发生handoff”，但不是call在handoff期间才到达。候选把 `_native_barge_in_pending=True` 从voice_route中排除；若没有既有gated pending，ordered/gated都False，直接进入原now。原 `_tool_task_owner_is_current` 核对scope/connection/session，而handoff刚开始、旧ws尚未close时这些仍可相同。
+
+actual-candidate内存探针设置 `_native_barge_in_pending=True`、`_fatal_error_occurred=True`（真实handoff同时设置的状态），原ws/connection不变，再提交study_explain：`started_during_handoff=True,pending=0`。只mock外部执行，没有支付请求。当前raw receive owner (`_transport.py:3383-3387`) 也仅验证ws/generation，故不能以“receive必定拦截pending/fatal”消除这个执行窗口。
+
+建议exactfree opt-in四类工具在入口先处理handoff/fatal的旧call拒绝，使用已有原connection的no-continuation释放；不要把handoff作为eligibility排除条件后直接fallback执行。这个修复不需要改普通onset/cancel或扩展provider。增加“call arriving during handoff/fatal、owner尚同连接”一个定向检查即可。已发送主线，待修复；不会由主Agent即将安排的普通同WAV成功场景自动覆盖。

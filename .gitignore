@@ -17,6 +17,12 @@ Thumbs.db
 # Local browser evidence and Python bytecode
 .playwright-cli/
 __pycache__/
+
+# Archify page-generation scratch (rebuilt per run, no source value)
+.archify/
+
+# Patch-manifest snapshots taken before risky phases; the live manifest is the record
+patches/*/manifest.json.phase*-before
 # Loopback acoustic captures are ~40 MB per scenario run; the JSON summary next to them
 # is what carries the numbers, so the wav stays on disk and out of history.
 docs/evidence/**/*.wav
