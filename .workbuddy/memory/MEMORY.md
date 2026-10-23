@@ -37,7 +37,9 @@
 ## 主线已从 Study 插件转到「日常学习伙伴」（2026-10-14 起，2026-10-23 复核）
 - 目标 A–F 完整日常可用（语音+Study+源码讲解+出题评分+材料指示+重启接续）；阶段推进记录在 `docs/daily-companion-{contract,plan,status,blockers}-2026-10-14.md`，阶段 62/75 通过后安全暂停过。
 - 10-15~10-16 三轮无人值守修复（Claude/Codex）：M1–M5、W1–W5、Codex P1–P8、Claude R1–R6，成果全在 **`codex/daily-learning-companion`** 分支（远端最新 `f2da5d3`）。
-- **`master` 不是最新的**：停在 `2c54175`（10-13），与 codex 分支分叉 136/115 未合并。查现状先看分支，别用 master 判断"做了什么"。
+- **`master` 不是最新的，但主目录现在已经切到 codex 分支**（2026-10-23 整理后）：工作区唯一的 worktree、唯一分支上下文就是 `codex/daily-learning-companion`。master 停在 `f56642f`（含 10-13 的 136 个 barge-in 平行实现 + 3 个归档 commit），与 codex 分叉 139/116 未合并，master 独有实现（barge-in）尚未并入主线。
+- 仓库曾有 3 个 worktree（主目录、`.codex/worktrees/daily-companion`、Temp 里的发布 worktree），2026-10-23 已清理为 1 个。**别再创建长驻 worktree**：分支一旦被别的 worktree 占用，主目录就 `checkout` 不了，只会制造"文件是 A 版、HEAD 是 B 版"的假脏。
+- `scripts/git_triage_dirty.py` 是判断"脏改动是不是假脏"的唯一可靠手段（blob hash 逐文件比对目标分支），别靠 `git status` 的行数判断风险。
 - **2026-10-16 用户已拍板停止加修复**：下一步是用户按 `docs/claude-acceptance-guide.md` v3 做定向复测第 5/3/2 步（约 20 分钟），之后只修最痛的一两件（首声 7–11s、自主高亮）。
 - 日常启动入口 `Start-Daily-Tutor-Voice.cmd` → `scripts/neko_tutor_start.py --store neko-daily-companion --voice --study-ui --learning-surface`；额度账本实读 `benchmarks/raw/neko-desktop-egress-cap`（2026-10-16 收尾后 DeepSeek 1825/2000，Lanlan.app 146）。
 - 现状快照见 `.workbuddy/memory/2026-10-23.md`。
