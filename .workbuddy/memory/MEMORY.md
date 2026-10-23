@@ -42,6 +42,7 @@
 - `scripts/git_triage_dirty.py` 是判断"脏改动是不是假脏"的唯一可靠手段（blob hash 逐文件比对目标分支），别靠 `git status` 的行数判断风险。
 - **2026-10-16 用户已拍板停止加修复**：下一步是用户按 `docs/claude-acceptance-guide.md` v3 做定向复测第 5/3/2 步（约 20 分钟），之后只修最痛的一两件（首声 7–11s、自主高亮）。
 - **运行时插件链路（2026-10-23 查清，别再搞错）**：`neko_desktop_tutor_host.py:274 prepare_product_plugin()` 每次启动都把骨架树 `benchmarks/raw/neko-app/resources/bin/plugins/study_companion/`（10-10 停更）复制到 **`<store>/plugin-code/study_companion`**，**随后用 `patches/neko-study-2026-10-10-product/payload/study_companion` 覆盖全部同名文件**，最后就地改 `plugin.toml`。所以真正跑的是仓库 payload——实测 `neko-daily-companion` 的 `__init__.py`/`models.py` hash 与 payload 完全相同，**10-16 的修复会生效，复测前不需要同步骨架树**。骨架树旧只影响两件事：payload 里没有的文件会残留 10-10 版；直接测骨架的测试（`test_neko_study_summary_scope` 走 `neko_study_plugin_methods_fixture` 的 RELEASE）会假红。
+- **桌面上是两个图标、同一个 exe，不是两个安装（2026-10-23 查清）**：`N.E.K.O` 直接跑 `benchmarks/raw/neko-app/N.E.K.O.exe`，用默认数据目录 `%LOCALAPPDATA%\N.E.K.O`（1.2MB，无 plugins，官方式干净，且加载的是 10-10 骨架树代码）；`N.E.K.O (project launcher)` → `Start-Daily-Tutor.cmd`（`--store neko-daily-companion`，带 **`--text-only`，没有语音**）。**语音必须手动双击仓库根的 `Start-Daily-Tutor-Voice.cmd`**（桌面没有图标）。两套数据目录完全独立，所以"内容不同"是启动方式决定的。学习记录在 `benchmarks/raw/neko-daily-companion/N.E.K.O/plugins/study_companion/data/`（db 4.1MB + **wal 6MB，别删 wal**）。
 - 日常启动入口 `Start-Daily-Tutor-Voice.cmd` → `scripts/neko_tutor_start.py --store neko-daily-companion --voice --study-ui --learning-surface`；额度账本实读 `benchmarks/raw/neko-desktop-egress-cap`（2026-10-16 收尾后 DeepSeek 1825/2000，Lanlan.app 146）。
 - 现状快照见 `.workbuddy/memory/2026-10-23.md`。
 
