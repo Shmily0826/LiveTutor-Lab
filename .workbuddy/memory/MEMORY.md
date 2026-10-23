@@ -41,7 +41,7 @@
 - 仓库曾有 3 个 worktree（主目录、`.codex/worktrees/daily-companion`、Temp 里的发布 worktree），2026-10-23 已清理为 1 个。**别再创建长驻 worktree**：分支一旦被别的 worktree 占用，主目录就 `checkout` 不了，只会制造"文件是 A 版、HEAD 是 B 版"的假脏。
 - `scripts/git_triage_dirty.py` 是判断"脏改动是不是假脏"的唯一可靠手段（blob hash 逐文件比对目标分支），别靠 `git status` 的行数判断风险。
 - **2026-10-16 用户已拍板停止加修复**：下一步是用户按 `docs/claude-acceptance-guide.md` v3 做定向复测第 5/3/2 步（约 20 分钟），之后只修最痛的一两件（首声 7–11s、自主高亮）。
-- **部署树落后是复测的头号坑（2026-10-23 发现）**：真正被 N.E.K.O 加载的插件在 `benchmarks/raw/neko-app/resources/bin/plugins/study_companion/`（BRIDGE 根还有 `resources/bin/plugin/plugins/`），而 `neko_tutor_start.py` **没有任何部署动作**。2026-10-10 之后这个目录没被同步过（models.py 连 `study_course_id` 都没有），源码 payload 已是 10-23。**复测前必须先把 payload 同步到部署树**（或确认实际加载路径），否则测到的是 10-10 的行为。同步会改运行环境，需用户点头。
+- **运行时插件链路（2026-10-23 查清，别再搞错）**：`neko_desktop_tutor_host.py:274 prepare_product_plugin()` 每次启动都把骨架树 `benchmarks/raw/neko-app/resources/bin/plugins/study_companion/`（10-10 停更）复制到 **`<store>/plugin-code/study_companion`**，**随后用 `patches/neko-study-2026-10-10-product/payload/study_companion` 覆盖全部同名文件**，最后就地改 `plugin.toml`。所以真正跑的是仓库 payload——实测 `neko-daily-companion` 的 `__init__.py`/`models.py` hash 与 payload 完全相同，**10-16 的修复会生效，复测前不需要同步骨架树**。骨架树旧只影响两件事：payload 里没有的文件会残留 10-10 版；直接测骨架的测试（`test_neko_study_summary_scope` 走 `neko_study_plugin_methods_fixture` 的 RELEASE）会假红。
 - 日常启动入口 `Start-Daily-Tutor-Voice.cmd` → `scripts/neko_tutor_start.py --store neko-daily-companion --voice --study-ui --learning-surface`；额度账本实读 `benchmarks/raw/neko-desktop-egress-cap`（2026-10-16 收尾后 DeepSeek 1825/2000，Lanlan.app 146）。
 - 现状快照见 `.workbuddy/memory/2026-10-23.md`。
 
